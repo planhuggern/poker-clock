@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pokerklokke</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app">
+    <div class="card" id="loginCard">
+      <h1>Pokerklokke</h1>
+      <p>Logg inn for å se synkronisert klokke.</p>
+      <div class="row">
+        <input id="username" placeholder="Brukernavn" autocomplete="username" />
+        <input id="password" placeholder="Passord" type="password" autocomplete="current-password" />
+        <button id="loginBtn">Logg inn</button>
+      </div>
+      <div id="loginError" class="error"></div>
+      <div class="hint">Tips: host/hostpass (admin) eller viewer/viewerpass</div>
+    </div>
+
+    <div class="card hidden" id="mainCard">
+      <div class="topbar">
+        <div>
+          <div class="title" id="tName"></div>
+          <div class="sub" id="whoami"></div>
+        </div>
+        <div class="row">
+          <button id="fullscreenBtn">Fullskjerm</button>
+          <button id="logoutBtn" class="ghost">Logg ut</button>
+        </div>
+      </div>
+
+      <div class="clock">
+        <div class="big" id="timeLeft">--:--</div>
+        <div class="meta" id="levelTitle">…</div>
+        <div class="meta" id="blinds">SB/BB/Ante</div>
+        <div class="meta" id="levelIndex">Level X/Y</div>
+      </div>
+
+      <div id="adminPanel" class="admin hidden">
+        <h2>Host-kontroller</h2>
+        <div class="row wrap">
+          <button id="startBtn">Start</button>
+          <button id="pauseBtn">Pause</button>
+          <button id="resetBtn" class="ghost">Reset nivå</button>
+          <button id="prevBtn" class="ghost">Forrige</button>
+          <button id="nextBtn" class="ghost">Neste</button>
+        </div>
+
+        <div class="row wrap">
+          <label>Jump til nivå:</label>
+          <select id="jumpSelect"></select>
+          <button id="jumpBtn" class="ghost">Gå</button>
+        </div>
+
+        <h3>Rediger struktur (JSON)</h3>
+        <textarea id="tournamentJson" rows="10"></textarea>
+        <div class="row">
+          <button id="applyJsonBtn">Bruk struktur</button>
+          <div id="adminError" class="error"></div>
+        </div>
+      </div>
+
+      <div id="events" class="events"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
