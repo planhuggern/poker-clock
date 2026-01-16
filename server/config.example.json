@@ -1,7 +1,17 @@
 {
-  "jwtSecret": "CHANGE_ME_TO_A_LONG_RANDOM_STRING",
-  "users": [
-    { "username": "host", "password": "hostpass", "role": "admin" },
-    { "username": "viewer", "password": "viewerpass", "role": "viewer" }
+  "jwtSecret": "super-lang-tilfeldig-streng-her-123456789",
+  "sessionSecret": "enda-en-lang-tilfeldig-streng-987654321",
+
+  "clientOrigin": "http://localhost:5173",
+  "serverOrigin": "http://localhost:3000",
+
+  "google": {
+    "clientID": "",
+    "clientSecret": "",
+    "callbackURL": "http://localhost:3000/auth/google/callback"
+  },
+
+  "adminEmails": [
+    "espen.holtebu@gmail.com"
   ]
 }
