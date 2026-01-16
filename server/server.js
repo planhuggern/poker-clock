@@ -3,6 +3,8 @@ import http from "http";
 import cors from "cors";
 import passport from "passport";  
 import { Server as SocketIOServer } from "socket.io";
+import { loadStateFromDisk, scheduleSave } from "./persist.js";
+
 
 import { loadConfig, signToken, verifyToken } from "./auth.js";
 import { setupPassport } from "./oauth.js";
@@ -26,7 +28,10 @@ const io = new SocketIOServer(server, {
   cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-let state = createState();
+let state = loadStateFromDisk(createState());
+if (state.running) {
+  state.startedAtMs = Date.now();
+}
 
 function publicSnapshot(nowMs = Date.now()) {
   const timing = computeRemainingSeconds(state, nowMs);
@@ -100,6 +105,7 @@ io.on("connection", (socket) => {
     if (!state.running) {
       state.running = true;
       state.startedAtMs = Date.now();
+      scheduleSave(state);
       io.emit("snapshot", publicSnapshot());
     }
   });
@@ -113,6 +119,7 @@ io.on("connection", (socket) => {
       state.elapsedInCurrentSeconds = elapsed;
       state.running = false;
       state.startedAtMs = null;
+      scheduleSave(state);
       io.emit("snapshot", publicSnapshot());
     }
   });
@@ -121,6 +128,7 @@ io.on("connection", (socket) => {
     if (!requireAdmin(socket)) return;
     state.elapsedInCurrentSeconds = 0;
     state.startedAtMs = state.running ? Date.now() : null;
+    scheduleSave(state);
     io.emit("snapshot", publicSnapshot());
   });
 
@@ -130,6 +138,7 @@ io.on("connection", (socket) => {
       state.currentIndex += 1;
       state.elapsedInCurrentSeconds = 0;
       state.startedAtMs = state.running ? Date.now() : null;
+      scheduleSave(state);
       io.emit("snapshot", publicSnapshot());
     }
   });
@@ -140,6 +149,7 @@ io.on("connection", (socket) => {
       state.currentIndex -= 1;
       state.elapsedInCurrentSeconds = 0;
       state.startedAtMs = state.running ? Date.now() : null;
+      scheduleSave(state);
       io.emit("snapshot", publicSnapshot());
     }
   });
@@ -151,6 +161,7 @@ io.on("connection", (socket) => {
       state.currentIndex = i;
       state.elapsedInCurrentSeconds = 0;
       state.startedAtMs = state.running ? Date.now() : null;
+      scheduleSave(state);
       io.emit("snapshot", publicSnapshot());
     }
   });
@@ -169,6 +180,7 @@ io.on("connection", (socket) => {
     state.currentIndex = Math.min(state.currentIndex, tournament.levels.length - 1);
     state.elapsedInCurrentSeconds = 0;
     state.startedAtMs = state.running ? Date.now() : null;
+    scheduleSave(state);  
     io.emit("snapshot", publicSnapshot());
   });
 });
@@ -179,6 +191,7 @@ setInterval(() => {
   const now = Date.now();
   const { changed, event } = stopIfFinishedAndAdvance(state, now);
   if (changed) {
+    scheduleSave(state);
     io.emit("snapshot", publicSnapshot(now));
     io.emit("system_event", event);
   } else {
