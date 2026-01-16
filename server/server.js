@@ -1,27 +1,30 @@
 import express from "express";
 import http from "http";
 import cors from "cors";
+import passport from "passport";  
 import { Server as SocketIOServer } from "socket.io";
-import bcrypt from "bcryptjs";
 
-import { loadConfig, buildUserDb, signToken, verifyToken } from "./auth.js";
+import { loadConfig, signToken, verifyToken } from "./auth.js";
+import { setupPassport } from "./oauth.js";
 import {
   createState,
   computeRemainingSeconds,
   stopIfFinishedAndAdvance
 } from "./state.js";
 
+const config = loadConfig();            // ✅ MÅ være før app.use(session(...))
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+
+setupPassport(app, config);             // ✅ passport etter session
 
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
   cors: { origin: "*", methods: ["GET", "POST"] }
 });
-
-const config = loadConfig();
-const users = await buildUserDb(config);
 
 let state = createState();
 
@@ -44,20 +47,32 @@ function requireAdmin(socket) {
   return true;
 }
 
-// --- REST: login ---
-app.post("/api/login", async (req, res) => {
-  const { username, password } = req.body ?? {};
-  if (!username || !password) return res.status(400).json({ error: "Mangler brukernavn/passord" });
+function roleFromEmail(email) {
+  if (!email) return "viewer";
+  return (config.adminEmails ?? []).includes(email.toLowerCase()) ? "admin" : "viewer";
+}
 
-  const u = users.find(x => x.username === username);
-  if (!u) return res.status(401).json({ error: "Feil innlogging" });
+app.get("/auth/google",
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    prompt: "select_account",
+    session: false
+  })
+);
 
-  const ok = await bcrypt.compare(password, u.passwordHash);
-  if (!ok) return res.status(401).json({ error: "Feil innlogging" });
+app.get("/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: `${config.clientOrigin}/?login=fail`, session: false }),
+  (req, res) => {
+    const email = req.user?.email?.toLowerCase() ?? "";
+    const admins = (config.adminEmails ?? []).map(x => x.toLowerCase());
+    const role = admins.includes(email) ? "admin" : "viewer";
+    const token = signToken(config, { username: email || "google-user", role });
 
-  const token = signToken(config, u);
-  res.json({ token, role: u.role, username: u.username });
-});
+    //logg
+    const redirectUrl = `${config.clientOrigin}/callback?token=${encodeURIComponent(token)}&role=${encodeURIComponent(role)}`;
+    res.redirect(redirectUrl);
+  }
+);
 
 // --- Socket auth middleware ---
 io.use((socket, next) => {
@@ -175,4 +190,9 @@ setInterval(() => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+});
+
+app.use((err, req, res, next) => {
+  console.error("EXPRESS ERROR:", err);
+  res.status(500).send("Auth error: " + (err?.message ?? "unknown"));
 });
