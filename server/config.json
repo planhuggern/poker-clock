@@ -1,7 +1,0 @@
-{
-  "jwtSecret": "CHANGE_ME_TO_A_LONG_RANDOM_STRING",
-  "users": [
-    { "username": "host", "password": "hostpass", "role": "admin" },
-    { "username": "viewer", "password": "viewerpass", "role": "viewer" }
-  ]
-}
