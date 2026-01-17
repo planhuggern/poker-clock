@@ -3,7 +3,14 @@ import http from "http";
 import cors from "cors";
 import passport from "passport";  
 import { Server as SocketIOServer } from "socket.io";
-import { loadStateFromDisk, scheduleSave } from "./persist.js";
+import {
+  initDb,
+  loadStateFromDb,
+  scheduleSave
+} from "./persist_sqlite.js";
+
+import path from "path";
+
 
 
 import { loadConfig, signToken, verifyToken } from "./auth.js";
@@ -15,6 +22,7 @@ import {
 } from "./state.js";
 
 const config = loadConfig();            // ✅ MÅ være før app.use(session(...))
+initDb();
 
 const app = express();
 app.use(cors());
@@ -28,7 +36,9 @@ const io = new SocketIOServer(server, {
   cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-let state = loadStateFromDisk(createState());
+let state = loadStateFromDb(createState());
+
+// Hvis klokka kjørte før restart, fortsett pent
 if (state.running) {
   state.startedAtMs = Date.now();
 }
@@ -209,3 +219,4 @@ app.use((err, req, res, next) => {
   console.error("EXPRESS ERROR:", err);
   res.status(500).send("Auth error: " + (err?.message ?? "unknown"));
 });
+
