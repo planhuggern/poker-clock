@@ -2,6 +2,8 @@ import { Navigate, useNavigate, Link } from "react-router-dom";
 import { usePokerSocket } from "../lib/usePokerSocket";
 import ClockCard from "../components/ClockCard";
 import AdminTournamentEditor from "../components/AdminTournamentEditor";
+import AdminTournamentTable from "../components/AdminTournamentTable";
+
 
 export default function Home() {
   const nav = useNavigate();
@@ -43,11 +45,12 @@ export default function Home() {
         </div>
       )}
 
-      <AdminTournamentEditor
+      <AdminTournamentTable
         role={role}
         snapshot={snapshot}
         updateTournament={updateTournament}
       />
+
 
       <div style={{ marginTop: 16 }}>
         <button

@@ -12,7 +12,7 @@ export function usePokerSocket(token) {
     if (!token) return null;
     return io(SERVER, {
       auth: { token },
-      transports: ["websocket", "polling"]
+      transports: ["websocket", "polling"],
     });
   }, [token]);
 
@@ -25,7 +25,13 @@ export function usePokerSocket(token) {
     socket.on("connect", () => setStatus("connected"));
     socket.on("connect_error", (err) => {
       setStatus("error");
-      setError(err?.message || "connect_error");
+      const msg = err?.message || "connect_error";
+      setError(msg);
+
+      if (msg.toLowerCase().includes("invalid token")) {
+        localStorage.removeItem("poker_token");
+        localStorage.removeItem("poker_role");
+      }
     });
 
     socket.on("snapshot", (snap) => setSnapshot(snap));
@@ -42,18 +48,18 @@ export function usePokerSocket(token) {
         pause: () => {},
         reset: () => {},
         next: () => {},
-        prev: () => {}
+        prev: () => {},
       };
     }
     return {
-        emit: (event, payload) => socket.emit(event, payload),
-        start: () => socket.emit("admin_start"),
-        pause: () => socket.emit("admin_pause"),
-        reset: () => socket.emit("admin_reset_level"),
-        next: () => socket.emit("admin_next"),
-        prev: () => socket.emit("admin_prev"),
-        updateTournament: (t) => socket.emit("admin_update_tournament", t)
-        };
+      emit: (event, payload) => socket.emit(event, payload),
+      start: () => socket.emit("admin_start"),
+      pause: () => socket.emit("admin_pause"),
+      reset: () => socket.emit("admin_reset_level"),
+      next: () => socket.emit("admin_next"),
+      prev: () => socket.emit("admin_prev"),
+      updateTournament: (t) => socket.emit("admin_update_tournament", t),
+    };
   }, [socket]);
 
   return { status, error, snapshot, ...api };
