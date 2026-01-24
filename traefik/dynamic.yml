@@ -1,0 +1,36 @@
+http:
+  routers:
+    server:
+      rule: "PathPrefix(`/auth`) || PathPrefix(`/socket.io`)"
+      entryPoints:
+        - web
+      service: server-svc
+      priority: 100
+
+    client:
+      rule: "PathPrefix(`/`)"
+      entryPoints:
+        - web
+      service: client-svc
+      middlewares:
+        - client-spa
+      priority: 1
+
+  services:
+    server-svc:
+      loadBalancer:
+        servers:
+          - url: "http://server:3000"
+
+    client-svc:
+      loadBalancer:
+        servers:
+          - url: "http://client:80"
+
+  middlewares:
+    client-spa:
+      errors:
+        status:
+          - "404"
+        service: client-svc
+        query: "/index.html"

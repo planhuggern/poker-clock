@@ -13,5 +13,7 @@
 
   "adminEmails": [
     "espen.holtebu@gmail.com"
-  ]
+  ],
+  
+  "sqlite_file": "./data/pokerclock.sqlite"
 }
