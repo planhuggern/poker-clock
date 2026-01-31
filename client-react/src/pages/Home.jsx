@@ -16,9 +16,9 @@ export default function Home() {
   const { status, error, snapshot, start, pause, reset, next, prev, updateTournament } = usePokerSocket(token);
 
   return (
-    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 820 }}>
+    <main className="main-content">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <h1 style={{ margin: 0 }}>Pokerklokke</h1>
+        <h1>Pokerklokke</h1>
         <Link to="/tv">TV</Link>
       </div>
 
@@ -51,7 +51,6 @@ export default function Home() {
         updateTournament={updateTournament}
       />
 
-
       <div style={{ marginTop: 16 }}>
         <button
           onClick={() => {
@@ -63,6 +62,6 @@ export default function Home() {
           Logg ut
         </button>
       </div>
-    </div>
+    </main>
   );
 }
