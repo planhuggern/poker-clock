@@ -117,6 +117,7 @@ io.on("connection", (socket) => {
       state.startedAtMs = Date.now();
       scheduleSave(state);
       io.emit("snapshot", publicSnapshot());
+      io.emit("play_sound", { type: "start" });
     }
   });
 
@@ -131,6 +132,7 @@ io.on("connection", (socket) => {
       state.startedAtMs = null;
       scheduleSave(state);
       io.emit("snapshot", publicSnapshot());
+      io.emit("play_sound", { type: "pause" });
     }
   });
 
@@ -140,6 +142,7 @@ io.on("connection", (socket) => {
     state.startedAtMs = state.running ? Date.now() : null;
     scheduleSave(state);
     io.emit("snapshot", publicSnapshot());
+    io.emit("play_sound", { type: "reset_level" });
   });
 
   socket.on("admin_next", () => {
@@ -150,6 +153,7 @@ io.on("connection", (socket) => {
       state.startedAtMs = state.running ? Date.now() : null;
       scheduleSave(state);
       io.emit("snapshot", publicSnapshot());
+      io.emit("play_sound", { type: "level_advance" });
     }
   });
 
@@ -161,6 +165,7 @@ io.on("connection", (socket) => {
       state.startedAtMs = state.running ? Date.now() : null;
       scheduleSave(state);
       io.emit("snapshot", publicSnapshot());
+      io.emit("play_sound", { type: "level_back" });
     }
   });
 
@@ -173,6 +178,7 @@ io.on("connection", (socket) => {
       state.startedAtMs = state.running ? Date.now() : null;
       scheduleSave(state);
       io.emit("snapshot", publicSnapshot());
+      io.emit("play_sound", { type: "level_jump" });
     }
   });
 
@@ -204,9 +210,15 @@ setInterval(() => {
     scheduleSave(state);
     io.emit("snapshot", publicSnapshot(now));
     io.emit("system_event", event);
+    io.emit("play_sound", { type: "level_advance" });
   } else {
     // send lettvekts tick av og til (1s) for smooth klient
     io.emit("tick", publicSnapshot(now));
+    // Sjekk om det er 60 sekunder igjen av nivået, og send lydvarsel
+    const timing = computeRemainingSeconds(state, now);
+    if (timing && timing.remaining === 60) {
+      io.emit("play_sound", { type: "one_minute_left" });
+    }
   }
 }, 1000);
 

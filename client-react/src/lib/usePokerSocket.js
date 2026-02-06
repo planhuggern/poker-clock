@@ -37,6 +37,37 @@ export function usePokerSocket(token) {
     socket.on("snapshot", (snap) => setSnapshot(snap));
     socket.on("tick", (snap) => setSnapshot(snap));
 
+    // Lydavspilling på play_sound-event
+    socket.on("play_sound", ({ type }) => {
+      let audio;
+      switch (type) {
+        case "start":
+          audio = new Audio("/sounds/start.mp3");
+          break;
+        case "pause":
+          audio = new Audio("/sounds/pause.mp3");
+          break;
+        case "reset_level":
+          audio = new Audio("/sounds/reset.mp3");
+          break;
+        case "level_advance":
+          audio = new Audio("/sounds/new_level.mp3");
+          break;
+        case "level_back":
+          audio = new Audio("/sounds/level-down.mp3");
+          break;
+        case "level_jump":
+          audio = new Audio("/sounds/jump.mp3");
+          break;
+        case "one_minute_left":
+          audio = new Audio("/sounds/one-minute.mp3");
+          break;
+        default:
+          return;
+      }
+      audio?.play();
+    });
+
     return () => socket.disconnect();
   }, [socket]);
 
