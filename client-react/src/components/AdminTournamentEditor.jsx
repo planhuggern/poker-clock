@@ -57,6 +57,17 @@ export default function AdminTournamentEditor({ role, snapshot, updateTournament
                 throw new Error("Må ha levels[] med minst ett element");
               }
 
+              // Konverter durationMinutes til seconds hvis det finnes
+              if (Array.isArray(t.levels)) {
+                t.levels = t.levels.map(lvl => {
+                  if (typeof lvl.durationMinutes === "number") {
+                    lvl.seconds = lvl.durationMinutes * 60;
+                  } else if (typeof lvl.durationSeconds === "number") {
+                    lvl.seconds = lvl.durationSeconds;
+                  }
+                  return lvl;
+                });
+              }
               updateTournament(t);
             } catch (e) {
               setErr(e?.message || "Ugyldig JSON");
@@ -70,7 +81,7 @@ export default function AdminTournamentEditor({ role, snapshot, updateTournament
       </div>
 
       <div style={{ marginTop: 8, opacity: 0.7, fontSize: 12 }}>
-        Tips: durationSeconds er i sekunder (900 = 15 min). type = "level" eller "break".
+        Tips: Du kan bruke <b>durationMinutes</b> (f.eks. 15) eller <b>durationSeconds</b> (f.eks. 900) for hvert nivå. type = "level" eller "break".
       </div>
     </div>
   );

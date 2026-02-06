@@ -38,6 +38,63 @@ const io = new SocketIOServer(server, {
 
 let state = loadStateFromDb(createState());
 
+// Normaliser state (DB kan inneholde gamle/ugyldige verdier som gir NaN-timing)
+function normalizeStateInPlace(s) {
+  if (!s || typeof s !== "object") return;
+
+  // currentIndex
+  if (!Number.isInteger(s.currentIndex)) {
+    const idx = Number(s.currentIndex);
+    s.currentIndex = Number.isInteger(idx) ? idx : 0;
+  }
+
+  const maxIndex = Array.isArray(s.tournament?.levels) ? s.tournament.levels.length - 1 : 0;
+  s.currentIndex = Math.max(0, Math.min(s.currentIndex, Math.max(0, maxIndex)));
+
+  // startedAtMs
+  if (!Number.isFinite(s.startedAtMs)) s.startedAtMs = null;
+
+  // elapsedInCurrentSeconds
+  if (!Number.isFinite(s.elapsedInCurrentSeconds) || s.elapsedInCurrentSeconds < 0) {
+    s.elapsedInCurrentSeconds = 0;
+  }
+
+  // running
+  s.running = !!s.running;
+
+  // tournament defaults
+  if (!Number.isFinite(s.tournament?.defaultLevelSeconds) || s.tournament.defaultLevelSeconds < 0) {
+    if (s.tournament) s.tournament.defaultLevelSeconds = 15 * 60;
+  }
+
+  // normalize level seconds
+  if (Array.isArray(s.tournament?.levels)) {
+    s.tournament.levels = s.tournament.levels.map((lvl) => {
+      if (!lvl || typeof lvl !== "object") return lvl;
+
+      // Allow alternative fields
+      const minutes = Number.isFinite(lvl.durationMinutes)
+        ? lvl.durationMinutes
+        : (Number.isFinite(lvl.minutes) ? lvl.minutes : null);
+
+      if (Number.isFinite(minutes) && minutes >= 0) {
+        lvl.seconds = minutes * 60;
+      } else if (Number.isFinite(lvl.durationSeconds) && lvl.durationSeconds >= 0) {
+        lvl.seconds = lvl.durationSeconds;
+      }
+
+      // Clean up invalid seconds
+      if (!Number.isFinite(lvl.seconds) || lvl.seconds < 0) {
+        delete lvl.seconds;
+      }
+
+      return lvl;
+    });
+  }
+}
+
+normalizeStateInPlace(state);
+
 // Hvis klokka kjørte før restart, fortsett pent
 if (state.running) {
   state.startedAtMs = Date.now();
@@ -189,6 +246,29 @@ io.on("connection", (socket) => {
     if (!tournament || !Array.isArray(tournament.levels) || tournament.levels.length === 0) {
       socket.emit("error_msg", "Ugyldig turneringsstruktur");
       return;
+    }
+
+    // Normaliser innkommende tournament-format (aksepter durationMinutes/durationSeconds/minutes)
+    if (tournament && Array.isArray(tournament.levels)) {
+      tournament.levels = tournament.levels.map((lvl) => {
+        if (!lvl || typeof lvl !== "object") return lvl;
+
+        const minutes = Number.isFinite(lvl.durationMinutes)
+          ? lvl.durationMinutes
+          : (Number.isFinite(lvl.minutes) ? lvl.minutes : null);
+
+        if (Number.isFinite(minutes) && minutes >= 0) {
+          lvl.seconds = minutes * 60;
+        } else if (Number.isFinite(lvl.durationSeconds) && lvl.durationSeconds >= 0) {
+          lvl.seconds = lvl.durationSeconds;
+        }
+
+        if (!Number.isFinite(lvl.seconds) || lvl.seconds < 0) {
+          delete lvl.seconds;
+        }
+
+        return lvl;
+      });
     }
 
     state.tournament = tournament;

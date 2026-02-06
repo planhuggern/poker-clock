@@ -34,18 +34,32 @@ export function getCurrentLevel(state) {
 export function levelTotalSeconds(state) {
   const lvl = getCurrentLevel(state);
   if (!lvl) return 0;
-  return typeof lvl.seconds === "number" ? lvl.seconds : state.tournament.defaultLevelSeconds;
+
+  const lvlSeconds = lvl.seconds;
+  if (Number.isFinite(lvlSeconds) && lvlSeconds >= 0) return lvlSeconds;
+
+  const fallback = state?.tournament?.defaultLevelSeconds;
+  return Number.isFinite(fallback) && fallback >= 0 ? fallback : 0;
 }
 
 export function computeRemainingSeconds(state, nowMs = Date.now()) {
   const total = levelTotalSeconds(state);
   let elapsed = state.elapsedInCurrentSeconds;
 
-  if (state.running && state.startedAtMs != null) {
-    elapsed += Math.floor((nowMs - state.startedAtMs) / 1000);
+  if (!Number.isFinite(elapsed) || elapsed < 0) elapsed = 0;
+  if (!Number.isFinite(total) || total < 0) {
+    return { total: 0, elapsed, remaining: 0 };
+  }
+
+  const startedAtMs = state.startedAtMs;
+  if (state.running && Number.isFinite(startedAtMs) && Number.isFinite(nowMs)) {
+    elapsed += Math.floor((nowMs - startedAtMs) / 1000);
   }
 
   const remaining = Math.max(0, total - elapsed);
+  if (!Number.isFinite(remaining)) {
+    return { total, elapsed: 0, remaining: total };
+  }
   return { total, elapsed, remaining };
 }
 
@@ -54,6 +68,12 @@ export function stopIfFinishedAndAdvance(state, nowMs = Date.now()) {
   if (!lvl) return { changed: false, event: null };
 
   const { remaining } = computeRemainingSeconds(state, nowMs);
+  if (!Number.isFinite(remaining)) {
+    // Skulle ikke skje pga computeRemainingSeconds, men ekstra sikkerhet.
+    state.elapsedInCurrentSeconds = 0;
+    state.startedAtMs = state.running ? nowMs : null;
+    return { changed: false, event: null };
+  }
   if (remaining > 0) return { changed: false, event: null };
 
   // nivå ferdig -> auto neste (hvis finnes)
