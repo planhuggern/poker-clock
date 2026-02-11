@@ -1,7 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 
-const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+const SERVER_ORIGIN = import.meta.env.VITE_SERVER_URL
+  || globalThis.location?.origin
+  || "http://localhost:3000";
+
+const BASE_URL = import.meta.env.BASE_URL || "/";
+const basePath = BASE_URL === "/" ? "" : BASE_URL.replace(/\/$/, "");
+const SOCKET_PATH = `${basePath}/socket.io`;
+
+function assetUrl(p) {
+  // Vite BASE_URL inkluderer trailing slash.
+  return `${BASE_URL}${p.replace(/^\//, "")}`;
+}
 
 export function usePokerSocket(token) {
   const [status, setStatus] = useState("disconnected");
@@ -10,8 +21,9 @@ export function usePokerSocket(token) {
 
   const socket = useMemo(() => {
     if (!token) return null;
-    return io(SERVER, {
+    return io(SERVER_ORIGIN, {
       auth: { token },
+      path: SOCKET_PATH,
       transports: ["websocket", "polling"],
     });
   }, [token]);
@@ -42,25 +54,25 @@ export function usePokerSocket(token) {
       let audio;
       switch (type) {
         case "start":
-          audio = new Audio("/sounds/start.mp3");
+          audio = new Audio(assetUrl("sounds/start.mp3"));
           break;
         case "pause":
-          audio = new Audio("/sounds/pause.mp3");
+          audio = new Audio(assetUrl("sounds/pause.mp3"));
           break;
         case "reset_level":
-          audio = new Audio("/sounds/reset.mp3");
+          audio = new Audio(assetUrl("sounds/reset.mp3"));
           break;
         case "level_advance":
-          audio = new Audio("/sounds/new_level.mp3");
+          audio = new Audio(assetUrl("sounds/new_level.mp3"));
           break;
         case "level_back":
-          audio = new Audio("/sounds/level-down.mp3");
+          audio = new Audio(assetUrl("sounds/level-down.mp3"));
           break;
         case "level_jump":
-          audio = new Audio("/sounds/jump.mp3");
+          audio = new Audio(assetUrl("sounds/jump.mp3"));
           break;
         case "one_minute_left":
-          audio = new Audio("/sounds/one-minute.mp3");
+          audio = new Audio(assetUrl("sounds/one-minute.mp3"));
           break;
         default:
           return;

@@ -1,0 +1,15 @@
+http:
+  routers:
+    pokerklokke:
+      # Path-basert routing (ingen stripPrefix). Endre basepath hvis du vil.
+      rule: "PathPrefix(`/pokerklokke`)"
+      entryPoints:
+        - web
+      service: pokerklokke-svc
+      priority: 10
+
+  services:
+    pokerklokke-svc:
+      loadBalancer:
+        servers:
+          - url: "http://app:3000"

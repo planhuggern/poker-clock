@@ -2,7 +2,11 @@ import jwt from "jsonwebtoken";
 import fs from "fs";
 
 export function loadConfig() {
-  const raw = fs.readFileSync(new URL("./config.json", import.meta.url));
+  const configUrl = new URL("./config.json", import.meta.url);
+  const exampleUrl = new URL("./config.example.json", import.meta.url);
+
+  const configPath = fs.existsSync(configUrl) ? configUrl : exampleUrl;
+  const raw = fs.readFileSync(configPath);
   return JSON.parse(raw.toString("utf-8"));
 }
 

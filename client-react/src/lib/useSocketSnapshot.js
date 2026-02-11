@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
-const SERVER = import.meta.env.VITE_SERVER_URL;
+const SERVER_ORIGIN = import.meta.env.VITE_SERVER_URL
+  || globalThis.location?.origin
+  || "http://localhost:3000";
+
+const BASE_URL = import.meta.env.BASE_URL || "/";
+const basePath = BASE_URL === "/" ? "" : BASE_URL.replace(/\/$/, "");
+const SOCKET_PATH = `${basePath}/socket.io`;
 
 export function useSocketSnapshot(token) {
   const [status, setStatus] = useState("disconnected"); // "connecting" | "connected" | "error"
@@ -14,8 +20,9 @@ export function useSocketSnapshot(token) {
     setStatus("connecting");
     setError(null);
 
-    const socket = io(SERVER, {
+    const socket = io(SERVER_ORIGIN, {
       auth: { token },
+      path: SOCKET_PATH,
       transports: ["websocket", "polling"]
     });
 

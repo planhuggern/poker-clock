@@ -1,4 +1,5 @@
 {
+  "basePath": "",
   "jwtSecret": "super-lang-tilfeldig-streng-her-123456789",
   "sessionSecret": "enda-en-lang-tilfeldig-streng-987654321",
 

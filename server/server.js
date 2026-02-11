@@ -10,6 +10,7 @@ import {
 } from "./persist_sqlite.js";
 
 import path from "path";
+import { fileURLToPath } from "url";
 
 
 
@@ -24,6 +25,23 @@ import {
 const config = loadConfig();            // ✅ MÅ være før app.use(session(...))
 initDb();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function normalizeBasePath(value) {
+  if (!value) return "";
+  let base = String(value).trim();
+  if (!base) return "";
+  if (!base.startsWith("/")) base = `/${base}`;
+  // Remove trailing slash (except root)
+  if (base.length > 1 && base.endsWith("/")) base = base.slice(0, -1);
+  return base;
+}
+
+const BASE_PATH = normalizeBasePath(process.env.BASE_PATH ?? config.basePath);
+const withBase = (p) => `${BASE_PATH}${p}`;
+const socketPath = `${BASE_PATH}/socket.io`;
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -33,6 +51,7 @@ setupPassport(app, config);             // ✅ passport etter session
 
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
+  path: socketPath,
   cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
@@ -124,7 +143,20 @@ function roleFromEmail(email) {
   return (config.adminEmails ?? []).includes(email.toLowerCase()) ? "admin" : "viewer";
 }
 
-app.get("/auth/google",
+function clientBase() {
+  // Hvis client og server kjører på samme origin (én container), bruk relative redirects.
+  const sameOrigin = (config.clientOrigin && config.serverOrigin && config.clientOrigin === config.serverOrigin);
+  const origin = sameOrigin ? "" : (config.clientOrigin ?? "");
+  if (!origin) return "";
+  return origin.endsWith("/") ? origin.slice(0, -1) : origin;
+}
+
+function clientRedirectBase() {
+  // origin (optional) + base path
+  return `${clientBase()}${BASE_PATH}`;
+}
+
+app.get(withBase("/auth/google"),
   passport.authenticate("google", {
     scope: ["profile", "email"],
     prompt: "select_account",
@@ -132,8 +164,8 @@ app.get("/auth/google",
   })
 );
 
-app.get("/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: `${config.clientOrigin}/?login=fail`, session: false }),
+app.get(withBase("/auth/google/callback"),
+  passport.authenticate("google", { failureRedirect: `${clientRedirectBase()}/?login=fail`, session: false }),
   (req, res) => {
     const email = req.user?.email?.toLowerCase() ?? "";
     const admins = (config.adminEmails ?? []).map(x => x.toLowerCase());
@@ -141,10 +173,36 @@ app.get("/auth/google/callback",
     const token = signToken(config, { username: email || "google-user", role });
 
     //logg
-    const redirectUrl = `${config.clientOrigin}/callback?token=${encodeURIComponent(token)}&role=${encodeURIComponent(role)}`;
+    const base = clientRedirectBase();
+    const redirectUrl = `${base}/callback?token=${encodeURIComponent(token)}&role=${encodeURIComponent(role)}`;
     res.redirect(redirectUrl);
   }
 );
+
+// Serve ferdigbygde statiske filer i production (én container)
+if (process.env.NODE_ENV === "production") {
+  const staticDir = path.join(__dirname, "public");
+  if (BASE_PATH) {
+    app.use(BASE_PATH, express.static(staticDir));
+
+    // Støtt /basepath uten trailing slash
+    app.get(BASE_PATH, (req, res) => {
+      return res.sendFile(path.join(staticDir, "index.html"));
+    });
+  } else {
+    app.use(express.static(staticDir));
+  }
+
+  // SPA fallback (ikke fang /auth eller /socket.io)
+  const spaRoute = BASE_PATH ? `${BASE_PATH}/*` : "*";
+  const authPrefix = `${BASE_PATH}/auth`;
+  const socketPrefix = `${BASE_PATH}/socket.io`;
+
+  app.get(spaRoute, (req, res, next) => {
+    if (req.path.startsWith(authPrefix) || req.path.startsWith(socketPrefix)) return next();
+    return res.sendFile(path.join(staticDir, "index.html"));
+  });
+}
 
 // --- Socket auth middleware ---
 io.use((socket, next) => {
@@ -302,7 +360,7 @@ setInterval(() => {
   }
 }, 1000);
 
-const PORT = config.port || process.env.PORT || 3000;
+const PORT = process.env.PORT || config.port || 3000;
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
