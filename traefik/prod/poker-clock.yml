@@ -4,7 +4,9 @@ http:
       # Path-basert routing (ingen stripPrefix). Endre basepath hvis du vil.
       rule: "PathPrefix(`/pokerklokke`)"
       entryPoints:
-        - web
+        - websecure
+      tls:
+        certResolver: le
       service: pokerklokke-svc
       priority: 10
 

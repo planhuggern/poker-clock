@@ -7,17 +7,24 @@ set -euo pipefail
 # - Optionally syncs BASE_PATH across prod files
 # - Starts docker compose (dev or prod)
 
+# - Installs git and clones repo if project directory is missing
+
+
 MODE="prod"              # prod|dev
 BASE_PATH="/pokerklokke" # no trailing slash
 FORCE_CONFIG="0"
 INSTALL_DOCKER="auto"    # auto|yes|no
 DETACH="1"
+DEFAULT_GIT_URL="https://github.com/planhuggern/poker-clock.git"
+PROJECT_DIR="poker-clock"
+CLONE="0"
 
 usage() {
   cat <<'EOF'
 Usage:
   ./bootstrap.sh [--prod|--dev] [--base-path /pokerklokke] [--force-config]
                [--install-docker auto|yes|no] [--foreground]
+               [--clone]
 
 Defaults:
   --prod
@@ -29,6 +36,7 @@ Examples:
   ./bootstrap.sh --prod --base-path /pokerklokke
   ./bootstrap.sh --dev
   ./bootstrap.sh --prod --force-config
+  ./bootstrap.sh --clone
 EOF
 }
 
@@ -67,6 +75,7 @@ parse_args() {
         INSTALL_DOCKER="$2"; shift 2
         ;;
       --foreground) DETACH="0"; shift ;;
+      --clone) CLONE="1"; shift ;;
       -h|--help) usage; exit 0 ;;
       *) die "Unknown arg: $1 (use --help)" ;;
     esac
@@ -91,11 +100,6 @@ install_docker_ubuntu_debian() {
   sudo_if_needed apt-get install -y ca-certificates curl gnupg
   sudo_if_needed install -m 0755 -d /etc/apt/keyrings
 
-  if [[ ! -f /etc/apt/keyrings/docker.gpg ]]; then
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo_if_needed gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    sudo_if_needed chmod a+r /etc/apt/keyrings/docker.gpg
-  fi
-
   # Detect distro codename
   local codename
   codename="$(. /etc/os-release && echo "${VERSION_CODENAME}")"
@@ -106,6 +110,11 @@ install_docker_ubuntu_debian() {
   local repo_distro="$distro"
   if [[ "$distro" != "ubuntu" && "$distro" != "debian" ]]; then
     die "Unsupported distro for docker install: $distro"
+  fi
+
+  if [[ ! -f /etc/apt/keyrings/docker.gpg ]]; then
+    curl -fsSL "https://download.docker.com/linux/${repo_distro}/gpg" | sudo_if_needed gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    sudo_if_needed chmod a+r /etc/apt/keyrings/docker.gpg
   fi
 
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/${repo_distro} ${codename} stable" \
@@ -158,28 +167,74 @@ sync_base_path_prod_files() {
 
   require_cmd python3
 
-  python3 - <<PY
+  BASE_PATH="$BASE_PATH" python3 - <<'PY'
+import os
 import re
 from pathlib import Path
 
-base_path = "${BASE_PATH}"
+base_path = os.environ.get('BASE_PATH', '').rstrip('/')
 vite_base = base_path + "/"
 
-# docker-compose.prod.yml
-p = Path('docker-compose.prod.yml')
-text = p.read_text(encoding='utf-8')
-text2 = text
-text2 = re.sub(r'(VITE_BASE_PATH:\s*)/[^\s]*/', r'\\1' + vite_base, text2)
-text2 = re.sub(r'(\bBASE_PATH=)/[^\s\"]+', r'\\1' + base_path, text2)
-if text2 != text:
-    p.write_text(text2, encoding='utf-8')
 
-# traefik/prod/poker-clock.yml
-p = Path('traefik/prod/poker-clock.yml')
-text = p.read_text(encoding='utf-8')
-text2 = re.sub(r'PathPrefix\(`[^`]*`\)', f"PathPrefix(`{base_path}`)", text)
-if text2 != text:
-    p.write_text(text2, encoding='utf-8')
+def update_compose_prod(path: Path) -> None:
+    text = path.read_text(encoding='utf-8')
+    lines = text.splitlines(True)
+
+    out: list[str] = []
+    in_args = False
+    args_indent: int | None = None
+    args_child_indent: int | None = None
+
+    for line in lines:
+        # Update env var BASE_PATH in list form
+        line = re.sub(r'(\s*-\s*BASE_PATH=)/[^\s\"]+', r'\1' + base_path, line)
+
+        m_args = re.match(r'^(\s*)args:\s*(#.*)?$', line)
+        if m_args:
+            in_args = True
+            args_indent = len(m_args.group(1))
+            args_child_indent = args_indent + 2
+            out.append(line)
+            continue
+
+        if in_args:
+            if line.strip() == "":
+                out.append(line)
+                continue
+
+            current_indent = len(line) - len(line.lstrip(' '))
+            if current_indent <= (args_indent or 0):
+                in_args = False
+                args_indent = None
+                args_child_indent = None
+                out.append(line)
+                continue
+
+            # Normalize VITE_BASE_PATH, regardless of mapping or list style
+            if re.match(r'^\s*-\s*VITE_BASE_PATH=', line):
+                out.append(' ' * (args_child_indent or 0) + f"VITE_BASE_PATH: {vite_base}\n")
+                continue
+
+            if re.match(r'^\s*VITE_BASE_PATH:\s*', line):
+                out.append(' ' * (args_child_indent or 0) + f"VITE_BASE_PATH: {vite_base}\n")
+                continue
+
+        out.append(line)
+
+    new_text = ''.join(out)
+    if new_text != text:
+        path.write_text(new_text, encoding='utf-8')
+
+
+def update_traefik_rule(path: Path) -> None:
+    text = path.read_text(encoding='utf-8')
+    new_text = re.sub(r'PathPrefix\(`[^`]*`\)', f"PathPrefix(`{base_path}`)", text)
+    if new_text != text:
+        path.write_text(new_text, encoding='utf-8')
+
+
+update_compose_prod(Path('docker-compose.prod.yml'))
+update_traefik_rule(Path('traefik/prod/poker-clock.yml'))
 PY
 }
 
@@ -200,8 +255,9 @@ ensure_server_config() {
   log "Generating $target from $example"
   require_cmd python3
 
-  python3 - <<PY
+  BASE_PATH="$BASE_PATH" python3 - <<'PY'
 import json, secrets
+import os
 from pathlib import Path
 
 example = Path('server/config.example.json')
@@ -209,7 +265,7 @@ target = Path('server/config.json')
 
 cfg = json.loads(example.read_text(encoding='utf-8'))
 
-cfg['basePath'] = "${BASE_PATH}"
+cfg['basePath'] = os.environ.get('BASE_PATH', '')
 
 # Generate fresh secrets every time we (re)create config
 cfg['jwtSecret'] = secrets.token_urlsafe(48)
@@ -248,6 +304,24 @@ main() {
   log "Mode: $MODE"
   if [[ "$MODE" == "prod" ]]; then
     log "Base path: $BASE_PATH"
+  fi
+
+  # If not running from project root, clone repo
+  if [[ ! -f "docker-compose.prod.yml" ]]; then
+    if [[ -d "$PROJECT_DIR" ]]; then
+      log "Project root not found in current folder; using existing ./$PROJECT_DIR"
+      cd "$PROJECT_DIR"
+    else
+      log "Project directory not found. Installing git and cloning repo."
+      if ! command -v git >/dev/null 2>&1; then
+        log "Installing git..."
+        sudo_if_needed apt-get update -y
+        sudo_if_needed apt-get install -y git
+      fi
+      git clone "$DEFAULT_GIT_URL" "$PROJECT_DIR"
+      cd "$PROJECT_DIR"
+      log "Repo cloned. Continuing bootstrap in $PROJECT_DIR."
+    fi
   fi
 
   ensure_docker

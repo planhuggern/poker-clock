@@ -1,20 +1,47 @@
 http:
+  middlewares:
+    client-strip-pokerklokke:
+      stripPrefix:
+        prefixes:
+          - "/pokerklokke"
+
+    root-to-landing:
+      replacePath:
+        path: "/landing.html"
+
+    client-spa:
+      errors:
+        status:
+          - "404"
+        service: client-svc
+        query: "/index.html"
+
   routers:
     server:
-      rule: "PathPrefix(`/auth`) || PathPrefix(`/socket.io`)"
+      rule: "PathPrefix(`/pokerklokke/auth`) || PathPrefix(`/pokerklokke/socket.io`)"
       entryPoints:
         - web
       service: server-svc
       priority: 100
 
     client:
-      rule: "PathPrefix(`/`)"
+      rule: "PathPrefix(`/pokerklokke`)"
       entryPoints:
         - web
       service: client-svc
       middlewares:
+        - client-strip-pokerklokke
         - client-spa
       priority: 1
+
+    root:
+      rule: "Path(`/`)"
+      entryPoints:
+        - web
+      service: client-svc
+      middlewares:
+        - root-to-landing
+      priority: 200
 
   services:
     server-svc:
@@ -26,11 +53,3 @@ http:
       loadBalancer:
         servers:
           - url: "http://client:80"
-
-  middlewares:
-    client-spa:
-      errors:
-        status:
-          - "404"
-        service: client-svc
-        query: "/index.html"

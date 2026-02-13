@@ -15,6 +15,8 @@ export function setupPassport(app, config) {
   const configured = config.google?.callbackURL;
   let callbackURL = configured;
 
+  const googleEnabled = !!(config.google?.clientID && config.google?.clientSecret && callbackURL);
+
   // Hvis man bruker path-basert routing (f.eks. /poker-clock) men callbackURL mangler basePath,
   // så legg den til automatisk.
   if (callbackURL && basePath) {
@@ -32,25 +34,28 @@ export function setupPassport(app, config) {
   passport.serializeUser((user, done) => done(null, user));
   passport.deserializeUser((obj, done) => done(null, obj));
 
-  passport.use(new GoogleStrategy(
-    {
-      clientID: config.google.clientID,
-      clientSecret: config.google.clientSecret,
-      callbackURL
-    },
-    (accessToken, refreshToken, profile, done) => {
-      const email = profile.emails?.[0]?.value ?? null;
-      return done(null, {
-        provider: "google",
-        email,
-        name: profile.displayName ?? email ?? "Unknown"
-      });
-    }
-  ));
+  if (googleEnabled) {
+    passport.use(new GoogleStrategy(
+      {
+        clientID: config.google.clientID,
+        clientSecret: config.google.clientSecret,
+        callbackURL
+      },
+      (accessToken, refreshToken, profile, done) => {
+        const email = profile.emails?.[0]?.value ?? null;
+        return done(null, {
+          provider: "google",
+          email,
+          name: profile.displayName ?? email ?? "Unknown"
+        });
+      }
+    ));
+  }
 
   app.use(passport.initialize());
   // ❌ IKKE app.use(passport.session());
 
+  app.locals.googleAuthEnabled = googleEnabled;
   return passport;
 }
 

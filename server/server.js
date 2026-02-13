@@ -49,6 +49,8 @@ app.use(express.json());
 
 setupPassport(app, config);             // ✅ passport etter session
 
+const googleAuthEnabled = !!app.locals.googleAuthEnabled;
+
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
   path: socketPath,
@@ -156,23 +158,43 @@ function clientRedirectBase() {
   return `${clientBase()}${BASE_PATH}`;
 }
 
-app.get(withBase("/auth/google"),
-  passport.authenticate("google", {
+// Dev-only: quick auth without external OAuth.
+// Use: /auth/dev?role=admin (only when NODE_ENV=development)
+if (process.env.NODE_ENV === "development") {
+  app.get(withBase("/auth/dev"), (req, res) => {
+    const role = String(req.query?.role ?? "viewer") === "admin" ? "admin" : "viewer";
+    const username = String(req.query?.user ?? "dev-user");
+    const token = signToken(config, { username, role });
+    const redirectUrl = `${BASE_PATH}/callback?token=${encodeURIComponent(token)}&role=${encodeURIComponent(role)}`;
+    return res.redirect(redirectUrl);
+  });
+}
+
+app.get(withBase("/auth/google"), (req, res, next) => {
+  if (!googleAuthEnabled) {
+    return res.status(501).send("Google OAuth er ikke konfigurert (mangler clientID/clientSecret).");
+  }
+  return passport.authenticate("google", {
     scope: ["profile", "email"],
     prompt: "select_account",
     session: false
-  })
-);
+  })(req, res, next);
+});
 
-app.get(withBase("/auth/google/callback"),
-  passport.authenticate("google", { failureRedirect: `${clientRedirectBase()}/?login=fail`, session: false }),
+app.get(
+  withBase("/auth/google/callback"),
+  (req, res, next) => {
+    if (!googleAuthEnabled) {
+      return res.status(501).send("Google OAuth er ikke konfigurert (mangler clientID/clientSecret).");
+    }
+    return passport.authenticate("google", { failureRedirect: `${clientRedirectBase()}/?login=fail`, session: false })(req, res, next);
+  },
   (req, res) => {
     const email = req.user?.email?.toLowerCase() ?? "";
-    const admins = (config.adminEmails ?? []).map(x => x.toLowerCase());
+    const admins = (config.adminEmails ?? []).map((x) => x.toLowerCase());
     const role = admins.includes(email) ? "admin" : "viewer";
     const token = signToken(config, { username: email || "google-user", role });
 
-    //logg
     const base = clientRedirectBase();
     const redirectUrl = `${base}/callback?token=${encodeURIComponent(token)}&role=${encodeURIComponent(role)}`;
     res.redirect(redirectUrl);
@@ -210,16 +232,14 @@ io.use((socket, next) => {
   if (!token) return next(new Error("No token"));
   try {
     const payload = verifyToken(config, token);
-    socket.user = payload; // {username, role}
-    next();
-  } catch (e) {
-    next(new Error("Invalid token"));
+    socket.user = payload;
+    return next();
+  } catch {
+    return next(new Error("Invalid token"));
   }
 });
 
 io.on("connection", (socket) => {
-  socket.emit("snapshot", publicSnapshot());
-
   socket.on("get_snapshot", () => {
     socket.emit("snapshot", publicSnapshot());
   });
@@ -334,7 +354,7 @@ io.on("connection", (socket) => {
     state.currentIndex = Math.min(state.currentIndex, tournament.levels.length - 1);
     state.elapsedInCurrentSeconds = 0;
     state.startedAtMs = state.running ? Date.now() : null;
-    scheduleSave(state);  
+    scheduleSave(state);
     io.emit("snapshot", publicSnapshot());
   });
 });

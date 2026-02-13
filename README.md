@@ -9,9 +9,15 @@ Dette repoet har en enkel bootstrap som kan settes opp på en fresh Ubuntu VPS.
 - Lokalt (dev, 2 containere, Traefik + client/server): `./bootstrap.sh --dev`
 
 Tips:
+- over før enkelt til vps: `scp bootstrap.sh espenhoh@espen.holtebu.eu:~/` så `chmod +x ~/bootstrap.sh` og `~/bootstrap.sh`
 - På Linux: `chmod +x bootstrap.sh` første gang.
 - Prod basepath kan endres: `./bootstrap.sh --prod --base-path /pokerklokke`
 - `server/config.json` blir bare generert hvis den mangler (bruk `--force-config` for å overskrive).
+
+Lokalt dev (Docker Compose):
+- Start: `docker compose -f docker-compose.yml up --build`
+- App: http://localhost:8080
+- Dev-login uten Google OAuth (kun i dev): http://localhost:8080/auth/dev?role=admin
 
 ## Dev Container (VS Code)
 
@@ -22,8 +28,12 @@ Tips:
 Bygger React til statiske filer og lar Node/Express-serveren serve dem (SPA-fallback), slik at du kan kjøre alt i én container bak Traefik.
 
 - Start: `docker compose -f docker-compose.prod.yml up --build`
-- App: http://localhost:8080
+- App: https://<ditt-domene>/pokerklokke
 - Traefik dashboard: http://localhost:8081
+
+HTTPS (Let's Encrypt):
+- Sett `TRAEFIK_ACME_EMAIL` på serveren før oppstart (f.eks. i `.env` ved siden av compose-filen), ellers får Traefik ikke hentet sertifikat.
+- Sørg for at DNS for domenet peker til VPS-en, og at port 80 og 443 er åpne i brannmur/security group.
 
 Merk:
 - Traefik-ruting for denne appen ligger i `traefik/prod/poker-clock.yml` og bruker `PathPrefix('/pokerklokke')`.

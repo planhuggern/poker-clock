@@ -7,11 +7,24 @@ services:
       - --providers.file.directory=/etc/traefik
       - --providers.file.watch=true
       - --entrypoints.web.address=:80
+      - --entrypoints.traefik.address=:8080
+      - --entrypoints.websecure.address=:443
+
+      # HTTP -> HTTPS
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+
+      # Let's Encrypt (HTTP-01)
+      - --certificatesresolvers.le.acme.email=${TRAEFIK_ACME_EMAIL}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"
       - "8081:8080" # Traefik dashboard
     volumes:
       - ./traefik/prod:/etc/traefik:ro
+      - traefik_letsencrypt:/letsencrypt
 
   app:
     build:
@@ -31,3 +44,4 @@ services:
 
 volumes:
   server_data:
+  traefik_letsencrypt:
