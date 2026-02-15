@@ -21,7 +21,7 @@ DOMAIN=""                 # e.g. example.com
 ACME_EMAIL=""             # e.g. you@example.com
 BACKEND_URL="http://127.0.0.1:8000"
 BASE_PATH="/"             # "/" or "/pokerklokke" (no trailing slash)
-TRAEFIK_VERSION="v3.1.2"  # pinned; update when needed
+TRAEFIK_VERSION="v3.6.8"  # pinned; update when needed
 
 TRAEFIK_USER="traefik"
 TRAEFIK_GROUP="traefik"
