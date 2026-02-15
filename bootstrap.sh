@@ -21,7 +21,7 @@ DOMAIN=""                 # e.g. example.com
 ACME_EMAIL=""             # e.g. you@example.com
 BACKEND_URL="http://127.0.0.1:8000"
 BASE_PATH="/"             # "/" or "/pokerklokke" (no trailing slash)
-TRAEFIK_VERSION="v3.6.8"  # pinned; update when needed
+TRAEFIK_VERSION="latest"  # 'latest' for automatisk, eller angi f.eks. v3.6.8
 
 TRAEFIK_USER="traefik"
 TRAEFIK_GROUP="traefik"
@@ -115,17 +115,30 @@ ensure_user_and_dirs() {
 }
 
 install_traefik() {
-  log "Installing Traefik ${TRAEFIK_VERSION}"
   require_cmd curl
   require_cmd tar
-
   local arch
   arch="$(detect_arch)"
   local tmp
   tmp="$(mktemp -d)"
 
-  local name="traefik_${TRAEFIK_VERSION#v}_linux_${arch}.tar.gz"
-  local url="https://github.com/traefik/traefik/releases/download/${TRAEFIK_VERSION}/${name}"
+  local version="$TRAEFIK_VERSION"
+  if [[ "$version" == "" || "$version" == "latest" ]]; then
+    log "Henter siste Traefik-versjon fra GitHub..."
+    version="v$(curl -fsSL https://api.github.com/repos/traefik/traefik/releases/latest | grep '"tag_name"' | head -1 | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/^v//')"
+    log "Siste versjon er $version"
+  fi
+
+  log "Installing Traefik ${version}"
+
+  # Finn riktig filnavn for v2 og v3
+  local name
+  if [[ "$version" =~ ^v3 ]]; then
+    name="traefik_${version#v}_linux-${arch}.tar.gz"
+  else
+    name="traefik_${version#v}_linux_${arch}.tar.gz"
+  fi
+  local url="https://github.com/traefik/traefik/releases/download/${version}/${name}"
 
   curl -fsSL "$url" -o "$tmp/$name"
   tar -xzf "$tmp/$name" -C "$tmp"
