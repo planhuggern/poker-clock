@@ -5,7 +5,7 @@ set -euo pipefail
 #
 # Første steg: klon eller oppdater dette repoet fra GitHub (HTTPS)
 
-GIT_REPO="https://github.com/asbjornholte/poker-clock.git"  # Sett til riktig repo-URL
+GIT_REPO="https://github.com/planhuggern/poker-clock.git"  # Sett til riktig repo-URL
 REPO_DIR="$HOME/poker-clock"
 #
 # What it does:
