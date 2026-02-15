@@ -139,7 +139,7 @@ install_traefik() {
     name="traefik_${version#v}_linux_${arch}.tar.gz"
   fi
   local url="https://github.com/traefik/traefik/releases/download/${version}/${name}"
-
+  log "Henter Traefik fra $url..."
   curl -fsSL "$url" -o "$tmp/$name"
   tar -xzf "$tmp/$name" -C "$tmp"
   install -m 0755 "$tmp/traefik" /usr/local/bin/traefik
