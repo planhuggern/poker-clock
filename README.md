@@ -1,11 +1,58 @@
 # poker-clock
 enkel pokerklokke
 
+## SSH keys (valgfritt)
+
+Eksempel (Windows):
+- `powershell -ExecutionPolicy Bypass -File .\scripts\setup-ssh-keys.ps1 -Comment "you@example.com"`
+
+Eksempel (Linux/macOS):
+- `./scripts/setup-ssh-keys.sh --comment you@example.com`
+
+
+Hvis du trenger å generere SSH-nøkkel, ligger det scripts her:
+
+- Windows (PowerShell): `./scripts/setup-ssh-keys.ps1`
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File setup-ssh-keys.ps1 -Comment "espenhoh@espen.holtebu.eu" -ConfigHost poker-vps -ConfigUser espenhoh -ConfigHostName espen.holtebu.eu
+
+Get-Content $env:USERPROFILE\.ssh\id_ed25519_poker_clock.pub | ssh espenhoh@espen.holtebu.eu "mkdir -p ~/.ssh; chmod 700 ~/.ssh; cat >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys"
+```
+
+## Deaktivere passwordpålogging og root:
+Lag en fil som kommer FØR 50-cloud-init.conf:
+`sudo nano /etc/ssh/sshd_config.d/00-disable-password.conf`
+
+Med
+```
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+```
+
+Til slutt:
+```
+sudo sshd -t
+sudo systemctl restart ssh
+```
+
+## Sette opp firewall:
+```
+sudo apt update && sudo apt install ufw
+sudo ufw allow 22
+sudo ufw allow 80
+sudo ufw allow 443
+sudo ufw enable
+sudo ufw status
+```
+
+
 ## Bootstrap (fra scratch)
 
 Dette repoet har en enkel bootstrap som kan settes opp på en fresh Ubuntu VPS.
 
 - VPS (prod, én container, Traefik + app): `./bootstrap.sh --prod`
+- VPS (prod, HTTPS): `./bootstrap.sh --prod --domain <ditt-domene> --acme-email <din-epost>`
 - Lokalt (dev, 2 containere, Traefik + client/server): `./bootstrap.sh --dev`
 
 Tips:
@@ -17,7 +64,7 @@ Tips:
 Lokalt dev (Docker Compose):
 - Start: `docker compose -f docker-compose.yml up --build`
 - App: http://localhost:8080
-- Dev-login uten Google OAuth (kun i dev): http://localhost:8080/auth/dev?role=admin
+- Dev-login uten Google OAuth (kun i dev): http://localhost:8080/pokerklokke/auth/dev?role=admin
 
 ## Dev Container (VS Code)
 
@@ -33,6 +80,7 @@ Bygger React til statiske filer og lar Node/Express-serveren serve dem (SPA-fall
 
 HTTPS (Let's Encrypt):
 - Sett `TRAEFIK_ACME_EMAIL` på serveren før oppstart (f.eks. i `.env` ved siden av compose-filen), ellers får Traefik ikke hentet sertifikat.
+- Alternativt: bruk bootstrap: `./bootstrap.sh --prod --domain <ditt-domene> --acme-email <din-epost>` (skriver `.env` automatisk og syncer Google callback/origins).
 - Sørg for at DNS for domenet peker til VPS-en, og at port 80 og 443 er åpne i brannmur/security group.
 
 Merk:

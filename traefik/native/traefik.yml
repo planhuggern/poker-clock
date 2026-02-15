@@ -1,0 +1,26 @@
+# Minimal Traefik static config (native / non-Docker)
+# Intended location: /etc/traefik/traefik.yml
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "you@example.com"
+      storage: "/var/lib/traefik/acme.json"
+      httpChallenge:
+        entryPoint: web
+
+log:
+  level: INFO
+
+accessLog: {}

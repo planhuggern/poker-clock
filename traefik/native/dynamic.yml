@@ -1,0 +1,30 @@
+# Minimal Traefik dynamic config (native / non-Docker)
+# Intended location: /etc/traefik/dynamic/dynamic.yml
+
+http:
+  routers:
+    app:
+      # Base path '/' means "everything". For sub-path hosting, set PathPrefix(`/subpath`).
+      rule: "Host(`example.com`) && PathPrefix(`/`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      service: backend
+
+  services:
+    backend:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8000"
+
+# If hosting under a base path (e.g. /pokerklokke), you usually want:
+# - rule: "Host(`example.com`) && PathPrefix(`/pokerklokke`)"
+# - middlewares: [strip-basepath]
+# - middleware below:
+#
+#  middlewares:
+#    strip-basepath:
+#      stripPrefix:
+#        prefixes:
+#          - "/pokerklokke"
