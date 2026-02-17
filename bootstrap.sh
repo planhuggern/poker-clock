@@ -131,13 +131,9 @@ install_traefik() {
 
   log "Installing Traefik ${version}"
 
-  # Finn riktig filnavn for v2 og v3
+  # Finn riktig filnavn for v2 og v3 (både v2 og v3 bruker understrek)
   local name
-  if [[ "$version" =~ ^v3 ]]; then
-    name="traefik_${version#v}_linux-${arch}.tar.gz"
-  else
-    name="traefik_${version#v}_linux_${arch}.tar.gz"
-  fi
+  name="traefik_${version#v}_linux_${arch}.tar.gz"
   local url="https://github.com/traefik/traefik/releases/download/${version}/${name}"
   
   log "Henter Traefik fra $url..."
