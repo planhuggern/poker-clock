@@ -177,6 +177,10 @@ entryPoints:
   traefik:
     address: ":8080"
 
+api:
+  dashboard: true
+  insecure: true  # Kun for testing! Ikke bruk i produksjon uten autentisering.
+
 providers:
   file:
     directory: "/etc/traefik/dynamic"
