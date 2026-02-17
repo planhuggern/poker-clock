@@ -80,8 +80,8 @@ parse_args() {
   DOMAIN="${DOMAIN#http://}"
   DOMAIN="${DOMAIN#https://}"
   DOMAIN="${DOMAIN%%/*}"
-  [[ -n "$DOMAIN" ]] || die "--domain is required"
-  [[ -n "$ACME_EMAIL" ]] || die "--email is required"
+  [[ -n "$DOMAIN" ]] || die "--domain is required (set via --domain or ~/.env)"
+  [[ -n "$ACME_EMAIL" ]] || die "--email is required (set via --email or ~/.env)"
 
   [[ "$BASE_PATH" == /* ]] || die "--base-path must start with /"
   [[ "$BASE_PATH" != */ ]] || BASE_PATH="${BASE_PATH%/}"
@@ -256,6 +256,17 @@ EOF
   systemctl enable --now traefik
 }
 
+load_env_vars() {
+  local env_file="$HOME/.env"
+  if [[ -f "$env_file" ]]; then
+    # shellcheck disable=SC1090
+    source "$env_file"
+    if [[ -z "$DOMAIN" && -n "$domain" ]]; then DOMAIN="$domain"; fi
+    if [[ -z "$ACME_EMAIL" && -n "$email" ]]; then ACME_EMAIL="$email"; fi
+    if [[ -z "$DOMAIN" && -n "$DOMAIN" ]]; then DOMAIN="$DOMAIN"; fi
+    if [[ -z "$ACME_EMAIL" && -n "$ACME_EMAIL" ]]; then ACME_EMAIL="$ACME_EMAIL"; fi
+  fi
+}
 
 main() {
   # Klon eller oppdater repoet først
@@ -269,6 +280,7 @@ main() {
   fi
 
   parse_args "$@"
+  load_env_vars
 
   is_linux || die "This script is for Linux (Ubuntu/Debian)"
   is_root || die "Run as root (use sudo)"
@@ -285,4 +297,4 @@ main() {
   sudo netstat -tuln
 }
 
-main "$@"
+
