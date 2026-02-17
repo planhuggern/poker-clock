@@ -139,9 +139,12 @@ install_traefik() {
   if [[ -x /usr/local/bin/traefik ]]; then
     log "Traefik er allerede installert. Sjekker versjon..."
     local current_version
-    current_version="$(/usr/local/bin/traefik version 2>/dev/null | grep -i version | head -1 | awk '{print $2}' | sed 's/^v//')"
+    current_version="$(/usr/local/bin/traefik version --format '{{ .Version }}' 2>/dev/null | sed 's/^v//')"
+    if [[ -z "$current_version" ]]; then
+      current_version="$(/usr/local/bin/traefik version 2>/dev/null | grep -i version | head -1 | awk '{print $2}' | sed 's/^v//')"
+    fi
     log "Nåværende versjon: $current_version"
-    if [[ "$current_version" == "${version#v}" ]]; then
+    if [[ -n "$current_version" && "$current_version" == "${version#v}" ]]; then
       log "Traefik ${version} er allerede installert. Hopper over nedlasting."
       rm -rf "$tmp"
       return
@@ -152,7 +155,7 @@ install_traefik() {
 
   # Finn riktig filnavn for v2 og v3 (både v2 og v3 bruker understrek)
   local name
-  name="traefik_${version}_linux_${arch}.tar.gz"
+  name="traefik_${version#v}_linux_${arch}.tar.gz"
   local url="https://github.com/traefik/traefik/releases/download/${version}/${name}"
 
   log "Henter Traefik fra $url..."
@@ -160,6 +163,17 @@ install_traefik() {
   curl -fsSL "$url" -o "$tmp/$name"
   tar -xzf "$tmp/$name" -C "$tmp"
   install -m 0755 "$tmp/traefik" /usr/local/bin/traefik
+
+  # La Traefik (som ikke-root) binde til port 80/443
+  if ! command -v setcap >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+      log "Installerer libcap2-bin (setcap)"
+      apt-get update -y
+      apt-get install -y libcap2-bin
+    fi
+  fi
+  command -v setcap >/dev/null 2>&1 || die "Missing command: setcap (install libcap2-bin)"
+  setcap 'cap_net_bind_service=+ep' /usr/local/bin/traefik
 
   rm -rf "$tmp"
 }
