@@ -156,7 +156,8 @@ install_traefik() {
     local current_version
     current_version="$(/usr/local/bin/traefik version --format '{{ .Version }}' 2>/dev/null | sed 's/^v//')"
     if [[ -z "$current_version" ]]; then
-      current_version="$(/usr/local/bin/traefik version 2>/dev/null | grep -i version | head -1 | awk '{print $2}' | sed 's/^v//')"
+      # Fallback: parse "Version:"-linjen
+      current_version="$(/usr/local/bin/traefik version 2>/dev/null | sed -nE 's/^Version:[[:space:]]*v?([^[:space:]]+).*/\1/p' | head -1)"
     fi
     log "Nåværende versjon: $current_version"
     if [[ -n "$current_version" && "$current_version" == "${version#v}" ]]; then
