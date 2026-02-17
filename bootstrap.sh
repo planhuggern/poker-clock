@@ -136,10 +136,10 @@ install_traefik() {
   fi
 
   # Sjekk om riktig versjon allerede er installert
-  if command -v traefik >/dev/null 2>&1; then
+  if [[ -x /usr/local/bin/traefik ]]; then
     log "Traefik er allerede installert. Sjekker versjon..."
     local current_version
-    current_version="$(traefik version --format '{{ .Version }}' 2>/dev/null | sed 's/^v//')"
+    current_version="$(/usr/local/bin/traefik version 2>/dev/null | grep -i version | head -1 | awk '{print $2}' | sed 's/^v//')"
     log "Nåværende versjon: $current_version"
     if [[ "$current_version" == "${version#v}" ]]; then
       log "Traefik ${version} er allerede installert. Hopper over nedlasting."
