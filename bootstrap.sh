@@ -120,6 +120,21 @@ ensure_user_and_dirs() {
   install -d -m 0750 -o "$TRAEFIK_USER" -g "$TRAEFIK_GROUP" /var/log/traefik
 }
 
+ensure_traefik_bind_caps() {
+  [[ -x /usr/local/bin/traefik ]] || return 0
+
+  # La Traefik (som ikke-root) binde til port 80/443
+  if ! command -v setcap >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+      log "Installerer libcap2-bin (setcap)"
+      apt-get update -y
+      apt-get install -y libcap2-bin
+    fi
+  fi
+  command -v setcap >/dev/null 2>&1 || die "Missing command: setcap (install libcap2-bin)"
+  setcap 'cap_net_bind_service=+ep' /usr/local/bin/traefik
+}
+
 install_traefik() {
   require_cmd curl
   require_cmd tar
@@ -146,6 +161,7 @@ install_traefik() {
     log "Nåværende versjon: $current_version"
     if [[ -n "$current_version" && "$current_version" == "${version#v}" ]]; then
       log "Traefik ${version} er allerede installert. Hopper over nedlasting."
+      ensure_traefik_bind_caps
       rm -rf "$tmp"
       return
     fi
@@ -164,16 +180,7 @@ install_traefik() {
   tar -xzf "$tmp/$name" -C "$tmp"
   install -m 0755 "$tmp/traefik" /usr/local/bin/traefik
 
-  # La Traefik (som ikke-root) binde til port 80/443
-  if ! command -v setcap >/dev/null 2>&1; then
-    if command -v apt-get >/dev/null 2>&1; then
-      log "Installerer libcap2-bin (setcap)"
-      apt-get update -y
-      apt-get install -y libcap2-bin
-    fi
-  fi
-  command -v setcap >/dev/null 2>&1 || die "Missing command: setcap (install libcap2-bin)"
-  setcap 'cap_net_bind_service=+ep' /usr/local/bin/traefik
+  ensure_traefik_bind_caps
 
   rm -rf "$tmp"
 }
