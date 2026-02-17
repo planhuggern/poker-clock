@@ -154,7 +154,7 @@ install_traefik() {
   if [[ -x /usr/local/bin/traefik ]]; then
     log "Traefik er allerede installert. Sjekker versjon..."
     local current_version
-    current_version="$(/usr/local/bin/traefik version --format '{{ .Version }}' 2>/dev/null | sed 's/^v//')"
+    current_version="$(/usr/local/bin/traefik version | grep Version: | sed -E 's/Version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
     if [[ -z "$current_version" ]]; then
       # Fallback: parse "Version:"-linjen
       current_version="$(/usr/local/bin/traefik version 2>/dev/null | sed -nE 's/^Version:[[:space:]]*v?([^[:space:]]+).*/\1/p' | head -1)"
@@ -286,10 +286,11 @@ Wants=network-online.target
 Type=simple
 User=traefik
 Group=traefik
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 ExecStart=/usr/local/bin/traefik --configFile=/etc/traefik/traefik.yml
 Restart=on-failure
 RestartSec=2
-NoNewPrivileges=true
 
 [Install]
 WantedBy=multi-user.target
