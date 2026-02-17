@@ -257,7 +257,14 @@ EOF
 }
 
 load_env_vars() {
-  local env_file="$HOME/.env"
+  # Finn hjemmemappen til brukeren som startet sudo, ellers bruk $HOME
+  local user_home
+  if [[ -n "$SUDO_USER" && "$SUDO_USER" != "root" ]]; then
+    user_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+  else
+    user_home="$HOME"
+  fi
+  local env_file="$user_home/.env"
   if [[ -f "$env_file" ]]; then
     # shellcheck disable=SC1090
     source "$env_file"
