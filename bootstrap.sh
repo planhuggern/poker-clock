@@ -6,7 +6,13 @@ set -euo pipefail
 # Første steg: klon eller oppdater dette repoet fra GitHub (HTTPS)
 
 GIT_REPO="https://github.com/planhuggern/poker-clock.git"  # Sett til riktig repo-URL
-REPO_DIR="$HOME/poker-clock"
+# Bruk hjemmemappen til brukeren som startet sudo, ikke root
+if [[ -n "${SUDO_USER:-}" && "$SUDO_USER" != "root" ]]; then
+  REAL_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+else
+  REAL_HOME="$HOME"
+fi
+REPO_DIR="$REAL_HOME/poker-clock"
 #
 # What it does:
 # - Installs Traefik binary (from GitHub releases)
@@ -129,14 +135,24 @@ install_traefik() {
     log "Siste versjon er $version"
   fi
 
-  log "Installing Traefik ${version}"
+  # Sjekk om riktig versjon allerede er installert
+  if command -v traefik >/dev/null 2>&1; then
+    local current_version
+    current_version="$(traefik version --format '{{ .Version }}' 2>/dev/null | sed 's/^v//')"
+    if [[ "$current_version" == "${version#v}" ]]; then
+      log "Traefik ${version} er allerede installert. Hopper over nedlasting."
+      rm -rf "$tmp"
+      return
+    fi
+  fi
+
+  log "Installerer Traefik ${version}"
 
   # Finn riktig filnavn for v2 og v3 (både v2 og v3 bruker understrek)
   local name
   name="traefik_${version}_linux_${arch}.tar.gz"
   local url="https://github.com/traefik/traefik/releases/download/${version}/${name}"
-  
-  
+
   log "Henter Traefik fra $url..."
 
   curl -fsSL "$url" -o "$tmp/$name"
@@ -156,6 +172,8 @@ entryPoints:
     address: ":80"
   websecure:
     address: ":443"
+  traefik:
+    address: ":8080"
 
 providers:
   file:
@@ -254,14 +272,7 @@ EOF
 }
 
 load_env_vars() {
-  # Finn hjemmemappen til brukeren som startet sudo, ellers bruk $HOME
-  local user_home
-  if [[ -n "$SUDO_USER" && "$SUDO_USER" != "root" ]]; then
-    user_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
-  else
-    user_home="$HOME"
-  fi
-  local env_file="$user_home/.env"
+  local env_file="$REAL_HOME/.env"
   if [[ -f "$env_file" ]]; then
     # shellcheck disable=SC1090
     source "$env_file"
@@ -279,7 +290,8 @@ main() {
     log "Kloner repoet fra $GIT_REPO til $REPO_DIR"
     git clone "$GIT_REPO" "$REPO_DIR"
   else
-    log "Oppdaterer repoet i $REPO_DIR (git pull)"
+    log "Oppdaterer repoet i $REPO_DIR (git reset --hard + pull)"
+    git -C "$REPO_DIR" reset --hard HEAD
     git -C "$REPO_DIR" pull --ff-only
   fi
 
