@@ -279,8 +279,8 @@ main() {
     git -C "$REPO_DIR" pull --ff-only
   fi
 
-  parse_args "$@"
   load_env_vars
+  parse_args "$@"
 
   is_linux || die "This script is for Linux (Ubuntu/Debian)"
   is_root || die "Run as root (use sudo)"
