@@ -284,6 +284,7 @@ User=traefik
 Group=traefik
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
 ExecStart=/usr/local/bin/traefik --configFile=/etc/traefik/traefik.yml
 Restart=on-failure
 RestartSec=2

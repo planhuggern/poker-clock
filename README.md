@@ -47,6 +47,18 @@ sudo ufw status
 ```
 
 
+## Traefik dashboard (native/bootstrap)
+
+Port 8080 er ikke eksponert i brannmuren. Bruk SSH-tunneling:
+
+```
+ssh -L 8080:localhost:8080 vps -N
+```
+
+Åpne deretter: http://localhost:8080/dashboard/
+
+> **Merk:** URL-en må ha trailing slash (`/dashboard/`), ellers gir Traefik 404.
+
 ## Bootstrap (fra scratch)
 
 Dette repoet har en enkel bootstrap som kan settes opp på en fresh Ubuntu VPS.
