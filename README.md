@@ -1,53 +1,105 @@
 # poker-clock
-enkel pokerklokke
+Enkel pokerklokke. Backend: Django + Channels (Python). Frontend: React (Vite).
 
-## SSH keys (valgfritt)
+## Serverstruktur
 
-Eksempel (Windows):
-- `powershell -ExecutionPolicy Bypass -File .\scripts\setup-ssh-keys.ps1 -Comment "you@example.com"`
-
-Eksempel (Linux/macOS):
-- `./scripts/setup-ssh-keys.sh --comment you@example.com`
-
-
-Hvis du trenger å generere SSH-nøkkel, ligger det scripts her:
-
-- Windows (PowerShell): `./scripts/setup-ssh-keys.ps1`
 ```
-powershell -NoProfile -ExecutionPolicy Bypass -File setup-ssh-keys.ps1 -Comment "espenhoh@espen.holtebu.eu" -ConfigHost poker-vps -ConfigUser espenhoh -ConfigHostName espen.holtebu.eu
+server/           ← Django-app (Python)
+  poker_clock/    ← Django-prosjekt (settings, asgi, urls)
+  clock/          ← Django-app (state, consumers, views, models)
+  manage.py
+  requirements.txt
+  config.json     ← konfig (JWT, Google OAuth, adminEmails osv.)
 
-Get-Content $env:USERPROFILE\.ssh\id_ed25519_poker_clock.pub | ssh espenhoh@espen.holtebu.eu "mkdir -p ~/.ssh; chmod 700 ~/.ssh; cat >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys"
+client-react/     ← React + Vite
 ```
 
-## Deaktivere passwordpålogging og root:
-Lag en fil som kommer FØR 50-cloud-init.conf:
-`sudo nano /etc/ssh/sshd_config.d/00-disable-password.conf`
+## Lokalt dev
 
-Med
-```
-PermitRootLogin no
-PasswordAuthentication no
-KbdInteractiveAuthentication no
-```
+```bash
+# Backend
+cd server
+pip install -r requirements.txt
+python manage.py migrate
+DEBUG=true python manage.py runserver 8000
 
-Til slutt:
-```
-sudo sshd -t
-sudo systemctl restart ssh
+# Frontend (ny terminal)
+cd client-react
+npm install
+npm run dev
 ```
 
-## Sette opp firewall:
+Dev-login uten Google OAuth: http://localhost:5173/callback?token=... via:
 ```
-sudo apt update && sudo apt install ufw
-sudo ufw allow 22
-sudo ufw allow 80
-sudo ufw allow 443
-sudo ufw enable
-sudo ufw status
+http://localhost:8000/auth/dev?role=admin
 ```
 
+WebSocket: `ws://localhost:8000/ws/clock/?token=<jwt>`
 
-## Traefik dashboard (native/bootstrap)
+## server/config.json
+
+```json
+{
+  "basePath": "/pokerklokke",
+  "jwtSecret": "...",
+  "sessionSecret": "...",
+  "clientOrigin": "http://localhost:5173",
+  "serverOrigin": "http://localhost:8000",
+  "google": {
+    "clientID": "",
+    "clientSecret": "",
+    "callbackURL": "http://localhost:8000/auth/google/callback"
+  },
+  "adminEmails": ["deg@example.com"]
+}
+```
+
+Se `server/config.example.json` for mal.
+
+## Produksjon (VPS med Traefik)
+
+### 1. Bootstrap Traefik (én gang)
+
+Kopier scriptet og kjør det på VPS-en:
+
+```bash
+scp bootstrap.sh vps:~/
+ssh vps
+sudo ./bootstrap.sh --domain espen.holtebu.eu --email espen.holtebu@gmail.com
+```
+
+Traefik kjører da som systemd-tjeneste, lytter på port 80/443, og terminerer TLS.
+
+### 2. Bygg og send opp appen
+
+```bash
+# Bygg React
+cd client-react
+npm run build          # output: dist/
+
+# Kopier dist/ til server/public/ (Django serverer static)
+cp -r dist/* ../server/public/
+
+# Kjør migrations og start Daphne
+cd ../server
+python manage.py migrate
+daphne -b 0.0.0.0 -p 8000 poker_clock.asgi:application
+```
+
+Eller via Docker:
+```bash
+docker compose -f docker-compose.prod.yml up --build
+```
+
+### Basepath
+
+Basepath kan settes via `BASE_PATH`-env eller `basePath` i `config.json`.  
+Det må matche tre steder:
+- `config.json`: `"basePath": "/pokerklokke"`
+- React build: `VITE_BASE_PATH=/pokerklokke/` (satt i Vite-config / build-arg)
+- Traefik rule: `PathPrefix('/pokerklokke')`
+
+## Traefik dashboard
 
 Port 8080 er ikke eksponert i brannmuren. Bruk SSH-tunneling:
 
@@ -61,54 +113,55 @@ Stop-Job 1; Remove-Job 1
 **Linux/macOS:**
 ```bash
 ssh -L 8080:localhost:8080 vps -N &
-# Stopp tunnelen når du er ferdig:
+# Stopp tunnelen:
 kill %1
 ```
 
-Åpne deretter: http://localhost:8080/dashboard/
+Åpne: http://localhost:8080/dashboard/
 
-> **Merk:** URL-en må ha trailing slash (`/dashboard/`), ellers gir Traefik 404.
+> URL-en må ha trailing slash (`/dashboard/`), ellers gir Traefik 404.
 
-## Bootstrap (fra scratch)
+## SSH-nøkler (valgfritt)
 
-Dette repoet har en enkel bootstrap som kan settes opp på en fresh Ubuntu VPS.
+**Windows:**
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-ssh-keys.ps1 `
+  -Comment "you@example.com" -ConfigHost vps -ConfigUser espenhoh -ConfigHostName espen.holtebu.eu
+```
 
-- VPS (prod, én container, Traefik + app): `./bootstrap.sh --prod`
-- VPS (prod, HTTPS): `./bootstrap.sh --prod --domain <ditt-domene> --acme-email <din-epost>`
-- Lokalt (dev, 2 containere, Traefik + client/server): `./bootstrap.sh --dev`
+**Linux/macOS:**
+```bash
+./scripts/setup-ssh-keys.sh --comment you@example.com
+```
 
-Tips:
-- over før enkelt til vps: `scp bootstrap.sh espenhoh@espen.holtebu.eu:~/` så `chmod +x ~/bootstrap.sh` og `~/bootstrap.sh`
-- På Linux: `chmod +x bootstrap.sh` første gang.
-- Prod basepath kan endres: `./bootstrap.sh --prod --base-path /pokerklokke`
-- `server/config.json` blir bare generert hvis den mangler (bruk `--force-config` for å overskrive).
+Kopier nøkkelen til VPS:
+```bash
+Get-Content $env:USERPROFILE\.ssh\id_ed25519_poker_clock.pub | ssh espenhoh@espen.holtebu.eu `
+  "mkdir -p ~/.ssh; chmod 700 ~/.ssh; cat >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys"
+```
 
-Lokalt dev (Docker Compose):
-- Start: `docker compose -f docker-compose.yml up --build`
-- App: http://localhost:8080
-- Dev-login uten Google OAuth (kun i dev): http://localhost:8080/pokerklokke/auth/dev?role=admin
+## Deaktiver passord-innlogging (VPS)
 
-## Dev Container (VS Code)
+```bash
+sudo nano /etc/ssh/sshd_config.d/00-disable-password.conf
+```
+```
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+```
+```bash
+sudo sshd -t && sudo systemctl restart ssh
+```
 
-Åpne repoet i VS Code → "Dev Containers: Reopen in Container". Da får du Node 20 + docker-cli i containeren (koblet til host-docker), og dependencies installeres automatisk.
+## Sett opp firewall (VPS)
 
-## Produksjon (én container)
+```bash
+sudo apt update && sudo apt install ufw
+sudo ufw allow 22
+sudo ufw allow 80
+sudo ufw allow 443
+sudo ufw enable
+sudo ufw status
+```
 
-Bygger React til statiske filer og lar Node/Express-serveren serve dem (SPA-fallback), slik at du kan kjøre alt i én container bak Traefik.
-
-- Start: `docker compose -f docker-compose.prod.yml up --build`
-- App: https://<ditt-domene>/pokerklokke
-- Traefik dashboard: http://localhost:8081
-
-HTTPS (Let's Encrypt):
-- Sett `TRAEFIK_ACME_EMAIL` på serveren før oppstart (f.eks. i `.env` ved siden av compose-filen), ellers får Traefik ikke hentet sertifikat.
-- Alternativt: bruk bootstrap: `./bootstrap.sh --prod --domain <ditt-domene> --acme-email <din-epost>` (skriver `.env` automatisk og syncer Google callback/origins).
-- Sørg for at DNS for domenet peker til VPS-en, og at port 80 og 443 er åpne i brannmur/security group.
-
-Merk:
-- Traefik-ruting for denne appen ligger i `traefik/prod/poker-clock.yml` og bruker `PathPrefix('/pokerklokke')`.
-- Basepath må matche på 3 steder:
-	- Traefik rule: `/pokerklokke`
-	- `docker-compose.prod.yml`: `BASE_PATH=/pokerklokke`
-	- build-arg til React: `VITE_BASE_PATH=/pokerklokke/`
-- `docker-compose.prod.yml` monterer `server/config.json` inn i containeren. I ekte prod bør denne leveres som secret/volume (ikke bake den inn i image).
