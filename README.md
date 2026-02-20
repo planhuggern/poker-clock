@@ -51,8 +51,18 @@ sudo ufw status
 
 Port 8080 er ikke eksponert i brannmuren. Bruk SSH-tunneling:
 
+**Windows (PowerShell):**
+```powershell
+Start-Job { ssh -L 8080:localhost:8080 vps -N }
+# Stopp tunnelen når du er ferdig:
+Stop-Job 1; Remove-Job 1
 ```
-ssh -L 8080:localhost:8080 vps -N
+
+**Linux/macOS:**
+```bash
+ssh -L 8080:localhost:8080 vps -N &
+# Stopp tunnelen når du er ferdig:
+kill %1
 ```
 
 Åpne deretter: http://localhost:8080/dashboard/
