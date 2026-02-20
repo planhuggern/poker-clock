@@ -154,11 +154,7 @@ install_traefik() {
   if [[ -x /usr/local/bin/traefik ]]; then
     log "Traefik er allerede installert. Sjekker versjon..."
     local current_version
-    current_version="$(/usr/local/bin/traefik version | grep Version: | sed -E 's/Version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
-    if [[ -z "$current_version" ]]; then
-      # Fallback: parse "Version:"-linjen
-      current_version="$(/usr/local/bin/traefik version 2>/dev/null | sed -nE 's/^Version:[[:space:]]*v?([^[:space:]]+).*/\1/p' | head -1)"
-    fi
+    current_version="$(/usr/local/bin/traefik version 2>/dev/null | awk '/^Version:/{print $2}' | head -1)"
     log "Nåværende versjon: $current_version"
     if [[ -n "$current_version" && "$current_version" == "${version#v}" ]]; then
       log "Traefik ${version} er allerede installert. Hopper over nedlasting."
@@ -298,6 +294,10 @@ EOF
 
   systemctl daemon-reload
   systemctl enable --now traefik
+  sleep 2
+  systemctl is-active --quiet traefik \
+    && log "Traefik service: active" \
+    || { log "ADVARSEL: Traefik service er IKKE aktiv. Sjekk: systemctl status traefik"; systemctl status traefik --no-pager || true; }
 }
 
 load_env_vars() {
@@ -339,7 +339,8 @@ main() {
 
   log "Done. Traefik is running."
   log "Router: https://${DOMAIN}${BASE_PATH} -> ${BACKEND_URL}"
-  sudo netstat -tuln
+  sleep 1
+  netstat -tuln
 }
 
 
