@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Minimal native (non-Docker) Traefik bootstrap for Ubuntu/Debian.
+# Minimal native (non-Docker) Traefik + Django bootstrap for Ubuntu/Debian.
 #
 # Første steg: klon eller oppdater dette repoet fra GitHub (HTTPS)
 
@@ -31,6 +31,8 @@ TRAEFIK_VERSION="latest"  # 'latest' for automatisk, eller angi f.eks. v3.6.8
 
 TRAEFIK_USER="traefik"
 TRAEFIK_GROUP="traefik"
+
+APP_USER=""   # settes automatisk til SUDO_USER
 
 usage() {
   cat <<'EOF'
@@ -313,16 +315,113 @@ load_env_vars() {
   fi
 }
 
+setup_django() {
+  local server_dir="$REPO_DIR/server"
+  local venv_dir="$server_dir/.venv"
+
+  log "Setter opp Python venv i $venv_dir"
+
+  # Sørg for at data-mappen finnes (SQLite)
+  install -d -m 0750 -o "$APP_USER" "$server_dir/data"
+
+  # Sørg for at python3, venv og pip er tilgjengelig
+  if command -v apt-get >/dev/null 2>&1; then
+    apt-get update -y -q
+    apt-get install -y -q python3 python3-venv python3-pip
+  elif ! command -v python3 >/dev/null 2>&1; then
+    die "python3 ikke funnet og apt-get ikke tilgjengelig"
+  fi
+
+  # Lag venv hvis den ikke finnes
+  if [[ ! -x "$venv_dir/bin/python" ]]; then
+    sudo -u "$APP_USER" python3 -m venv "$venv_dir"
+  fi
+
+  log "Installerer Python-avhengigheter"
+  sudo -u "$APP_USER" "$venv_dir/bin/pip" install --quiet --upgrade pip
+  sudo -u "$APP_USER" "$venv_dir/bin/pip" install --quiet -r "$server_dir/requirements.txt"
+
+  log "Kjører Django-migrasjoner"
+  sudo -u "$APP_USER" \
+    BASE_PATH="$BASE_PATH" \
+    SQLITE_FILE="$server_dir/data/pokerclock.sqlite" \
+    "$venv_dir/bin/python" "$server_dir/manage.py" migrate --run-syncdb
+
+  # Sørg for at Node.js / npm er installert
+  if ! command -v npm >/dev/null 2>&1; then
+    log "Installerer Node.js (LTS) via NodeSource..."
+    apt-get update -y
+    apt-get install -y ca-certificates curl gnupg
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+    apt-get install -y nodejs
+  else
+    log "Node $(node --version) / npm $(npm --version) allerede installert"
+  fi
+
+  # Bygg React
+  local client_dir="$REPO_DIR/client-react"
+  local public_dir="$server_dir/public"
+  log "Bygger React-klienten"
+  sudo -u "$APP_USER" bash -c "cd '$client_dir' && npm install --silent && npm run build --silent"
+  install -d -m 0755 "$public_dir"
+  cp -r "$client_dir/dist/." "$public_dir/"
+  log "React-build kopiert til $public_dir"
+}
+
+write_django_systemd_unit() {
+  local server_dir="$REPO_DIR/server"
+  local venv_dir="$server_dir/.venv"
+
+  log "Skriver systemd-unit for poker-clock (Daphne)"
+
+  cat > /etc/systemd/system/poker-clock.service <<EOF
+[Unit]
+Description=Poker Clock (Django/Daphne)
+After=network.target
+
+[Service]
+Type=simple
+User=${APP_USER}
+WorkingDirectory=${server_dir}
+Environment="BASE_PATH=${BASE_PATH}"
+Environment="SQLITE_FILE=${server_dir}/data/pokerclock.sqlite"
+Environment="DJANGO_SETTINGS_MODULE=poker_clock.settings"
+ExecStart=${venv_dir}/bin/daphne -b 127.0.0.1 -p 8000 poker_clock.asgi:application
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  systemctl daemon-reload
+  systemctl enable poker-clock
+  systemctl restart poker-clock
+  sleep 2
+  systemctl is-active --quiet poker-clock \
+    && log "poker-clock service: active" \
+    || { log "ADVARSEL: poker-clock er IKKE aktiv. Sjekk: systemctl status poker-clock"; systemctl status poker-clock --no-pager || true; }
+}
+
 main() {
+  # Bestem app-bruker (den som kjørte sudo) – trengs tidlig for chown
+  if [[ -n "${SUDO_USER:-}" && "$SUDO_USER" != "root" ]]; then
+    APP_USER="$SUDO_USER"
+  else
+    APP_USER="$(logname 2>/dev/null || echo root)"
+  fi
+
   # Klon eller oppdater repoet først
   require_cmd git
   if [ ! -d "$REPO_DIR/.git" ]; then
     log "Kloner repoet fra $GIT_REPO til $REPO_DIR"
-    git clone "$GIT_REPO" "$REPO_DIR"
+    sudo -u "$APP_USER" git clone "$GIT_REPO" "$REPO_DIR"
   else
     log "Oppdaterer repoet i $REPO_DIR (git reset --hard + pull)"
-    git -C "$REPO_DIR" reset --hard HEAD
-    git -C "$REPO_DIR" pull --ff-only
+    # Sørg for at eierskap er riktig før git-operasjoner
+    chown -R "$APP_USER":"$APP_USER" "$REPO_DIR"
+    sudo -u "$APP_USER" git -C "$REPO_DIR" reset --hard HEAD
+    sudo -u "$APP_USER" git -C "$REPO_DIR" pull --ff-only
   fi
 
   load_env_vars
@@ -337,9 +436,13 @@ main() {
   install_traefik
   write_configs
   write_systemd_unit
+  setup_django
+  write_django_systemd_unit
 
-  log "Done. Traefik is running."
-  log "Router: https://${DOMAIN}${BASE_PATH} -> ${BACKEND_URL}"
+  log "Ferdig."
+  log "  Traefik:     https://${DOMAIN}${BASE_PATH}"
+  log "  Django app:  http://127.0.0.1:8000  (via Traefik -> HTTPS)"
+  log "  Logg:        journalctl -u poker-clock -f"
   sleep 1
   netstat -tuln
 }
