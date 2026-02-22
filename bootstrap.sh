@@ -332,8 +332,9 @@ setup_django() {
     die "python3 ikke funnet og apt-get ikke tilgjengelig"
   fi
 
-  # Lag venv hvis den ikke finnes
-  if [[ ! -x "$venv_dir/bin/python" ]]; then
+  # Lag venv hvis den ikke finnes, eller re-lag hvis pip mangler (kan skje etter feilet første kjøring)
+  if [[ ! -x "$venv_dir/bin/python" ]] || [[ ! -x "$venv_dir/bin/pip" ]]; then
+    rm -rf "$venv_dir"
     sudo -u "$APP_USER" python3 -m venv "$venv_dir"
   fi
 
