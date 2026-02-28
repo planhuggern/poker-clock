@@ -116,6 +116,11 @@ export function usePokerSocket(token) {
       prev: () => send("admin_prev"),
       jump: (index) => send("admin_jump", { index }),
       updateTournament: (tournament) => send("admin_update_tournament", { tournament }),
+      addTime: (seconds) => send("admin_add_time", { seconds }),
+      setPlayers: (patch) => send("admin_set_players", patch),
+      rebuy: () => send("admin_rebuy"),
+      addOn: () => send("admin_add_on"),
+      bustout: () => send("admin_bustout"),
     };
   }, []);
 

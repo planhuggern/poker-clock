@@ -21,18 +21,43 @@ def _default_tournament() -> dict:
     return {
         "name": "Pokerturnering",
         "defaultLevelSeconds": m,
+        "buyIn": 200,
+        "rebuyAmount": 200,
+        "addOnAmount": 200,
+        "startingStack": 10000,
         "levels": [
-            {"type": "level", "title": "Level 1", "sb": 50,  "bb": 100, "ante": 0,  "seconds": m},
-            {"type": "level", "title": "Level 2", "sb": 75,  "bb": 150, "ante": 0,  "seconds": m},
-            {"type": "break", "title": "Pause",                                       "seconds": 5 * 60},
-            {"type": "level", "title": "Level 3", "sb": 100, "bb": 200, "ante": 25, "seconds": m},
+            {"type": "level", "title": "Level 1",  "sb": 25,  "bb": 50,  "ante": 0,   "seconds": m},
+            {"type": "level", "title": "Level 2",  "sb": 50,  "bb": 100, "ante": 0,   "seconds": m},
+            {"type": "level", "title": "Level 3",  "sb": 75,  "bb": 150, "ante": 0,   "seconds": m},
+            {"type": "break", "title": "Pause",                                         "seconds": 10 * 60},
+            {"type": "level", "title": "Level 4",  "sb": 100, "bb": 200, "ante": 25,  "seconds": m},
+            {"type": "level", "title": "Level 5",  "sb": 150, "bb": 300, "ante": 25,  "seconds": m},
+            {"type": "level", "title": "Level 6",  "sb": 200, "bb": 400, "ante": 50,  "seconds": m},
+            {"type": "break", "title": "Pause",                                         "seconds": 10 * 60},
+            {"type": "level", "title": "Level 7",  "sb": 300, "bb": 600, "ante": 75,  "seconds": m},
+            {"type": "level", "title": "Level 8",  "sb": 400, "bb": 800, "ante": 100, "seconds": m},
+            {"type": "level", "title": "Level 9",  "sb": 500, "bb": 1000,"ante": 100, "seconds": m},
+            {"type": "break", "title": "Pause",                                         "seconds": 10 * 60},
+            {"type": "level", "title": "Level 10", "sb": 600, "bb": 1200,"ante": 200, "seconds": m},
+            {"type": "level", "title": "Level 11", "sb": 800, "bb": 1600,"ante": 200, "seconds": m},
+            {"type": "level", "title": "Level 12", "sb": 1000,"bb": 2000,"ante": 300, "seconds": m},
         ],
+    }
+
+
+def _default_players() -> dict:
+    return {
+        "registered": 0,
+        "busted": 0,
+        "rebuyCount": 0,
+        "addOnCount": 0,
     }
 
 
 def _create_state() -> dict:
     return {
         "tournament": _default_tournament(),
+        "players": _default_players(),
         "running": False,
         "currentIndex": 0,
         "startedAtMs": None,
@@ -54,6 +79,15 @@ def normalize_state(s: dict) -> None:
     """Mutates s in-place, fixing any invalid/missing fields."""
     if not isinstance(s, dict):
         return
+
+    # players
+    if not isinstance(s.get("players"), dict):
+        s["players"] = _default_players()
+    else:
+        p = s["players"]
+        for key in ("registered", "busted", "rebuyCount", "addOnCount"):
+            if not isinstance(p.get(key), int) or p[key] < 0:
+                p[key] = 0
 
     # currentIndex
     if not isinstance(s.get("currentIndex"), int):
@@ -133,6 +167,27 @@ def compute_remaining_seconds(s: dict, now_ms: float | None = None) -> dict:
     return {"total": total, "elapsed": elapsed, "remaining": remaining}
 
 
+def _prize_pool(s: dict) -> dict:
+    t = s.get("tournament") or {}
+    p = s.get("players") or {}
+    registered = max(0, int(p.get("registered") or 0))
+    busted = max(0, int(p.get("busted") or 0))
+    rebuy_count = max(0, int(p.get("rebuyCount") or 0))
+    add_on_count = max(0, int(p.get("addOnCount") or 0))
+    buy_in = max(0, int(t.get("buyIn") or 0))
+    rebuy_amount = max(0, int(t.get("rebuyAmount") or 0))
+    add_on_amount = max(0, int(t.get("addOnAmount") or 0))
+    total = registered * buy_in + rebuy_count * rebuy_amount + add_on_count * add_on_amount
+    return {
+        "registered": registered,
+        "busted": busted,
+        "active": max(0, registered - busted),
+        "rebuyCount": rebuy_count,
+        "addOnCount": add_on_count,
+        "prizePool": total,
+    }
+
+
 def public_snapshot(s: dict, now_ms: float | None = None) -> dict:
     if now_ms is None:
         now_ms = time.time() * 1000
@@ -142,6 +197,7 @@ def public_snapshot(s: dict, now_ms: float | None = None) -> dict:
         "currentIndex": s["currentIndex"],
         "timing": compute_remaining_seconds(s, now_ms),
         "serverNowMs": now_ms,
+        "players": _prize_pool(s),
     }
 
 
@@ -192,3 +248,29 @@ def with_state(fn) -> Any:
     """Call fn(state) inside the lock; returns its return value."""
     with _lock:
         return fn(_state)
+
+
+def update_players(patch: dict) -> None:
+    """Merge patch into state[\"players\"] (integers clamped to >= 0)."""
+    with _lock:
+        p = _state.setdefault("players", _default_players())
+        for k, v in patch.items():
+            if k in ("registered", "busted", "rebuyCount", "addOnCount"):
+                try:
+                    p[k] = max(0, int(v))
+                except (TypeError, ValueError):
+                    pass
+
+
+def add_time_seconds(seconds: int, now_ms: float) -> None:
+    """Reduce elapsedInCurrentSeconds so remaining increases by `seconds`."""
+    with _lock:
+        elapsed = _state.get("elapsedInCurrentSeconds") or 0
+        if _state.get("running") and isinstance(_state.get("startedAtMs"), (int, float)):
+            elapsed += (_state["startedAtMs"] and (now_ms - _state["startedAtMs"]) / 1000 or 0)
+        # Snap elapsed to now, then subtract seconds
+        if _state.get("running"):
+            _state["elapsedInCurrentSeconds"] = max(0, elapsed - seconds)
+            _state["startedAtMs"] = now_ms
+        else:
+            _state["elapsedInCurrentSeconds"] = max(0, (_state.get("elapsedInCurrentSeconds") or 0) - seconds)

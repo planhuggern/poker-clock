@@ -12,9 +12,13 @@ function toRowsFromTournament(t) {
   }));
 }
 
-function toTournamentFromRows(name, rows) {
+function toTournamentFromRows(name, rows, settings = {}) {
   return {
     name: name || "Pokerturnering",
+    buyIn:        Number(settings.buyIn)        || 0,
+    rebuyAmount:  Number(settings.rebuyAmount)  || 0,
+    addOnAmount:  Number(settings.addOnAmount)  || 0,
+    startingStack:Number(settings.startingStack)|| 0,
     levels: rows.map((r) => {
       const durationSeconds = Math.max(1, Number(r.minutes || 1)) * 60;
       if (r.type === "break") {
@@ -56,6 +60,81 @@ function validate(rows) {
   return "";
 }
 
+// ─── Preset structures ────────────────────────────────────────────────────────
+
+const PRESETS = {
+  quick: {
+    name: "Hurtigturnering",
+    buyIn: 100, rebuyAmount: 100, addOnAmount: 100, startingStack: 5000,
+    levels: [
+      { type:"level", title:"Level 1",  sb:25,   bb:50,   ante:0,   durationSeconds:600 },
+      { type:"level", title:"Level 2",  sb:50,   bb:100,  ante:0,   durationSeconds:600 },
+      { type:"level", title:"Level 3",  sb:75,   bb:150,  ante:0,   durationSeconds:600 },
+      { type:"break", title:"Pause",                                  durationSeconds:300 },
+      { type:"level", title:"Level 4",  sb:100,  bb:200,  ante:25,  durationSeconds:600 },
+      { type:"level", title:"Level 5",  sb:150,  bb:300,  ante:25,  durationSeconds:600 },
+      { type:"level", title:"Level 6",  sb:200,  bb:400,  ante:50,  durationSeconds:600 },
+      { type:"break", title:"Pause",                                  durationSeconds:300 },
+      { type:"level", title:"Level 7",  sb:300,  bb:600,  ante:75,  durationSeconds:600 },
+      { type:"level", title:"Level 8",  sb:400,  bb:800,  ante:100, durationSeconds:600 },
+    ],
+  },
+  standard: {
+    name: "Standard turnering",
+    buyIn: 200, rebuyAmount: 200, addOnAmount: 200, startingStack: 10000,
+    levels: [
+      { type:"level", title:"Level 1",  sb:25,   bb:50,   ante:0,   durationSeconds:900 },
+      { type:"level", title:"Level 2",  sb:50,   bb:100,  ante:0,   durationSeconds:900 },
+      { type:"level", title:"Level 3",  sb:75,   bb:150,  ante:0,   durationSeconds:900 },
+      { type:"break", title:"Pause",                                  durationSeconds:600 },
+      { type:"level", title:"Level 4",  sb:100,  bb:200,  ante:25,  durationSeconds:900 },
+      { type:"level", title:"Level 5",  sb:150,  bb:300,  ante:25,  durationSeconds:900 },
+      { type:"level", title:"Level 6",  sb:200,  bb:400,  ante:50,  durationSeconds:900 },
+      { type:"break", title:"Pause",                                  durationSeconds:600 },
+      { type:"level", title:"Level 7",  sb:300,  bb:600,  ante:75,  durationSeconds:900 },
+      { type:"level", title:"Level 8",  sb:400,  bb:800,  ante:100, durationSeconds:900 },
+      { type:"level", title:"Level 9",  sb:500,  bb:1000, ante:100, durationSeconds:900 },
+      { type:"break", title:"Pause",                                  durationSeconds:600 },
+      { type:"level", title:"Level 10", sb:600,  bb:1200, ante:200, durationSeconds:900 },
+    ],
+  },
+  deep: {
+    name: "Deep Stack",
+    buyIn: 500, rebuyAmount: 500, addOnAmount: 500, startingStack: 25000,
+    levels: [
+      { type:"level", title:"Level 1",  sb:25,   bb:50,   ante:0,   durationSeconds:1200 },
+      { type:"level", title:"Level 2",  sb:50,   bb:100,  ante:0,   durationSeconds:1200 },
+      { type:"level", title:"Level 3",  sb:75,   bb:150,  ante:0,   durationSeconds:1200 },
+      { type:"level", title:"Level 4",  sb:100,  bb:200,  ante:0,   durationSeconds:1200 },
+      { type:"break", title:"Pause",                                  durationSeconds:900 },
+      { type:"level", title:"Level 5",  sb:150,  bb:300,  ante:25,  durationSeconds:1200 },
+      { type:"level", title:"Level 6",  sb:200,  bb:400,  ante:25,  durationSeconds:1200 },
+      { type:"level", title:"Level 7",  sb:300,  bb:600,  ante:50,  durationSeconds:1200 },
+      { type:"level", title:"Level 8",  sb:400,  bb:800,  ante:75,  durationSeconds:1200 },
+      { type:"break", title:"Pause",                                  durationSeconds:900 },
+      { type:"level", title:"Level 9",  sb:500,  bb:1000, ante:100, durationSeconds:1200 },
+      { type:"level", title:"Level 10", sb:600,  bb:1200, ante:100, durationSeconds:1200 },
+      { type:"level", title:"Level 11", sb:800,  bb:1600, ante:200, durationSeconds:1200 },
+      { type:"level", title:"Level 12", sb:1000, bb:2000, ante:200, durationSeconds:1200 },
+      { type:"break", title:"Pause",                                  durationSeconds:900 },
+      { type:"level", title:"Level 13", sb:1500, bb:3000, ante:300, durationSeconds:1200 },
+      { type:"level", title:"Level 14", sb:2000, bb:4000, ante:400, durationSeconds:1200 },
+    ],
+  },
+};
+
+function applyPreset(key, setName, setRows, setBuyIn, setRebuyAmount, setAddOnAmount, setStartingStack, setDirty) {
+  const p = PRESETS[key];
+  if (!p) return;
+  setName(p.name);
+  setRows(toRowsFromTournament(p));
+  setBuyIn(String(p.buyIn));
+  setRebuyAmount(String(p.rebuyAmount));
+  setAddOnAmount(String(p.addOnAmount));
+  setStartingStack(String(p.startingStack));
+  setDirty(true);
+}
+
 function downloadJson(filename, obj) {
   const blob = new Blob([JSON.stringify(obj, null, 2)], {
     type: "application/json",
@@ -88,6 +167,10 @@ export default function AdminTournamentTable({
   const [err, setErr] = useState("");
   const [dirty, setDirty] = useState(false);
   const [importMsg, setImportMsg] = useState("");
+  const [buyIn, setBuyIn] = useState("200");
+  const [rebuyAmount, setRebuyAmount] = useState("200");
+  const [addOnAmount, setAddOnAmount] = useState("200");
+  const [startingStack, setStartingStack] = useState("10000");
 
   // Når snapshot endrer seg fra server (f.eks. annen admin), sync inn – men ikke overskriv hvis admin redigerer
   useEffect(() => {
@@ -95,6 +178,10 @@ export default function AdminTournamentTable({
     if (dirty) return;
     setName(t.name ?? "Pokerturnering");
     setRows(toRowsFromTournament(t));
+    setBuyIn(String(t.buyIn ?? 200));
+    setRebuyAmount(String(t.rebuyAmount ?? 200));
+    setAddOnAmount(String(t.addOnAmount ?? 200));
+    setStartingStack(String(t.startingStack ?? 10000));
   }, [isAdmin, t, dirty]);
 
   const addLevel = () => {
@@ -165,6 +252,47 @@ export default function AdminTournamentTable({
     <div style={{ marginTop: 18 }}>
       <h3 style={{ marginBottom: 8 }}>Admin: Rediger oppsett</h3>
 
+      {/* Presets */}
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+        <label style={{ opacity: 0.8, fontSize: 13 }}>Preset:</label>
+        <select
+          defaultValue=""
+          onChange={(e) => {
+            if (e.target.value) {
+              applyPreset(e.target.value, setName, setRows, setBuyIn, setRebuyAmount, setAddOnAmount, setStartingStack, setDirty);
+              e.target.value = "";
+            }
+          }}
+          style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #ddd" }}
+        >
+          <option value="">Bruk preset…</option>
+          <option value="quick">Hurtigturnering (10 min)</option>
+          <option value="standard">Standard (15 min)</option>
+          <option value="deep">Deep Stack (20 min)</option>
+        </select>
+      </div>
+
+      {/* Tournament settings */}
+      <div className="tournament-settings" style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14, padding: "10px 12px", background: "#f9f9f9", borderRadius: 10, border: "1px solid #eee" }}>
+        {[
+          { label: "Buy-in kr",   val: buyIn,         set: setBuyIn },
+          { label: "Rebuy kr",    val: rebuyAmount,   set: setRebuyAmount },
+          { label: "Add-on kr",   val: addOnAmount,   set: setAddOnAmount },
+          { label: "Startstack",  val: startingStack, set: setStartingStack },
+        ].map(({ label, val, set }) => (
+          <label key={label} style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 12, opacity: 0.85 }}>
+            {label}
+            <input
+              type="number"
+              min="0"
+              value={val}
+              onChange={(e) => { setDirty(true); set(e.target.value); }}
+              style={{ width: 90, padding: "5px 8px", borderRadius: 8, border: "1px solid #ddd" }}
+            />
+          </label>
+        ))}
+      </div>
+
       <div
         style={{
           display: "flex",
@@ -194,7 +322,7 @@ export default function AdminTournamentTable({
 
         <button
           onClick={() => {
-            const tournament = toTournamentFromRows(name, rows);
+            const tournament = toTournamentFromRows(name, rows, { buyIn, rebuyAmount, addOnAmount, startingStack });
             const safeName = (tournament.name || "tournament")
               .toLowerCase()
               .replace(/[^a-z0-9-_]+/g, "-");
@@ -481,7 +609,7 @@ export default function AdminTournamentTable({
               return;
             }
             setErr("");
-            const tournament = toTournamentFromRows(name, rows);
+            const tournament = toTournamentFromRows(name, rows, { buyIn, rebuyAmount, addOnAmount, startingStack });
             updateTournament(tournament);
             setDirty(false);
           }}

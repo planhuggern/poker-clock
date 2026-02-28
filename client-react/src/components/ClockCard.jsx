@@ -1,41 +1,41 @@
 import { useEffect, useRef, useState } from "react";
 
-function fmtTime(sec) {
+export function fmtTime(sec) {
   const s = Math.max(0, Math.floor(sec || 0));
   const m = Math.floor(s / 60);
   const r = s % 60;
   return String(m).padStart(2, "0") + ":" + String(r).padStart(2, "0");
 }
 
+export function fmtChips(n) {
+  if (!n && n !== 0) return "-";
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + "k";
+  return String(n);
+}
+
 /**
  * Lokal klokke som teller ned 100 ms om gangen.
  * Server-ticks brukes kun til å korrigere dersom drift > 2 sek,
  * eller når klokka er stoppet (pause/start/level-bytte).
- * Dette unngår hopp forårsaket av nettverksjitter.
  */
 function useDisplayRemaining(snapshot) {
   const [display, setDisplay] = useState(snapshot?.timing?.remaining ?? 0);
-  // Refs oppdateres kun i effects/callbacks – aldri under render.
   const localRef = useRef(snapshot?.timing?.remaining ?? 0);
   const snapshotRef = useRef(snapshot);
 
-  // Synk inn ny snapshot: oppdater refs og korriger lokal verdi ved behov.
   useEffect(() => {
     snapshotRef.current = snapshot;
     if (!snapshot) return;
     const serverRemaining = snapshot.timing?.remaining ?? 0;
     if (!snapshot.running) {
-      // Klokka stoppet – snap til server-verdi
       localRef.current = serverRemaining;
     } else {
-      // Korriger kun ved drift > 2 sek
       const drift = Math.abs(localRef.current - serverRemaining);
       if (drift > 2) localRef.current = serverRemaining;
     }
   }, [snapshot]);
 
-  // Enkelt 100 ms-intervall. setDisplay kallast kun inne i callback (asynkront),
-  // aldri synkront i effect-body.
   useEffect(() => {
     const id = setInterval(() => {
       if (snapshotRef.current?.running) {
@@ -52,29 +52,76 @@ function useDisplayRemaining(snapshot) {
 export default function ClockCard({ snapshot, big = false }) {
   const remaining = useDisplayRemaining(snapshot);
 
-  if (!snapshot) return <div>Venter på snapshot…</div>;
+  if (!snapshot) return <div className="clock-card">Venter på snapshot…</div>;
 
   const t = snapshot.tournament;
-  const lvl = t?.levels?.[snapshot.currentIndex];
+  const levels = t?.levels ?? [];
+  const lvl = levels[snapshot.currentIndex];
+  const nextLvl = levels[snapshot.currentIndex + 1];
+  const total = snapshot.timing?.total ?? 0;
+  const progress = total > 0 ? Math.min(1, (total - remaining) / total) : 0;
+
+  const isBreak = lvl?.type === "break";
+  const isWarning = !isBreak && remaining <= 60 && snapshot.running;
+  const isCritical = !isBreak && remaining <= 30 && snapshot.running;
+
+  let cardClass = "clock-card";
+  if (big) cardClass += " big";
+  if (isCritical) cardClass += " critical";
+  else if (isWarning) cardClass += " warning";
+  if (isBreak) cardClass += " break-card";
 
   return (
-    <div className={big ? "clock-card big" : "clock-card"}>
+    <div className={cardClass}>
+
+      {/* Level header */}
+      <div className="clock-level-header">
+        {isBreak ? "☕ PAUSE" : `NIVÅ ${snapshot.currentIndex + 1}`}
+        {lvl?.title ? <span className="clock-level-title">{lvl.title}</span> : null}
+      </div>
+
+      {/* Big time */}
       <div className="clock-time">
         {fmtTime(remaining)}
       </div>
-      <div className="clock-level">
-        {lvl?.type === "break" ? "PAUSE" : "NIVÅ"} {snapshot.currentIndex + 1} / {t?.levels?.length ?? "?"}
-        {lvl?.title ? ` – ${lvl.title}` : ""}
+
+      {/* Progress bar */}
+      <div className="clock-progress-track">
+        <div
+          className="clock-progress-fill"
+          style={{ width: `${(progress * 100).toFixed(1)}%` }}
+        />
       </div>
+
+      {/* Blinds row */}
       <div className="clock-blinds">
-        {lvl?.type === "level"
-          ? `Blinds: ${lvl.sb}/${lvl.bb}  Ante: ${lvl.ante ?? 0}`
-          : `Pause: ${fmtTime(snapshot.timing?.total)}`}
+        {isBreak ? (
+          <span>Pause: {fmtTime(total)}</span>
+        ) : (
+          <>
+            <span className="blind-item">SB <b>{fmtChips(lvl?.sb)}</b></span>
+            <span className="blind-sep">/</span>
+            <span className="blind-item">BB <b>{fmtChips(lvl?.bb)}</b></span>
+            {lvl?.ante ? <><span className="blind-sep">·</span><span className="blind-item">Ante <b>{fmtChips(lvl.ante)}</b></span></> : null}
+          </>
+        )}
       </div>
-      <div className="clock-status">
-        Status: {snapshot.running ? "KJØRER" : "PAUSE"}
+
+      {/* Next level preview */}
+      {nextLvl && (
+        <div className="clock-next">
+          {nextLvl.type === "break"
+            ? `Neste: ☕ Pause (${nextLvl.seconds ? Math.round(nextLvl.seconds / 60) : "?"}m)`
+            : `Neste: ${fmtChips(nextLvl.sb)}/${fmtChips(nextLvl.bb)}${nextLvl.ante ? ` · Ante ${fmtChips(nextLvl.ante)}` : ""}`
+          }
+        </div>
+      )}
+
+      {/* Status */}
+      <div className="clock-status-row">
+        <span className={`clock-dot ${snapshot.running ? "running" : "paused"}`} />
+        {snapshot.running ? "Kjører" : "Pause"}
       </div>
     </div>
   );
 }
-

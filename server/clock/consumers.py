@@ -243,6 +243,52 @@ class ClockConsumer(AsyncWebsocketConsumer):
             _schedule_save()
             await self._broadcast_snapshot()
 
+        elif msg_type == "admin_add_time":
+            if not await self._require_admin():
+                return
+            seconds = data.get("seconds", 60)
+            now_ms = time.time() * 1000
+            try:
+                seconds = int(seconds)
+            except (TypeError, ValueError):
+                seconds = 60
+            gs.add_time_seconds(seconds, now_ms)
+            _schedule_save()
+            await self._broadcast_snapshot()
+
+        elif msg_type == "admin_set_players":
+            if not await self._require_admin():
+                return
+            patch = {k: data[k] for k in ("registered", "busted", "rebuyCount", "addOnCount") if k in data}
+            gs.update_players(patch)
+            _schedule_save()
+            await self._broadcast_snapshot()
+
+        elif msg_type == "admin_rebuy":
+            if not await self._require_admin():
+                return
+            gs.update_players({"rebuyCount": (gs.get_snapshot()["players"]["rebuyCount"] + 1)})
+            _schedule_save()
+            await self._broadcast_snapshot()
+
+        elif msg_type == "admin_add_on":
+            if not await self._require_admin():
+                return
+            gs.update_players({"addOnCount": (gs.get_snapshot()["players"]["addOnCount"] + 1)})
+            _schedule_save()
+            await self._broadcast_snapshot()
+
+        elif msg_type == "admin_bustout":
+            if not await self._require_admin():
+                return
+            snap = gs.get_snapshot()
+            active = snap["players"]["active"]
+            if active > 0:
+                gs.update_players({"busted": snap["players"]["busted"] + 1})
+                _schedule_save()
+                await self._broadcast_snapshot()
+
+
     # ── Channel-layer receiver (called by group_send) ─────────────────────────
 
     async def clock_broadcast(self, event: dict) -> None:
