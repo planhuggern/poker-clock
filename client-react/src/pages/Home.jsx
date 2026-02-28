@@ -9,11 +9,10 @@ export default function Home() {
   const nav = useNavigate();
   const token = localStorage.getItem("poker_token");
   const role = localStorage.getItem("poker_role") || "viewer";
-  
-
-  if (!token) return <Navigate to="/login" replace />;
 
   const { status, error, snapshot, start, pause, reset, next, prev, updateTournament } = usePokerSocket(token);
+
+  if (!token) return <Navigate to="/login" replace />;
 
   return (
     <main className="main-content">

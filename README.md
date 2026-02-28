@@ -19,9 +19,11 @@ client-react/     ← React + Vite
 ```bash
 # Backend
 cd server
-pip install -r requirements.txt
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt   # Linux/macOS
+# .venv\Scripts\pip install -r requirements.txt  # Windows
 python manage.py migrate
-DEBUG=true python manage.py runserver 8000
+DEBUG=true python manage.py runserver "[::]:8000"  # [::] sikrer IPv4+IPv6 på Windows
 
 # Frontend (ny terminal)
 cd client-react
@@ -29,7 +31,7 @@ npm install
 npm run dev
 ```
 
-Dev-login uten Google OAuth: http://localhost:5173/callback?token=... via:
+Dev-login uten Google OAuth — åpne dette i nettleseren og du blir logget inn automatisk:
 ```
 http://localhost:8000/auth/dev?role=admin
 ```
@@ -40,17 +42,16 @@ WebSocket: `ws://localhost:8000/ws/clock/?token=<jwt>`
 
 ```json
 {
-  "basePath": "/pokerklokke",
   "jwtSecret": "...",
-  "sessionSecret": "...",
-  "clientOrigin": "http://localhost:5173",
+  "clientOrigin": "http://localhost:8081",
   "serverOrigin": "http://localhost:8000",
   "google": {
     "clientID": "",
     "clientSecret": "",
     "callbackURL": "http://localhost:8000/auth/google/callback"
   },
-  "adminEmails": ["deg@example.com"]
+  "adminEmails": ["deg@example.com"],
+  "sqlite_file": "./data/pokerclock.sqlite"
 }
 ```
 

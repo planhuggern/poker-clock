@@ -5,9 +5,9 @@ import ClockCard from "../components/ClockCard";
 
 export default function Tv() {
   const token = localStorage.getItem("poker_token");
-  if (!token) return <Navigate to="/login" replace />;
-
   const { status, error, snapshot } = usePokerSocket(token);
+
+  if (!token) return <Navigate to="/login" replace />;
 
   return (
     <main className="main-content" style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80vh", justifyContent: "center" }}>

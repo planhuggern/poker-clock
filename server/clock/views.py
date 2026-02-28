@@ -132,7 +132,7 @@ class DevAuthView(View):
         role = "admin" if request.GET.get("role") == "admin" else "viewer"
         username = request.GET.get("user", "dev-user")
         token = _sign_token(username, role)
-        base_path = settings.BASE_PATH
+        base = _client_redirect_base()
         return HttpResponseRedirect(
-            f"{base_path}/callback?token={token}&role={role}"
+            f"{base}/callback?token={token}&role={role}"
         )

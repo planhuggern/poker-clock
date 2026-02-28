@@ -1,20 +1,18 @@
 {
-  "basePath": "/pokerklokke",
   "jwtSecret": "super-lang-tilfeldig-streng-her-123456789",
-  "sessionSecret": "enda-en-lang-tilfeldig-streng-987654321",
 
-  "clientOrigin": "http://localhost:8080",
-  "serverOrigin": "http://localhost:8080",
+  "clientOrigin": "http://localhost:8081",
+  "serverOrigin": "http://localhost:8000",
 
   "google": {
     "clientID": "",
     "clientSecret": "",
-    "callbackURL": "http://localhost:8080/pokerklokke/auth/google/callback"
+    "callbackURL": "http://localhost:8000/auth/google/callback"
   },
 
   "adminEmails": [
-    "espen.holtebu@gmail.com"
+    "deg@example.com"
   ],
-  
+
   "sqlite_file": "./data/pokerclock.sqlite"
 }

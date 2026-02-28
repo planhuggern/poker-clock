@@ -17,7 +17,7 @@ REPO_DIR="$REAL_HOME/poker-clock"
 # What it does:
 # - Installs Traefik binary (from GitHub releases)
 # - Writes static config: /etc/traefik/traefik.yml
-# - Writes dynamic config: /etc/traefik/dynamic/dynamic.yml
+# - Writes dynamic config: /etc/traefik/dynamic/poker-clock.yml
 # - Writes systemd unit: /etc/systemd/system/traefik.service
 # - Enables + starts Traefik
 #
@@ -187,8 +187,11 @@ install_traefik() {
 write_configs() {
   log "Writing Traefik config to /etc/traefik"
 
-  # Static config
-  cat > /etc/traefik/traefik.yml <<EOF
+  # Static config — bare skriv hvis den ikke finnes fra før, for å ikke
+  # ødelegge andre tjenester (f.eks. sigmabott) som allerede er konfigurert.
+  if [[ ! -f /etc/traefik/traefik.yml ]]; then
+    log "traefik.yml finnes ikke – skriver ny"
+    cat > /etc/traefik/traefik.yml <<EOF
 entryPoints:
   web:
     address: ":80"
@@ -219,47 +222,50 @@ log:
 
 accessLog: {}
 EOF
-
-  # Dynamic config: single router -> backend
-  # If BASE_PATH != /, we strip it before proxying.
-  local strip_mw=""
-  if [[ "$BASE_PATH" != "/" ]]; then
-    strip_mw="strip-basepath"
+  else
+    log "traefik.yml finnes allerede – hopper over (eksisterende konfig bevares)"
   fi
 
-  cat > /etc/traefik/dynamic/dynamic.yml <<EOF
+  # Dynamic config: skriv til poker-clock.yml (ikke dynamic.yml) slik at
+  # andre tjenester sine konfig-filer i dynamic/-mappen ikke berøres.
+  local strip_mw=""
+  if [[ "$BASE_PATH" != "/" ]]; then
+    strip_mw="strip-basepath-pokerclock"
+  fi
+
+  cat > /etc/traefik/dynamic/poker-clock.yml <<EOF
 http:
   routers:
-    app:
+    poker-clock:
       rule: "Host(\`${DOMAIN}\`) && PathPrefix(\`${BASE_PATH}\`)"
       entryPoints:
         - websecure
       tls:
         certResolver: letsencrypt
-      service: backend
+      service: poker-clock-backend
 EOF
 
   if [[ -n "$strip_mw" ]]; then
-    cat >> /etc/traefik/dynamic/dynamic.yml <<EOF
+    cat >> /etc/traefik/dynamic/poker-clock.yml <<EOF
       middlewares:
         - ${strip_mw}
 EOF
   fi
 
-  cat >> /etc/traefik/dynamic/dynamic.yml <<EOF
+  cat >> /etc/traefik/dynamic/poker-clock.yml <<EOF
 
   services:
-    backend:
+    poker-clock-backend:
       loadBalancer:
         servers:
           - url: "${BACKEND_URL}"
 EOF
 
   if [[ -n "$strip_mw" ]]; then
-    cat >> /etc/traefik/dynamic/dynamic.yml <<EOF
+    cat >> /etc/traefik/dynamic/poker-clock.yml <<EOF
 
   middlewares:
-    strip-basepath:
+    strip-basepath-pokerclock:
       stripPrefix:
         prefixes:
           - "${BASE_PATH}"

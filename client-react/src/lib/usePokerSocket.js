@@ -7,10 +7,6 @@ const SERVER_ORIGIN = import.meta.env.VITE_SERVER_URL
 const BASE_URL = import.meta.env.BASE_URL || "/";
 const basePath = BASE_URL === "/" ? "" : BASE_URL.replace(/\/$/, "");
 
-function assetUrl(p) {
-  return `${BASE_URL}${p.replace(/^\//, "")}`;
-}
-
 /** Convert an http(s) origin to ws(s). */
 function toWsOrigin(origin) {
   return origin.replace(/^https/, "wss").replace(/^http/, "ws");

@@ -98,7 +98,11 @@ CHANNEL_LAYERS = {
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 
-CORS_ALLOW_ALL_ORIGINS = True
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    _client_origin = CONFIG.get("clientOrigin", "")
+    CORS_ALLOWED_ORIGINS = [_client_origin] if _client_origin else []
 CORS_ALLOW_CREDENTIALS = True
 
 # ── Static files (WhiteNoise serves React SPA in production) ─────────────────

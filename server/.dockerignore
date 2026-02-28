@@ -1,7 +1,0 @@
-node_modules
-npm-debug.log
-.DS_Store
-
-# Don't bake secrets or local data into the image
-config.json
-data

@@ -5,7 +5,7 @@ function toRowsFromTournament(t) {
   return levels.map((L) => ({
     type: L.type === "break" ? "break" : "level",
     title: L.title ?? "",
-    minutes: Math.max(1, Math.round((L.durationSeconds ?? 60) / 60)),
+    minutes: Math.max(1, Math.round((L.durationSeconds ?? L.seconds ?? 60) / 60)),
     sb: L.sb ?? 0,
     bb: L.bb ?? 0,
     ante: L.ante ?? 0,
