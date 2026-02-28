@@ -27,11 +27,18 @@ jobs:
             git -C "$REPO" fetch --prune
             git -C "$REPO" reset --hard origin/main
 
+            echo "=== venv ==="
+            if [[ ! -x "$VENV/pip" ]]; then
+              echo "venv mangler — oppretter..."
+              python3 -m venv "$REPO/server/.venv"
+            fi
+
             echo "=== pip install ==="
             "$VENV/pip" install --quiet --upgrade pip
             "$VENV/pip" install --quiet -r "$REPO/server/requirements.txt"
 
             echo "=== migrate ==="
+            mkdir -p "$REPO/server/data"
             BASE_PATH="$BASE_PATH" \
             DJANGO_SETTINGS_MODULE=portal.settings \
               "$VENV/python" "$REPO/server/manage.py" migrate --run-syncdb
