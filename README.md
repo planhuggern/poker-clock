@@ -58,7 +58,7 @@ Se `server/config.example.json` for mal.
 
 ## Produksjon (VPS med Traefik)
 
-### 1. Bootstrap Traefik (én gang)
+### 1. Bootstrap Traefik + Django (én gang)
 
 Kopier scriptet og kjør det på VPS-en:
 
@@ -68,27 +68,20 @@ ssh vps
 sudo ./bootstrap.sh --domain espen.holtebu.eu --email espen.holtebu@gmail.com
 ```
 
-Traefik kjører da som systemd-tjeneste, lytter på port 80/443, og terminerer TLS.
+Scriptet gjør alt i én operasjon:
+- Installerer Traefik som systemd-tjeneste (port 80/443, Let's Encrypt)
+- Oppretter Python venv i `~/poker-clock/server/.venv`
+- Installerer `requirements.txt`
+- Kjører Django-migrasjoner
+- Bygger React-klienten (hvis npm er tilgjengelig)
+- Starter `poker-clock.service` (Daphne på `127.0.0.1:8000`)
 
-### 2. Bygg og send opp appen
+Ved re-deploy er det bare å kjøre samme kommando igjen — repo pulles, venv oppdateres, og tjenesten restartes automatisk.
 
+Sjekk logg:
 ```bash
-# Bygg React
-cd client-react
-npm run build          # output: dist/
-
-# Kopier dist/ til server/public/ (Django serverer static)
-cp -r dist/* ../server/public/
-
-# Kjør migrations og start Daphne
-cd ../server
-python manage.py migrate
-daphne -b 0.0.0.0 -p 8000 poker_clock.asgi:application
-```
-
-Eller via Docker:
-```bash
-docker compose -f docker-compose.prod.yml up --build
+journalctl -u poker-clock -f
+journalctl -u traefik -f
 ```
 
 ### Basepath
