@@ -50,6 +50,7 @@ jobs:
 
 
             echo "=== copy dist ==="
+            sudo chown -R "$(whoami)" "$REPO/server/public"
             mkdir -p "$REPO/server/public${BASE_PATH}"
             cp -r "$REPO/client-react/dist/." "$REPO/server/public${BASE_PATH}/"
 

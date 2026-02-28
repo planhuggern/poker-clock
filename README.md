@@ -144,8 +144,8 @@ ssh-keygen -t ed25519 -C "github-deploy" -f ~/.ssh/poker-clock-deploy -N ""
 cat ~/.ssh/poker-clock-deploy.pub >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 
-# Tillat passwordless restart av tjenesten
-echo "espenhoh ALL=(ALL) NOPASSWD: /bin/systemctl restart poker-clock" \
+# Tillat passwordless restart av tjenesten + chown av public-mappen
+echo "espenhoh ALL=(ALL) NOPASSWD: /bin/systemctl restart poker-clock, /usr/bin/chown -R espenhoh /home/espenhoh/poker-clock/server/public, /bin/chown -R espenhoh /home/espenhoh/poker-clock/server/public" \
   | sudo tee /etc/sudoers.d/poker-clock-deploy
 sudo chmod 440 /etc/sudoers.d/poker-clock-deploy
 
