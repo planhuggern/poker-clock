@@ -3,6 +3,7 @@ import { Navigate, useNavigate, Link } from "react-router-dom";
 import { usePokerSocket } from "../lib/usePokerSocket";
 import ClockCard, { fmtChips } from "../components/ClockCard";
 import AdminTournamentTable from "../components/AdminTournamentTable";
+import UserMenu from "../components/UserMenu";
 
 
 export default function Home() {
@@ -36,8 +37,8 @@ export default function Home() {
         <h1 className="home-title">{t?.name ?? "Pokerklokke"}</h1>
         <div className="home-header-right">
           <span className={`clock-dot ${status === "connected" ? "running" : "paused"}`} />
-          <span className="home-status-text">{status}{error ? ` – ${error}` : ""} · {role}</span>
           <Link to="/tv" className="btn-secondary">📺 TV</Link>
+          <UserMenu token={token} />
           <button className="btn-ghost" onClick={() => {
             localStorage.removeItem("poker_token");
             localStorage.removeItem("poker_role");
