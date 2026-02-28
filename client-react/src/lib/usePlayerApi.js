@@ -70,5 +70,25 @@ export function usePlayerApi(token) {
     [token],
   );
 
-  return { profile, loading, error, updateNickname, refresh: fetchProfile };
+const register = useCallback(
+    async (tournamentId = 1) => {
+      const r = await fetch(apiUrl("/clock/api/me/register/"), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tournament_id: tournamentId }),
+      });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error(body.error || `${r.status}`);
+      }
+      await fetchProfile();
+      return r.json();
+    },
+    [token, fetchProfile],
+  );
+
+  return { profile, loading, error, updateNickname, register, refresh: fetchProfile };
 }

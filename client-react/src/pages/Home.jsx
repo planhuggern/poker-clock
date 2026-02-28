@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate, useNavigate, Link, useParams } from "react-router-dom";
 import { usePokerSocket } from "../lib/usePokerSocket";
+import { usePlayerApi } from "../lib/usePlayerApi";
 import ClockCard, { fmtChips } from "../components/ClockCard";
 import AdminTournamentTable from "../components/AdminTournamentTable";
 import UserMenu from "../components/UserMenu";
@@ -17,6 +18,11 @@ export default function Home() {
 
   const [editingPlayers, setEditingPlayers] = useState(false);
   const [playerInput, setPlayerInput] = useState("");
+  const [registering, setRegistering] = useState(false);
+  const [registerError, setRegisterError] = useState("");
+
+  const { profile, register } = usePlayerApi(token);
+  const isRegistered = profile?.activeTournamentId === tournamentId;
 
   const {
     status, error, snapshot,
@@ -53,6 +59,31 @@ export default function Home() {
 
       {/* Clock */}
       <ClockCard snapshot={snapshot} />
+
+      {/* Registration */}
+      <div className="register-banner">
+        {isRegistered ? (
+          <span className="register-banner-ok">✅ Du er påmeldt denne turneringen</span>
+        ) : (
+          <>
+            <button
+              className="btn-register"
+              disabled={registering || profile?.activeTournamentId != null}
+              title={profile?.activeTournamentId != null ? "Du er allerede påmeldt en annen turnering" : ""}
+              onClick={async () => {
+                setRegistering(true);
+                setRegisterError("");
+                try { await register(tournamentId); }
+                catch (e) { setRegisterError(e.message); }
+                finally { setRegistering(false); }
+              }}
+            >
+              {registering ? "Melder på…" : profile?.activeTournamentId != null ? "Opptatt i annen turnering" : "＋ Meld meg på turneringen"}
+            </button>
+            {registerError && <span className="error-text" style={{marginLeft: 8, fontSize: "0.85rem"}}>{registerError}</span>}
+          </>
+        )}
+      </div>
 
       {/* Clock controls */}
       {isAdmin ? (

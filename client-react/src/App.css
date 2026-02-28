@@ -647,3 +647,44 @@ main, .main-content {
 }
 .modal-box h3 { margin: 0; font-size: 1rem; }
 .modal-actions { display: flex; gap: 8px; }
+
+/*  Registration  */
+.register-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0.75rem 0;
+}
+.register-banner-ok {
+  font-size: 0.9rem;
+  color: #4caf50;
+  font-weight: 600;
+}
+.btn-register {
+  background: linear-gradient(135deg, #1a6b3a, #27ae60);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px rgba(39,174,96,0.3);
+}
+.btn-register:hover:not(:disabled) {
+  opacity: 0.88;
+  box-shadow: 0 4px 14px rgba(39,174,96,0.45);
+}
+.btn-register:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #444;
+  box-shadow: none;
+}
+.tournament-registered-badge {
+  font-size: 0.82rem;
+  color: #4caf50;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}

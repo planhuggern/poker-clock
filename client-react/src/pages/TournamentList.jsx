@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useTournamentApi } from "../lib/useTournamentApi";
+import { usePlayerApi } from "../lib/usePlayerApi";
 
 const STATUS_LABEL = {
   pending:  "Venter",
@@ -21,6 +22,22 @@ export default function TournamentList() {
 
   const { tournaments, loading, error, createTournament, renameTournament, finishTournament } =
     useTournamentApi(token);
+
+  const { profile, register } = usePlayerApi(token);
+  const [registering, setRegistering] = useState(null); // tournament id being registered
+  const [registerError, setRegisterError] = useState("");
+
+  async function handleRegister(tournamentId) {
+    setRegistering(tournamentId);
+    setRegisterError("");
+    try {
+      await register(tournamentId);
+    } catch (err) {
+      setRegisterError(err.message);
+    } finally {
+      setRegistering(null);
+    }
+  }
 
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -130,6 +147,7 @@ export default function TournamentList() {
         </div>
       )}
 
+      {registerError && <p className="error-text" style={{marginBottom: "0.5rem"}}>Påmelding feilet: {registerError}</p>}
       {loading && <p className="muted-text">Laster turneringer…</p>}
       {error   && <p className="error-text">Feil: {error}</p>}
 
@@ -145,6 +163,10 @@ export default function TournamentList() {
                 isAdmin={isAdmin}
                 onRename={() => setRenaming({ id: t.id, name: t.name })}
                 onFinish={() => handleFinish(t.id)}
+                isRegistered={profile?.activeTournamentId === t.id}
+                isBlockedByOther={profile?.activeTournamentId != null && profile.activeTournamentId !== t.id}
+                onRegister={() => handleRegister(t.id)}
+                registering={registering === t.id}
               />
             ))}
           </div>
@@ -172,7 +194,7 @@ export default function TournamentList() {
   );
 }
 
-function TournamentCard({ t, isAdmin, onRename, onFinish }) {
+function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlockedByOther, onRegister, registering }) {
   return (
     <div className="tournament-card">
       <div className="tournament-card-header">
@@ -208,6 +230,21 @@ function TournamentCard({ t, isAdmin, onRename, onFinish }) {
             📺 TV
           </Link>
         </div>
+      )}
+
+      {t.status !== "finished" && onRegister && (
+        isRegistered ? (
+          <div className="tournament-registered-badge">✅ Du er påmeldt</div>
+        ) : (
+          <button
+            className="btn-register btn-sm"
+            onClick={onRegister}
+            disabled={registering || isBlockedByOther}
+            title={isBlockedByOther ? "Du er allerede påmeldt en annen turnering" : ""}
+          >
+            {registering ? "Melder på…" : isBlockedByOther ? "Opptatt i annen turnering" : "+ Meld meg på"}
+          </button>
+        )
       )}
     </div>
   );
