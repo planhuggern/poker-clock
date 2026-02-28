@@ -2,9 +2,7 @@
   "name": "poker-clock-root",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client-react\""
+    "dev": "npm run dev --prefix client-react"
   },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
-  }
+  "devDependencies": {}
 }

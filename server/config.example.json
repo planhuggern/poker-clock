@@ -1,8 +1,11 @@
 {
-  "jwtSecret": "super-lang-tilfeldig-streng-her-123456789",
+  "jwtSecret": "super-lang-tilfeldig-streng-for-jwt-her-123456789",
+  "djangoSecret": "en-annen-lang-tilfeldig-streng-for-django-987654321",
 
   "clientOrigin": "http://localhost:8081",
   "serverOrigin": "http://localhost:8000",
+
+  "basePath": "",
 
   "google": {
     "clientID": "",

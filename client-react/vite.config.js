@@ -11,8 +11,8 @@ function normalizeBasePath(value) {
 }
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "");
-  const base = normalizeBasePath(process.env.VITE_BASE_PATH ?? env.VITE_BASE_PATH);
+  const env = loadEnv(mode, ".", "");
+  const base = normalizeBasePath(env.VITE_BASE_PATH);
 
   return {
     base,

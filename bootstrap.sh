@@ -26,7 +26,7 @@ REPO_DIR="$REAL_HOME/poker-clock"
 DOMAIN=""                 # e.g. example.com
 ACME_EMAIL=""             # e.g. you@example.com
 BACKEND_URL="http://127.0.0.1:8000"
-BASE_PATH="/"             # "/" or "/pokerklokke" (no trailing slash)
+BASE_PATH="/poker-clock"  # sub-sti for appen, f.eks. /poker-clock eller /pokerklokke
 TRAEFIK_VERSION="latest"  # 'latest' for automatisk, eller angi f.eks. v3.6.8
 
 TRAEFIK_USER="traefik"
@@ -365,14 +365,16 @@ setup_django() {
     log "Node $(node --version) / npm $(npm --version) allerede installert"
   fi
 
-  # Bygg React
+  # Bygg React (med riktig base path slik at assets-URLs stemmer)
   local client_dir="$REPO_DIR/client-react"
   local public_dir="$server_dir/public"
-  log "Bygger React-klienten"
-  sudo -u "$APP_USER" bash -c "cd '$client_dir' && npm install --silent && npm run build --silent"
-  install -d -m 0755 "$public_dir"
-  cp -r "$client_dir/dist/." "$public_dir/"
-  log "React-build kopiert til $public_dir"
+  # Hvert app får sin egen undermappe: public/<base-path>/ (f.eks. public/poker-clock/)
+  local spa_dir="${public_dir}${BASE_PATH}"
+  log "Bygger React-klienten (VITE_BASE_PATH=${BASE_PATH}/)"
+  sudo -u "$APP_USER" bash -c "cd '$client_dir' && npm install --silent && VITE_BASE_PATH='${BASE_PATH}/' npm run build --silent"
+  install -d -m 0755 "$spa_dir"
+  cp -r "$client_dir/dist/." "$spa_dir/"
+  log "React-build kopiert til $spa_dir"
 }
 
 write_django_systemd_unit() {
@@ -392,8 +394,8 @@ User=${APP_USER}
 WorkingDirectory=${server_dir}
 Environment="BASE_PATH=${BASE_PATH}"
 Environment="SQLITE_FILE=${server_dir}/data/pokerclock.sqlite"
-Environment="DJANGO_SETTINGS_MODULE=poker_clock.settings"
-ExecStart=${venv_dir}/bin/daphne -b 127.0.0.1 -p 8000 poker_clock.asgi:application
+Environment="DJANGO_SETTINGS_MODULE=portal.settings"
+ExecStart=${venv_dir}/bin/daphne -b 127.0.0.1 -p 8000 portal.asgi:application
 Restart=on-failure
 RestartSec=3
 

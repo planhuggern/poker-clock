@@ -4,15 +4,36 @@ Enkel pokerklokke. Backend: Django + Channels (Python). Frontend: React (Vite).
 ## Serverstruktur
 
 ```
-server/           ← Django-app (Python)
-  poker_clock/    ← Django-prosjekt (settings, asgi, urls)
-  clock/          ← Django-app (state, consumers, views, models)
+server/
+  portal/           ← Django-prosjekt (nøytral container)
+    settings.py     ← konfig, ALLOWED_HOSTS, SECRET_KEY, BASE_PATH
+    urls.py         ← register_spa("poker-clock", "clock.urls") — legg ny app her
+    asgi.py         ← HTTP + WebSocket routing
+  clock/            ← Django-app: poker-clock
+    consumers.py    ← WebSocket-consumer
+    views.py        ← Auth (Google OAuth, dev-login)
+    state.py        ← Klokketilstand (thread-safe)
+    tick.py         ← Bakgrunnstråd som sender tick ~1/sek
+    models.py       ← AppState (SQLite singleton)
+    urls.py         ← /auth/google, /auth/google/callback, /auth/dev
+    routing.py      ← WebSocket URL-mønster
+  public/           ← WhiteNoise serverer dette som statiske filer
+    poker-clock/    ← React-build (VITE_BASE_PATH=/poker-clock/)
+      index.html
+      assets/
+  config.json       ← konfig (JWT, Google OAuth, adminEmails osv.)
   manage.py
-  requirements.txt
-  config.json     ← konfig (JWT, Google OAuth, adminEmails osv.)
 
-client-react/     ← React + Vite
+client-react/       ← React + Vite (frontend)
 ```
+
+### Legge til en ny app
+
+1. Lag en ny Django-app: `python manage.py startapp my_app`
+2. Legg til i `portal/settings.py` under `INSTALLED_APPS`
+3. Registrer i `portal/urls.py`: `*register_spa("my-app", "my_app.urls")`
+4. WebSocket (valgfritt): importer `websocket_urlpatterns` i `portal/asgi.py`
+5. Bygg frontend til `server/public/my-app/` med `VITE_BASE_PATH=/my-app/`
 
 ## Lokalt dev
 

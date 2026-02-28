@@ -1,68 +1,27 @@
+# Eksempel på Traefik dynamic config for poker-clock.
+# bootstrap.sh genererer dette automatisk til /etc/traefik/dynamic/poker-clock.yml.
+# Denne filen er kun referanse/mal.
+
 http:
+  routers:
+    poker-clock:
+      rule: "Host(`example.com`) && PathPrefix(`/pokerklokke`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      service: poker-clock-backend
+      middlewares:
+        - strip-basepath-pokerclock
+
+  services:
+    poker-clock-backend:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8000"
+
   middlewares:
-    strip-pokerklokke:
+    strip-basepath-pokerclock:
       stripPrefix:
         prefixes:
           - "/pokerklokke"
-
-    root-to-landing:
-      replacePath:
-        path: "/landing.html"
-
-  routers:
-    app-api:
-      rule: "PathPrefix(`/pokerklokke/auth`) || PathPrefix(`/pokerklokke/ws`)"
-      entryPoints:
-        - web
-      service: app-svc
-      priority: 100
-
-    app-static:
-      rule: "PathPrefix(`/pokerklokke`)"
-      entryPoints:
-        - web
-      service: app-svc
-      middlewares:
-        - strip-pokerklokke
-      priority: 1
-
-    root:
-      rule: "Path(`/`)"
-      entryPoints:
-        - web
-      service: app-svc
-      middlewares:
-        - root-to-landing
-      priority: 200
-
-  services:
-    app-svc:
-      loadBalancer:
-        servers:
-          - url: "http://app:8000"
-
-      service: client-svc
-      middlewares:
-        - client-strip-pokerklokke
-        - client-spa
-      priority: 1
-
-    root:
-      rule: "Path(`/`)"
-      entryPoints:
-        - web
-      service: client-svc
-      middlewares:
-        - root-to-landing
-      priority: 200
-
-  services:
-    server-svc:
-      loadBalancer:
-        servers:
-          - url: "http://server:3000"
-
-    client-svc:
-      loadBalancer:
-        servers:
-          - url: "http://client:80"
