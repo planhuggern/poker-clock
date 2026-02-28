@@ -20,3 +20,10 @@ CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
 BASE_PATH = ""
 USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+ROOT_URLCONF = "clock.urls"
+
+# Mimics the real config.json structure so auth helpers work during tests
+CONFIG: dict = {
+    "jwtSecret": "test-jwt-secret",
+    "adminEmails": ["admin@example.com"],
+}
