@@ -131,13 +131,46 @@ sudo systemctl restart poker-clock
 **GCP Console:** Legg til `https://espen.holtebu.eu/pokerklokke/auth/google/callback`
 som autorisert redirect-URI under *APIs & Services → Credentials*.
 
-### 3. Re-deploy (ved oppdateringer)
+### 3. Sett opp GitHub Actions auto-deploy (én gang per VPS)
+
+Push til `main` → GitHub Actions deployer automatisk via SSH.
+
+**På VPS-en:**
+```bash
+# Generer et dedikert deploy-keypair
+ssh-keygen -t ed25519 -C "github-deploy" -f ~/.ssh/poker-clock-deploy -N ""
+
+# Autoriser nøkkelen
+cat ~/.ssh/poker-clock-deploy.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+
+# Tillat passwordless restart av tjenesten
+echo "espenhoh ALL=(ALL) NOPASSWD: /bin/systemctl restart poker-clock" \
+  | sudo tee /etc/sudoers.d/poker-clock-deploy
+sudo chmod 440 /etc/sudoers.d/poker-clock-deploy
+
+# Kopier privat-nøkkelen — du trenger innholdet til GitHub Secrets
+cat ~/.ssh/poker-clock-deploy
+```
+
+**I GitHub** (Settings → Secrets and variables → Actions):
+
+| Secret | Verdi |
+|--------|-------|
+| `VPS_HOST` | `espen.holtebu.eu` |
+| `VPS_USER` | `espenhoh` |
+| `VPS_SSH_KEY` | innholdet av `~/.ssh/poker-clock-deploy` (hele filen inkl. `-----BEGIN/END-----`) |
+
+Etter dette: push til `main` deployer automatisk.
+Manuell kjøring: GitHub → Actions → *Deploy to VPS* → *Run workflow*.
+
+### 4. Re-deploy (manuelt ved behov)
 
 Bootstrap-scriptet er idempotent — kjør den samme kommandoen igjen:
 
 ```bash
 ssh vps
-sudo ./bootstrap.sh \
+sudo ~/poker-clock/bootstrap.sh \
   --domain espen.holtebu.eu \
   --email espen.holtebu@gmail.com \
   --base-path /pokerklokke

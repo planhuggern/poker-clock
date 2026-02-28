@@ -1,0 +1,52 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy pokerklokke → espen.holtebu.eu
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            REPO="$HOME/poker-clock"
+            BASE_PATH="/pokerklokke"
+            VENV="$REPO/server/.venv/bin"
+
+            echo "=== git pull ==="
+            git -C "$REPO" fetch --prune
+            git -C "$REPO" reset --hard origin/main
+
+            echo "=== pip install ==="
+            "$VENV/pip" install --quiet --upgrade pip
+            "$VENV/pip" install --quiet -r "$REPO/server/requirements.txt"
+
+            echo "=== migrate ==="
+            BASE_PATH="$BASE_PATH" \
+            DJANGO_SETTINGS_MODULE=portal.settings \
+              "$VENV/python" "$REPO/server/manage.py" migrate --run-syncdb
+
+            echo "=== npm build ==="
+            cd "$REPO/client-react"
+            npm install --silent
+            VITE_BASE_PATH="${BASE_PATH}/" npm run build --silent
+
+            echo "=== copy dist ==="
+            mkdir -p "$REPO/server/public${BASE_PATH}"
+            cp -r "$REPO/client-react/dist/." "$REPO/server/public${BASE_PATH}/"
+
+            echo "=== restart service ==="
+            sudo systemctl restart poker-clock
+            sleep 2
+            systemctl is-active poker-clock
+            echo "=== deploy OK ==="
