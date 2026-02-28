@@ -82,37 +82,74 @@ Se `server/config.example.json` for mal.
 
 ### 1. Bootstrap Traefik + Django (én gang)
 
-Kopier scriptet og kjør det på VPS-en:
-
 ```bash
 scp bootstrap.sh vps:~/
 ssh vps
-sudo ./bootstrap.sh --domain espen.holtebu.eu --email espen.holtebu@gmail.com
+sudo ./bootstrap.sh \
+  --domain espen.holtebu.eu \
+  --email espen.holtebu@gmail.com \
+  --base-path /pokerklokke
 ```
 
 Scriptet gjør alt i én operasjon:
 - Installerer Traefik som systemd-tjeneste (port 80/443, Let's Encrypt)
-- Oppretter Python venv i `~/poker-clock/server/.venv`
-- Installerer `requirements.txt`
+- Skriver `/etc/traefik/dynamic/poker-clock.yml` (berører ikke andres konfig)
+- Oppretter Python venv og installerer `requirements.txt`
 - Kjører Django-migrasjoner
-- Bygger React-klienten (hvis npm er tilgjengelig)
+- Bygger React-klienten med `VITE_BASE_PATH=/pokerklokke/`
+- Kopierer build til `~/poker-clock/server/public/pokerklokke/`
 - Starter `poker-clock.service` (Daphne på `127.0.0.1:8000`)
 
-Ved re-deploy er det bare å kjøre samme kommando igjen — repo pulles, venv oppdateres, og tjenesten restartes automatisk.
+### 2. Opprett config.json på VPS (første gang)
+
+Bootstrap-scriptet oppretter ikke `config.json` (den er gitignored og inneholder secrets).
+Lag den manuelt på VPS-en:
+
+```bash
+cat > ~/poker-clock/server/config.json <<'EOF'
+{
+  "jwtSecret": "<generer med: python3 -c 'import secrets; print(secrets.token_hex(50))'>",
+  "djangoSecret": "<en annen lang tilfeldig streng>",
+
+  "clientOrigin": "https://espen.holtebu.eu",
+  "serverOrigin": "https://espen.holtebu.eu",
+  "basePath": "/pokerklokke",
+
+  "google": {
+    "clientID": "<fra GCP Console>",
+    "clientSecret": "<fra GCP Console>",
+    "callbackURL": "https://espen.holtebu.eu/pokerklokke/auth/google/callback"
+  },
+
+  "adminEmails": ["espen.holtebu@gmail.com"],
+  "sqlite_file": "./data/pokerclock.sqlite"
+}
+EOF
+sudo systemctl restart poker-clock
+```
+
+**GCP Console:** Legg til `https://espen.holtebu.eu/pokerklokke/auth/google/callback`
+som autorisert redirect-URI under *APIs & Services → Credentials*.
+
+### 3. Re-deploy (ved oppdateringer)
+
+Bootstrap-scriptet er idempotent — kjør den samme kommandoen igjen:
+
+```bash
+ssh vps
+sudo ./bootstrap.sh \
+  --domain espen.holtebu.eu \
+  --email espen.holtebu@gmail.com \
+  --base-path /pokerklokke
+```
+
+Repo pulles, venv oppdateres, React bygges og tjenesten restartes automatisk.
 
 Sjekk logg:
 ```bash
 journalctl -u poker-clock -f
 journalctl -u traefik -f
 ```
-
-### Basepath
-
-Basepath kan settes via `BASE_PATH`-env eller `basePath` i `config.json`.  
-Det må matche tre steder:
-- `config.json`: `"basePath": "/pokerklokke"`
-- React build: `VITE_BASE_PATH=/pokerklokke/` (satt i Vite-config / build-arg)
-- Traefik rule: `PathPrefix('/pokerklokke')`
 
 ## Traefik dashboard
 

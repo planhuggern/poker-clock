@@ -1,17 +1,19 @@
+# Referansefil – bootstrap.sh genererer den faktiske konfigurasjonen.
+# Ingen stripPrefix: Django mottar full path og håndterer basepath via portal/urls.py.
+
 http:
   routers:
-    pokerklokke:
-      # Path-basert routing (ingen stripPrefix). Endre basepath hvis du vil.
+    poker-clock:
       rule: "PathPrefix(`/pokerklokke`)"
       entryPoints:
         - websecure
       tls:
         certResolver: le
-      service: pokerklokke-svc
+      service: poker-clock-backend
       priority: 10
 
   services:
-    pokerklokke-svc:
+    poker-clock-backend:
       loadBalancer:
         servers:
           - url: "http://127.0.0.1:8000"

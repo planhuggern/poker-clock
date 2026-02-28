@@ -26,7 +26,7 @@ REPO_DIR="$REAL_HOME/poker-clock"
 DOMAIN=""                 # e.g. example.com
 ACME_EMAIL=""             # e.g. you@example.com
 BACKEND_URL="http://127.0.0.1:8000"
-BASE_PATH="/poker-clock"  # sub-sti for appen, f.eks. /poker-clock eller /pokerklokke
+BASE_PATH="/pokerklokke"  # sub-sti for appen; må matche config.json basePath og Traefik-regelen
 TRAEFIK_VERSION="latest"  # 'latest' for automatisk, eller angi f.eks. v3.6.8
 
 TRAEFIK_USER="traefik"
@@ -228,10 +228,9 @@ EOF
 
   # Dynamic config: skriv til poker-clock.yml (ikke dynamic.yml) slik at
   # andre tjenester sine konfig-filer i dynamic/-mappen ikke berøres.
-  local strip_mw=""
-  if [[ "$BASE_PATH" != "/" ]]; then
-    strip_mw="strip-basepath-pokerclock"
-  fi
+  #
+  # Ingen stripPrefix – Django får full path og håndterer BASE_PATH selv
+  # via portal/urls.py (register_spa).
 
   cat > /etc/traefik/dynamic/poker-clock.yml <<EOF
 http:
@@ -243,16 +242,6 @@ http:
       tls:
         certResolver: letsencrypt
       service: poker-clock-backend
-EOF
-
-  if [[ -n "$strip_mw" ]]; then
-    cat >> /etc/traefik/dynamic/poker-clock.yml <<EOF
-      middlewares:
-        - ${strip_mw}
-EOF
-  fi
-
-  cat >> /etc/traefik/dynamic/poker-clock.yml <<EOF
 
   services:
     poker-clock-backend:
@@ -260,17 +249,6 @@ EOF
         servers:
           - url: "${BACKEND_URL}"
 EOF
-
-  if [[ -n "$strip_mw" ]]; then
-    cat >> /etc/traefik/dynamic/poker-clock.yml <<EOF
-
-  middlewares:
-    strip-basepath-pokerclock:
-      stripPrefix:
-        prefixes:
-          - "${BASE_PATH}"
-EOF
-  fi
 
   # Ensure ACME storage exists and is private
   if [[ ! -f /var/lib/traefik/acme.json ]]; then
