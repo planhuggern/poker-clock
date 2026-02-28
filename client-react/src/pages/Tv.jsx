@@ -1,10 +1,12 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import { usePokerSocket } from "../lib/usePokerSocket";
 import ClockCard, { fmtTime, fmtChips } from "../components/ClockCard";
 
 export default function Tv() {
   const token = localStorage.getItem("poker_token");
-  const { status, snapshot } = usePokerSocket(token);
+  const { tournamentId: tidParam } = useParams();
+  const tournamentId = Number(tidParam) || 1;
+  const { status, snapshot } = usePokerSocket(token, tournamentId);
 
   if (!token) return <Navigate to="/login" replace />;
 

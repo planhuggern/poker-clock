@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate, Link } from "react-router-dom";
+import { Navigate, useNavigate, Link, useParams } from "react-router-dom";
 import { usePokerSocket } from "../lib/usePokerSocket";
 import ClockCard, { fmtChips } from "../components/ClockCard";
 import AdminTournamentTable from "../components/AdminTournamentTable";
@@ -8,6 +8,9 @@ import UserMenu from "../components/UserMenu";
 
 export default function Home() {
   const nav = useNavigate();
+  const { tournamentId: tidParam } = useParams();
+  const tournamentId = Number(tidParam) || 1;
+
   const token = localStorage.getItem("poker_token");
   const role = localStorage.getItem("poker_role") || "viewer";
   const isAdmin = role === "admin";
@@ -19,7 +22,7 @@ export default function Home() {
     status, error, snapshot,
     start, pause, reset, next, prev, jump,
     updateTournament, addTime, setPlayers, rebuy, addOn, bustout,
-  } = usePokerSocket(token);
+  } = usePokerSocket(token, tournamentId);
 
   if (!token) return <Navigate to="/login" replace />;
 
@@ -37,7 +40,8 @@ export default function Home() {
         <h1 className="home-title">{t?.name ?? "Pokerklokke"}</h1>
         <div className="home-header-right">
           <span className={`clock-dot ${status === "connected" ? "running" : "paused"}`} />
-          <Link to="/tv" className="btn-secondary">📺 TV</Link>
+          <Link to={`/tournament/${tournamentId}/tv`} className="btn-secondary">📺 TV</Link>
+          <Link to="/" className="btn-secondary">⬅ Turneringer</Link>
           <UserMenu token={token} />
           <button className="btn-ghost" onClick={() => {
             localStorage.removeItem("poker_token");

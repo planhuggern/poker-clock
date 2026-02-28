@@ -1,11 +1,11 @@
-"""
-WebSocket consumer for the poker clock.
+﻿"""
+WebSocket consumer for the poker clock  per-tournament edition.
+
+Token passed as query-string: ws://host/ws/clock/<tournament_id>/?token=<jwt>
 
 Message protocol (JSON):
-  Client → Server:  { "type": "get_snapshot" | "admin_start" | ... }
-  Server → Client:  { "type": "snapshot" | "tick" | "play_sound" | "system_event" | "error_msg", ... }
-
-Token is passed as a query-string parameter: ws://host/ws/clock/?token=<jwt>
+  Client  Server:  { "type": "get_snapshot" | "admin_start" | ... }
+  Server  Client:  { "type": "snapshot" | "tick" | "play_sound" | "system_event" | "error_msg", ... }
 """
 import json
 import math
@@ -16,38 +16,36 @@ from urllib.parse import parse_qs
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from . import state as gs
-from .models import AppState
 
-_GROUP = "clock"
+#  Debounced save helpers 
 
-# Debounced save
-_save_timer: threading.Timer | None = None
+_save_timers: dict[int, threading.Timer] = {}
 _save_lock = threading.Lock()
 
 
-def _schedule_save(ms: int = 250) -> None:
-    global _save_timer
+def _schedule_save(tournament_id: int, ms: int = 250) -> None:
+    def _do():
+        from .models import Tournament
+        try:
+            data = gs.get_state_copy(tournament_id)
+            status = Tournament.STATUS_RUNNING if data.get("running") else Tournament.STATUS_PENDING
+            Tournament.objects.filter(pk=tournament_id).update(state_json=data, status=status)
+        except Exception as exc:
+            print(f"[consumer] save error for tournament {tournament_id}: {exc}")
+
     with _save_lock:
-        if _save_timer:
-            _save_timer.cancel()
-        _save_timer = threading.Timer(ms / 1000, _do_save)
-        _save_timer.daemon = True
-        _save_timer.start()
-
-
-def _do_save() -> None:
-    data = gs.get_state_copy()
-    try:
-        AppState.persist(data)
-    except Exception as exc:
-        print(f"[consumer] save error: {exc}")
+        existing = _save_timers.get(tournament_id)
+        if existing:
+            existing.cancel()
+        t = threading.Timer(ms / 1000, _do)
+        t.daemon = True
+        _save_timers[tournament_id] = t
+        t.start()
 
 
 def _verify_token(token: str) -> dict | None:
-    """Returns the JWT payload dict or None on failure."""
     import jwt as pyjwt
     from django.conf import settings
-
     secret = settings.CONFIG.get("jwtSecret", "")
     try:
         return pyjwt.decode(token, secret, algorithms=["HS256"])
@@ -57,12 +55,19 @@ def _verify_token(token: str) -> dict | None:
 
 class ClockConsumer(AsyncWebsocketConsumer):
 
-    # ── Lifecycle ──────────────────────────────────────────────────────────────
+    #  Lifecycle 
 
     async def connect(self) -> None:
+        # Tournament id from URL or default to 1
+        kwargs = self.scope.get("url_route", {}).get("kwargs", {})
+        try:
+            self.tournament_id: int = int(kwargs.get("tournament_id", 1))
+        except (TypeError, ValueError):
+            self.tournament_id = 1
+        self._group = f"clock-{self.tournament_id}"
+
         qs = parse_qs(self.scope.get("query_string", b"").decode())
         token = (qs.get("token") or [None])[0]
-
         if not token:
             await self.close(code=4001)
             return
@@ -73,14 +78,22 @@ class ClockConsumer(AsyncWebsocketConsumer):
             return
 
         self.user = payload  # {"username": ..., "role": ...}
-        await self.channel_layer.group_add(_GROUP, self.channel_name)
-        await self.accept()
 
-        # Send initial snapshot
-        await self.send_json({"type": "snapshot", **gs.get_snapshot()})
+        # Make sure the tournament state is loaded
+        try:
+            gs.get_snapshot(tournament_id=self.tournament_id)
+        except KeyError:
+            await self.close(code=4004)
+            return
+
+        await self.channel_layer.group_add(self._group, self.channel_name)
+        await self.accept()
+        await self.send_json({"type": "snapshot", **gs.get_snapshot(tournament_id=self.tournament_id)})
 
     async def disconnect(self, close_code: int) -> None:
-        await self.channel_layer.group_discard(_GROUP, self.channel_name)
+        group = getattr(self, "_group", None)
+        if group:
+            await self.channel_layer.group_discard(group, self.channel_name)
 
     async def receive(self, text_data: str = "", **kwargs) -> None:
         try:
@@ -88,10 +101,11 @@ class ClockConsumer(AsyncWebsocketConsumer):
         except json.JSONDecodeError:
             return
 
+        tid = self.tournament_id
         msg_type = data.get("type", "")
 
         if msg_type == "get_snapshot":
-            await self.send_json({"type": "snapshot", **gs.get_snapshot()})
+            await self.send_json({"type": "snapshot", **gs.get_snapshot(tournament_id=tid)})
 
         elif msg_type == "admin_start":
             if not await self._require_admin():
@@ -105,9 +119,9 @@ class ClockConsumer(AsyncWebsocketConsumer):
                     return True
                 return False
 
-            changed = gs.with_state(_run)
+            changed = gs.with_state(_run, tournament_id=tid)
             if changed:
-                _schedule_save()
+                _schedule_save(tid)
                 await self._broadcast_snapshot()
                 await self._broadcast({"type": "play_sound", "soundType": "start"})
 
@@ -125,9 +139,9 @@ class ClockConsumer(AsyncWebsocketConsumer):
                     return True
                 return False
 
-            changed = gs.with_state(_run)
+            changed = gs.with_state(_run, tournament_id=tid)
             if changed:
-                _schedule_save()
+                _schedule_save(tid)
                 await self._broadcast_snapshot()
                 await self._broadcast({"type": "play_sound", "soundType": "pause"})
 
@@ -140,8 +154,8 @@ class ClockConsumer(AsyncWebsocketConsumer):
                 s["elapsedInCurrentSeconds"] = 0
                 s["startedAtMs"] = now_ms if s["running"] else None
 
-            gs.with_state(_run)
-            _schedule_save()
+            gs.with_state(_run, tournament_id=tid)
+            _schedule_save(tid)
             await self._broadcast_snapshot()
             await self._broadcast({"type": "play_sound", "soundType": "reset_level"})
 
@@ -159,9 +173,9 @@ class ClockConsumer(AsyncWebsocketConsumer):
                     return True
                 return False
 
-            changed = gs.with_state(_run)
+            changed = gs.with_state(_run, tournament_id=tid)
             if changed:
-                _schedule_save()
+                _schedule_save(tid)
                 await self._broadcast_snapshot()
                 await self._broadcast({"type": "play_sound", "soundType": "level_advance"})
 
@@ -178,9 +192,9 @@ class ClockConsumer(AsyncWebsocketConsumer):
                     return True
                 return False
 
-            changed = gs.with_state(_run)
+            changed = gs.with_state(_run, tournament_id=tid)
             if changed:
-                _schedule_save()
+                _schedule_save(tid)
                 await self._broadcast_snapshot()
                 await self._broadcast({"type": "play_sound", "soundType": "level_back"})
 
@@ -203,9 +217,9 @@ class ClockConsumer(AsyncWebsocketConsumer):
                     return True
                 return False
 
-            changed = gs.with_state(_run)
+            changed = gs.with_state(_run, tournament_id=tid)
             if changed:
-                _schedule_save()
+                _schedule_save(tid)
                 await self._broadcast_snapshot()
                 await self._broadcast({"type": "play_sound", "soundType": "level_jump"})
 
@@ -223,7 +237,6 @@ class ClockConsumer(AsyncWebsocketConsumer):
                 await self.send_json({"type": "error_msg", "message": "Ugyldig turneringsstruktur"})
                 return
 
-            # Normalise level seconds (same as server.js)
             for lvl in tournament["levels"]:
                 if not isinstance(lvl, dict):
                     continue
@@ -239,62 +252,62 @@ class ClockConsumer(AsyncWebsocketConsumer):
                 s["elapsedInCurrentSeconds"] = 0
                 s["startedAtMs"] = now_ms if s["running"] else None
 
-            gs.with_state(_run)
-            _schedule_save()
+            gs.with_state(_run, tournament_id=tid)
+            _schedule_save(tid)
             await self._broadcast_snapshot()
 
         elif msg_type == "admin_add_time":
             if not await self._require_admin():
                 return
-            seconds = data.get("seconds", 60)
             now_ms = time.time() * 1000
             try:
-                seconds = int(seconds)
+                seconds = int(data.get("seconds", 60))
             except (TypeError, ValueError):
                 seconds = 60
-            gs.add_time_seconds(seconds, now_ms)
-            _schedule_save()
+            gs.add_time_seconds(seconds, now_ms, tournament_id=tid)
+            _schedule_save(tid)
             await self._broadcast_snapshot()
 
         elif msg_type == "admin_set_players":
             if not await self._require_admin():
                 return
             patch = {k: data[k] for k in ("registered", "busted", "rebuyCount", "addOnCount") if k in data}
-            gs.update_players(patch)
-            _schedule_save()
+            gs.update_players(patch, tournament_id=tid)
+            _schedule_save(tid)
             await self._broadcast_snapshot()
 
         elif msg_type == "admin_rebuy":
             if not await self._require_admin():
                 return
-            gs.update_players({"rebuyCount": (gs.get_snapshot()["players"]["rebuyCount"] + 1)})
-            _schedule_save()
+            snap = gs.get_snapshot(tournament_id=tid)
+            gs.update_players({"rebuyCount": snap["players"]["rebuyCount"] + 1}, tournament_id=tid)
+            _schedule_save(tid)
             await self._broadcast_snapshot()
 
         elif msg_type == "admin_add_on":
             if not await self._require_admin():
                 return
-            gs.update_players({"addOnCount": (gs.get_snapshot()["players"]["addOnCount"] + 1)})
-            _schedule_save()
+            snap = gs.get_snapshot(tournament_id=tid)
+            gs.update_players({"addOnCount": snap["players"]["addOnCount"] + 1}, tournament_id=tid)
+            _schedule_save(tid)
             await self._broadcast_snapshot()
 
         elif msg_type == "admin_bustout":
             if not await self._require_admin():
                 return
-            snap = gs.get_snapshot()
+            snap = gs.get_snapshot(tournament_id=tid)
             active = snap["players"]["active"]
             if active > 0:
-                gs.update_players({"busted": snap["players"]["busted"] + 1})
-                _schedule_save()
+                gs.update_players({"busted": snap["players"]["busted"] + 1}, tournament_id=tid)
+                _schedule_save(tid)
                 await self._broadcast_snapshot()
 
-
-    # ── Channel-layer receiver (called by group_send) ─────────────────────────
+    #  Channel-layer receiver 
 
     async def clock_broadcast(self, event: dict) -> None:
         await self.send_json(event["message"])
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
+    #  Helpers 
 
     async def _require_admin(self) -> bool:
         if getattr(self, "user", {}).get("role") != "admin":
@@ -303,11 +316,11 @@ class ClockConsumer(AsyncWebsocketConsumer):
         return True
 
     async def _broadcast_snapshot(self) -> None:
-        await self._broadcast({"type": "snapshot", **gs.get_snapshot()})
+        await self._broadcast({"type": "snapshot", **gs.get_snapshot(tournament_id=self.tournament_id)})
 
     async def _broadcast(self, message: dict) -> None:
         await self.channel_layer.group_send(
-            _GROUP,
+            self._group,
             {"type": "clock.broadcast", "message": message},
         )
 

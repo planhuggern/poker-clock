@@ -12,14 +12,14 @@ function toWsOrigin(origin) {
   return origin.replace(/^https/, "wss").replace(/^http/, "ws");
 }
 
-function buildWsUrl(token) {
+function buildWsUrl(token, tournamentId = 1) {
   const ws = toWsOrigin(SERVER_ORIGIN);
-  return `${ws}${basePath}/ws/clock/?token=${encodeURIComponent(token)}`;
+  return `${ws}${basePath}/ws/clock/${tournamentId}/?token=${encodeURIComponent(token)}`;
 }
 
 const RECONNECT_DELAY_MS = [1000, 2000, 4000, 8000, 15000];
 
-export function usePokerSocket(token) {
+export function usePokerSocket(token, tournamentId = 1) {
   const [status, setStatus] = useState("disconnected");
   const [error, setError] = useState(null);
   const [snapshot, setSnapshot] = useState(null);
@@ -38,7 +38,7 @@ export function usePokerSocket(token) {
       setStatus("connecting");
       setError(null);
 
-      const ws = new WebSocket(buildWsUrl(token));
+      const ws = new WebSocket(buildWsUrl(token, tournamentId));
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -98,7 +98,7 @@ export function usePokerSocket(token) {
       clearTimeout(reconnectTimerRef.current);
       wsRef.current?.close();
     };
-  }, [token]);
+  }, [token, tournamentId]);
 
   const api = useMemo(() => {
     const send = (type, extra = {}) => {

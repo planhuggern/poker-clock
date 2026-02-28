@@ -1,8 +1,10 @@
 """
-Clock state management.  Direct port of server/state.js.
+Clock state management — multi-tournament edition.
 
-All state lives in a single dict (_state) protected by a threading.RLock.
-Call init_state() once at startup (inside AppConfig.ready()).
+Each tournament has its own state dict protected by its own RLock.
+A meta-lock guards the registry dicts themselves.
+
+All public functions accept `tournament_id: int = 1` for backward compat.
 """
 import copy
 import math
@@ -10,8 +12,10 @@ import threading
 import time
 from typing import Any
 
-_lock = threading.RLock()
-_state: dict = {}
+# Registry: tournament_id → {state_dict, lock}
+_meta_lock: threading.Lock = threading.Lock()
+_states: dict[int, dict]          = {}   # tournament_id → state dict
+_locks:  dict[int, threading.RLock] = {}  # tournament_id → RLock
 
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
@@ -69,8 +73,7 @@ def _create_state() -> dict:
 
 def _coerce_int(value, fallback: int = 0) -> int:
     try:
-        v = int(value)
-        return v
+        return int(value)
     except (TypeError, ValueError):
         return fallback
 
@@ -80,7 +83,6 @@ def normalize_state(s: dict) -> None:
     if not isinstance(s, dict):
         return
 
-    # players
     if not isinstance(s.get("players"), dict):
         s["players"] = _default_players()
     else:
@@ -89,7 +91,6 @@ def normalize_state(s: dict) -> None:
             if not isinstance(p.get(key), int) or p[key] < 0:
                 p[key] = 0
 
-    # currentIndex
     if not isinstance(s.get("currentIndex"), int):
         s["currentIndex"] = _coerce_int(s.get("currentIndex"), 0)
 
@@ -97,26 +98,21 @@ def normalize_state(s: dict) -> None:
     max_idx = max(0, len(levels) - 1)
     s["currentIndex"] = max(0, min(s["currentIndex"], max_idx))
 
-    # startedAtMs
     v = s.get("startedAtMs")
     if not (isinstance(v, (int, float)) and math.isfinite(v)):
         s["startedAtMs"] = None
 
-    # elapsedInCurrentSeconds
     e = s.get("elapsedInCurrentSeconds")
     if not (isinstance(e, (int, float)) and math.isfinite(e) and e >= 0):
         s["elapsedInCurrentSeconds"] = 0
 
-    # running
     s["running"] = bool(s.get("running"))
 
-    # tournament.defaultLevelSeconds
     t = s.get("tournament") or {}
     dls = t.get("defaultLevelSeconds")
     if not (isinstance(dls, (int, float)) and math.isfinite(dls) and dls >= 0):
         t["defaultLevelSeconds"] = 15 * 60
 
-    # Normalise level seconds
     if isinstance(t.get("levels"), list):
         for lvl in t["levels"]:
             if not isinstance(lvl, dict):
@@ -149,7 +145,7 @@ def _level_total_seconds(s: dict) -> float:
     return fb if isinstance(fb, (int, float)) and math.isfinite(fb) and fb >= 0 else 0
 
 
-# ── Public API ────────────────────────────────────────────────────────────────
+# ── Pure computation helpers ──────────────────────────────────────────────────
 
 def compute_remaining_seconds(s: dict, now_ms: float | None = None) -> dict:
     if now_ms is None:
@@ -170,13 +166,13 @@ def compute_remaining_seconds(s: dict, now_ms: float | None = None) -> dict:
 def _prize_pool(s: dict) -> dict:
     t = s.get("tournament") or {}
     p = s.get("players") or {}
-    registered = max(0, int(p.get("registered") or 0))
-    busted = max(0, int(p.get("busted") or 0))
-    rebuy_count = max(0, int(p.get("rebuyCount") or 0))
-    add_on_count = max(0, int(p.get("addOnCount") or 0))
-    buy_in = max(0, int(t.get("buyIn") or 0))
-    rebuy_amount = max(0, int(t.get("rebuyAmount") or 0))
-    add_on_amount = max(0, int(t.get("addOnAmount") or 0))
+    registered    = max(0, int(p.get("registered")  or 0))
+    busted        = max(0, int(p.get("busted")       or 0))
+    rebuy_count   = max(0, int(p.get("rebuyCount")   or 0))
+    add_on_count  = max(0, int(p.get("addOnCount")   or 0))
+    buy_in        = max(0, int(t.get("buyIn")        or 0))
+    rebuy_amount  = max(0, int(t.get("rebuyAmount")  or 0))
+    add_on_amount = max(0, int(t.get("addOnAmount")  or 0))
     total = registered * buy_in + rebuy_count * rebuy_amount + add_on_count * add_on_amount
     return {
         "registered": registered,
@@ -202,7 +198,7 @@ def public_snapshot(s: dict, now_ms: float | None = None) -> dict:
 
 
 def stop_if_finished_and_advance(s: dict, now_ms: float) -> tuple[bool, str | None]:
-    """Returns (changed, event_name)."""
+    """Returns (changed, event_name). Mutates s in place."""
     lvl = _current_level(s)
     if not lvl:
         return False, None
@@ -223,37 +219,72 @@ def stop_if_finished_and_advance(s: dict, now_ms: float) -> tuple[bool, str | No
         return True, "TOURNAMENT_ENDED"
 
 
-# ── Thread-safe state accessors ───────────────────────────────────────────────
+# ── Registry helpers ──────────────────────────────────────────────────────────
 
-def init_state(loaded: dict | None = None) -> None:
-    global _state
-    with _lock:
-        _state = loaded if loaded else _create_state()
-        normalize_state(_state)
-        if _state["running"]:
-            _state["startedAtMs"] = time.time() * 1000
-
-
-def get_snapshot(now_ms: float | None = None) -> dict:
-    with _lock:
-        return public_snapshot(_state, now_ms)
+def _get_lock(tournament_id: int) -> threading.RLock:
+    """Return the RLock for *tournament_id*, creating it if needed."""
+    with _meta_lock:
+        if tournament_id not in _locks:
+            _locks[tournament_id] = threading.RLock()
+        return _locks[tournament_id]
 
 
-def get_state_copy() -> dict:
-    with _lock:
-        return copy.deepcopy(_state)
+# ── Public API ────────────────────────────────────────────────────────────────
+
+def init_state(loaded: dict | None = None, tournament_id: int = 1) -> None:
+    """Initialise (or reset) the in-memory state for *tournament_id*."""
+    lock = _get_lock(tournament_id)
+    with lock:
+        s = loaded if loaded else _create_state()
+        normalize_state(s)
+        if s["running"]:
+            s["startedAtMs"] = time.time() * 1000
+        with _meta_lock:
+            _states[tournament_id] = s
 
 
-def with_state(fn) -> Any:
-    """Call fn(state) inside the lock; returns its return value."""
-    with _lock:
-        return fn(_state)
+def list_tournament_ids() -> list[int]:
+    """Return the list of tournament IDs currently held in memory."""
+    with _meta_lock:
+        return list(_states.keys())
 
 
-def update_players(patch: dict) -> None:
-    """Merge patch into state[\"players\"] (integers clamped to >= 0)."""
-    with _lock:
-        p = _state.setdefault("players", _default_players())
+def get_snapshot(now_ms: float | None = None, tournament_id: int = 1) -> dict:
+    lock = _get_lock(tournament_id)
+    with lock:
+        s = _states.get(tournament_id)
+        if s is None:
+            raise KeyError(f"Tournament {tournament_id} not in memory")
+        return public_snapshot(s, now_ms)
+
+
+def get_state_copy(tournament_id: int = 1) -> dict:
+    lock = _get_lock(tournament_id)
+    with lock:
+        s = _states.get(tournament_id)
+        if s is None:
+            raise KeyError(f"Tournament {tournament_id} not in memory")
+        return copy.deepcopy(s)
+
+
+def with_state(fn, tournament_id: int = 1) -> Any:
+    """Call fn(state) inside the tournament's lock; returns its return value."""
+    lock = _get_lock(tournament_id)
+    with lock:
+        s = _states.get(tournament_id)
+        if s is None:
+            raise KeyError(f"Tournament {tournament_id} not in memory")
+        return fn(s)
+
+
+def update_players(patch: dict, tournament_id: int = 1) -> None:
+    """Merge patch into state['players'] (integers clamped to >= 0)."""
+    lock = _get_lock(tournament_id)
+    with lock:
+        s = _states.get(tournament_id)
+        if s is None:
+            raise KeyError(f"Tournament {tournament_id} not in memory")
+        p = s.setdefault("players", _default_players())
         for k, v in patch.items():
             if k in ("registered", "busted", "rebuyCount", "addOnCount"):
                 try:
@@ -262,15 +293,18 @@ def update_players(patch: dict) -> None:
                     pass
 
 
-def add_time_seconds(seconds: int, now_ms: float) -> None:
-    """Reduce elapsedInCurrentSeconds so remaining increases by `seconds`."""
-    with _lock:
-        elapsed = _state.get("elapsedInCurrentSeconds") or 0
-        if _state.get("running") and isinstance(_state.get("startedAtMs"), (int, float)):
-            elapsed += (_state["startedAtMs"] and (now_ms - _state["startedAtMs"]) / 1000 or 0)
-        # Snap elapsed to now, then subtract seconds
-        if _state.get("running"):
-            _state["elapsedInCurrentSeconds"] = max(0, elapsed - seconds)
-            _state["startedAtMs"] = now_ms
+def add_time_seconds(seconds: int, now_ms: float, tournament_id: int = 1) -> None:
+    """Reduce elapsedInCurrentSeconds so remaining increases by *seconds*."""
+    lock = _get_lock(tournament_id)
+    with lock:
+        s = _states.get(tournament_id)
+        if s is None:
+            raise KeyError(f"Tournament {tournament_id} not in memory")
+        elapsed = s.get("elapsedInCurrentSeconds") or 0
+        if s.get("running") and isinstance(s.get("startedAtMs"), (int, float)):
+            elapsed += (now_ms - s["startedAtMs"]) / 1000
+        if s.get("running"):
+            s["elapsedInCurrentSeconds"] = max(0, elapsed - seconds)
+            s["startedAtMs"] = now_ms
         else:
-            _state["elapsedInCurrentSeconds"] = max(0, (_state.get("elapsedInCurrentSeconds") or 0) - seconds)
+            s["elapsedInCurrentSeconds"] = max(0, (s.get("elapsedInCurrentSeconds") or 0) - seconds)

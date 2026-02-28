@@ -24,10 +24,28 @@ class ClockConfig(AppConfig):
 
 
 def _boot() -> None:
-    from .models import AppState
+    from .models import Tournament
     from . import state as gs
     from .tick import start_tick_thread
 
-    saved = AppState.load()
-    gs.init_state(saved)
-    start_tick_thread()
+    try:
+        # Ensure at least one tournament exists
+        if not Tournament.objects.exists():
+            # Try to seed from the legacy AppState singleton
+            from .models import AppState
+            saved = AppState.load()
+            Tournament.objects.create(
+                id=1,
+                name=(saved or {}).get("tournament", {}).get("name", "Pokerturnering"),
+                status=Tournament.STATUS_RUNNING if (saved or {}).get("running") else Tournament.STATUS_PENDING,
+                state_json=saved or {},
+            )
+
+        # Load every non-finished tournament into memory and start tick threads
+        active = Tournament.objects.exclude(status=Tournament.STATUS_FINISHED)
+        for t in active:
+            gs.init_state(t.state_json or None, tournament_id=t.id)
+            start_tick_thread(tournament_id=t.id)
+    except Exception as exc:
+        # DB may not be ready yet (e.g. first migrate run or test collection)
+        print(f"[boot] skipping state init: {exc}")
