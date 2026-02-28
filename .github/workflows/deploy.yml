@@ -48,6 +48,7 @@ jobs:
             npm install --silent
             VITE_BASE_PATH="${BASE_PATH}/" npm run build --silent
 
+
             echo "=== copy dist ==="
             mkdir -p "$REPO/server/public${BASE_PATH}"
             cp -r "$REPO/client-react/dist/." "$REPO/server/public${BASE_PATH}/"
