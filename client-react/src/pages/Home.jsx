@@ -5,6 +5,7 @@ import { usePlayerApi } from "../lib/usePlayerApi";
 import ClockCard, { fmtChips } from "../components/ClockCard";
 import AdminTournamentTable from "../components/AdminTournamentTable";
 import UserMenu from "../components/UserMenu";
+import ThemeSwitcher from "../components/ThemeSwitcher";
 
 
 export default function Home() {
@@ -48,10 +49,11 @@ export default function Home() {
         <h1 className="home-title">{t?.name ?? "Pokerklokke"}</h1>
         <div className="home-header-right">
           <span className={`clock-dot ${status === "connected" ? "running" : "paused"}`} />
-          <Link to={`/tournament/${tournamentId}/tv`} className="btn-secondary">📺 TV</Link>
-          <Link to="/" className="btn-secondary">⬅ Turneringer</Link>
+          <Link to={`/tournament/${tournamentId}/tv`} className="btn btn-secondary btn-sm">📺 TV</Link>
+          <Link to="/" className="btn btn-ghost btn-sm">⬅ Turneringer</Link>
           <UserMenu token={token} />
-          <button className="btn-ghost" onClick={() => {
+          <ThemeSwitcher />
+          <button className="btn btn-ghost btn-sm" onClick={() => {
             localStorage.removeItem("poker_token");
             localStorage.removeItem("poker_role");
             nav("/login", { replace: true });
@@ -69,7 +71,7 @@ export default function Home() {
         ) : (
           <>
             <button
-              className="btn-register"
+              className="btn btn-success btn-sm"
               disabled={registering || profile?.activeTournamentId != null}
               title={profile?.activeTournamentId != null ? "Du er allerede påmeldt en annen turnering" : ""}
               onClick={async () => {
@@ -91,18 +93,18 @@ export default function Home() {
       {isAdmin ? (
         <div className="admin-controls">
           <div className="ctrl-row">
-            <button className={`btn-primary${running ? " active" : ""}`} onClick={running ? pause : start}>
+              <button className={`btn btn-primary btn-sm${running ? " btn-active" : ""}`} onClick={running ? pause : start}>
               {running ? "⏸ Pause" : "▶ Start"}
             </button>
-            <button className="btn-secondary" onClick={reset}>⟳ Reset nivå</button>
-            <button className="btn-secondary" onClick={prev} disabled={currentIndex === 0}>◀ Forrige</button>
-            <button className="btn-secondary" onClick={next} disabled={currentIndex >= levels.length - 1}>Neste ▶</button>
+            <button className="btn btn-secondary btn-sm" onClick={reset}>⟳ Reset nivå</button>
+            <button className="btn btn-secondary btn-sm" onClick={prev} disabled={currentIndex === 0}>◀ Forrige</button>
+            <button className="btn btn-secondary btn-sm" onClick={next} disabled={currentIndex >= levels.length - 1}>Neste ▶</button>
           </div>
           <div className="ctrl-row">
             <span className="ctrl-label">Legg til tid:</span>
-            <button className="btn-ghost" onClick={() => addTime(60)}>+1 min</button>
-            <button className="btn-ghost" onClick={() => addTime(300)}>+5 min</button>
-            <button className="btn-ghost" onClick={() => addTime(-60)}>−1 min</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => addTime(60)}>+1 min</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => addTime(300)}>+5 min</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => addTime(-60)}>−1 min</button>
           </div>
         </div>
       ) : (
@@ -133,7 +135,7 @@ export default function Home() {
         <div className="players-panel">
           <div className="players-panel-header">
             <h3>Spillere & premiepott</h3>
-            <button className="btn-ghost" onClick={() => {
+              <button className="btn btn-ghost btn-sm" onClick={() => {
               setPlayerInput(String(players?.registered ?? 0));
               setEditingPlayers(v => !v);
             }}>
@@ -154,11 +156,11 @@ export default function Home() {
                 type="number" min="0"
                 value={playerInput}
                 onChange={e => setPlayerInput(e.target.value)}
-                className="player-input"
+                className="input input-sm player-input"
                 placeholder="Antall spillere"
                 autoFocus
               />
-              <button type="submit" className="btn-primary">OK</button>
+              <button type="submit" className="btn btn-primary btn-sm">OK</button>
             </form>
           )}
 
@@ -188,11 +190,11 @@ export default function Home() {
           </div>
 
           <div className="ctrl-row" style={{ marginTop: 8 }}>
-            <button className="btn-danger" onClick={bustout} disabled={!players?.active}>
+            <button className="btn btn-error btn-sm" onClick={bustout} disabled={!players?.active}>
               💀 Bust ({players?.active ?? 0} igjen)
             </button>
-            <button className="btn-secondary" onClick={rebuy}>+ Rebuy</button>
-            <button className="btn-secondary" onClick={addOn}>+ Add-on</button>
+            <button className="btn btn-secondary btn-sm" onClick={rebuy}>+ Rebuy</button>
+            <button className="btn btn-secondary btn-sm" onClick={addOn}>+ Add-on</button>
           </div>
 
           {t && (

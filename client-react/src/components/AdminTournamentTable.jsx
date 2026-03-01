@@ -256,7 +256,7 @@ export default function AdminTournamentTable({
       <div className="editor-presets">
         <label>Preset:</label>
         <select
-          className="editor-select"
+          className="select select-sm"
           defaultValue=""
           onChange={(e) => {
             if (e.target.value) {
@@ -287,7 +287,7 @@ export default function AdminTournamentTable({
               min="0"
               value={val}
               onChange={(e) => { setDirty(true); set(e.target.value); }}
-              className="editor-input editor-input--num90"
+              className="input input-sm editor-input--num90"
             />
           </label>
         ))}
@@ -301,13 +301,14 @@ export default function AdminTournamentTable({
             setDirty(true);
             setName(e.target.value);
           }}
-          className="editor-input editor-input--wide"
+          className="input editor-input--wide"
         />
 
-        <button onClick={addLevel}>+ Legg til nivå</button>
-        <button onClick={addBreak}>+ Legg til pause</button>
+        <button className="btn btn-sm" onClick={addLevel}>+ Legg til nivå</button>
+        <button className="btn btn-sm" onClick={addBreak}>+ Legg til pause</button>
 
         <button
+          className="btn btn-sm"
           onClick={() => {
             const tournament = toTournamentFromRows(name, rows, { buyIn, rebuyAmount, addOnAmount, startingStack });
             const safeName = (tournament.name || "tournament")
@@ -373,6 +374,7 @@ export default function AdminTournamentTable({
         </label>
 
         <button
+          className="btn btn-ghost btn-sm"
           onClick={() => {
             setDirty(false);
             setErr("");
@@ -408,7 +410,7 @@ export default function AdminTournamentTable({
 
                   <td>
                     <select
-                      className="editor-select"
+                      className="select select-sm"
                       value={r.type}
                       onChange={(e) => setCell(i, "type", e.target.value)}
                     >
@@ -421,7 +423,7 @@ export default function AdminTournamentTable({
                     <input
                       value={r.title}
                       onChange={(e) => setCell(i, "title", e.target.value)}
-                      className="editor-input editor-input--full"
+                      className="input input-sm editor-input--full"
                     />
                   </td>
 
@@ -431,7 +433,7 @@ export default function AdminTournamentTable({
                       min="1"
                       value={r.minutes}
                       onChange={(e) => setCell(i, "minutes", e.target.value)}
-                      className="editor-input editor-input--sm"
+                      className="input input-sm editor-input--sm"
                     />
                   </td>
 
@@ -442,7 +444,7 @@ export default function AdminTournamentTable({
                       disabled={isBreak}
                       value={r.sb}
                       onChange={(e) => setCell(i, "sb", e.target.value)}
-                      className="editor-input editor-input--num"
+                      className="input input-sm editor-input--num"
                     />
                   </td>
 
@@ -453,7 +455,7 @@ export default function AdminTournamentTable({
                       disabled={isBreak}
                       value={r.bb}
                       onChange={(e) => setCell(i, "bb", e.target.value)}
-                      className="editor-input editor-input--num"
+                      className="input input-sm editor-input--num"
                     />
                   </td>
 
@@ -464,28 +466,14 @@ export default function AdminTournamentTable({
                       disabled={isBreak}
                       value={r.ante}
                       onChange={(e) => setCell(i, "ante", e.target.value)}
-                      className="editor-input editor-input--num"
+                      className="input input-sm editor-input--num"
                     />
                   </td>
 
                   <td className="nowrap">
-                    <button
-                      onClick={() => move(i, -1)}
-                      disabled={i === 0}
-                      title="Opp"
-                    >
-                      ↑
-                    </button>{" "}
-                    <button
-                      onClick={() => move(i, +1)}
-                      disabled={i === rows.length - 1}
-                      title="Ned"
-                    >
-                      ↓
-                    </button>{" "}
-                    <button onClick={() => delRow(i)} title="Slett">
-                      Slett
-                    </button>
+                    <button className="btn btn-ghost btn-xs" onClick={() => move(i, -1)} disabled={i === 0} title="Opp">↑</button>{" "}
+                    <button className="btn btn-ghost btn-xs" onClick={() => move(i, +1)} disabled={i === rows.length - 1} title="Ned">↓</button>{" "}
+                    <button className="btn btn-error btn-xs" onClick={() => delRow(i)} title="Slett">Slett</button>
                   </td>
                 </tr>
               );
@@ -500,6 +488,7 @@ export default function AdminTournamentTable({
 
       <div className="editor-actions">
         <button
+          className="btn btn-primary btn-sm"
           disabled={!canApply}
           onClick={() => {
             const msg = validate(rows);

@@ -1,3 +1,7 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: night --default, dim, luxury, synthwave, cyberpunk;
+}
 
 /* ─── Reset / Root ────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
@@ -9,7 +13,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  background: linear-gradient(120deg, #1e2337 0%, #2b5876 100%);
+  background: linear-gradient(120deg, var(--color-base-200) 0%, var(--color-base-300) 100%);
   background-attachment: fixed;
   padding: 0;
   box-sizing: border-box;
@@ -172,8 +176,8 @@ h1, h2, h3, h4, h5 {
   grid-template-columns: 220px 1fr 200px;
   min-height: 100vh;
   width: 100%;
-  background: #12141f;
-  color: #f0f4ff;
+  background: var(--color-base-100);
+  color: var(--color-base-content);
 }
 
 /* Left: level list */
@@ -282,9 +286,9 @@ h1, h2, h3, h4, h5 {
 
 /* admin controls */
 .admin-controls {
-  background: rgba(30,35,55,0.7);
+  background: color-mix(in oklch, var(--color-base-300) 60%, transparent);
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid color-mix(in oklch, var(--color-base-content) 8%, transparent);
   padding: 1.1em 1.2em;
   margin-bottom: 1em;
 }
@@ -298,31 +302,8 @@ h1, h2, h3, h4, h5 {
 .ctrl-row:last-child { margin-bottom: 0; }
 .ctrl-label { font-size: 0.78rem; opacity: 0.55; min-width: 54px; }
 
-/* button variants */
-.btn-primary {
-  background: linear-gradient(90deg, #0d6efd 0%, #0dcaf0 100%);
-  border-color: #0d6efd;
-  color: #fff;
-}
-.btn-primary:hover { background: linear-gradient(90deg, #0dcaf0 0%, #0d6efd 100%); }
-.btn-secondary {
-  background: linear-gradient(90deg, #23243a 0%, #2b5876 100%);
-  border-color: #2b5876;
-  color: #fff;
-}
-.btn-ghost {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.2);
-  color: rgba(255,255,255,0.75);
-  padding: 0.45em 0.9em;
-  font-size: 0.9em;
-}
-.btn-ghost:hover { border-color: #7ee8fa; color: #7ee8fa; background: transparent; }
-.btn-danger {
-  background: linear-gradient(90deg, #7f0000 0%, #c0392b 100%);
-  border-color: #c0392b;
-}
-.btn-danger:hover { background: linear-gradient(90deg, #c0392b 0%, #7f0000 100%); }
+/* button variants handled by DaisyUI */
+/* .btn-primary / .btn-secondary / .btn-ghost / .btn-error / .btn-success = DaisyUI */
 
 /* level nav dots */
 .level-nav { margin-bottom: 1em; }
@@ -347,9 +328,9 @@ h1, h2, h3, h4, h5 {
 
 /* players panel */
 .players-panel {
-  background: rgba(30,35,55,0.7);
+  background: color-mix(in oklch, var(--color-base-300) 60%, transparent);
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid color-mix(in oklch, var(--color-base-content) 8%, transparent);
   padding: 1.1em 1.2em;
   margin-bottom: 1em;
 }
@@ -363,7 +344,7 @@ h1, h2, h3, h4, h5 {
 }
 .players-panel-title { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.04em; opacity: 0.8; }
 .player-form { display: flex; align-items: center; gap: 0.5em; flex-wrap: wrap; margin-bottom: 0.9em; }
-.player-input { width: 80px; padding: 6px 10px; font-size: 0.9rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.07); color: #fff; margin-bottom: 0; }
+.player-input { width: 80px; }
 .players-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; margin-bottom: 0.8em; }
 .pstat { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 0.5em 0.7em; display: flex; flex-direction: column; gap: 2px; }
 .pstat.prize { background: rgba(255,209,102,0.12); border: 1px solid rgba(255,209,102,0.25); }
@@ -401,13 +382,8 @@ h1, h2, h3, h4, h5 {
   display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap;
 }
 
-/* shared dark input / select used throughout the editor */
+/* editor-input/select use DaisyUI input/select + size modifiers below */
 .editor-input, .editor-select {
-  padding: 6px 8px;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.07);
-  color: inherit;
   font-size: inherit;
   font-family: inherit;
 }
@@ -418,28 +394,30 @@ h1, h2, h3, h4, h5 {
 .editor-input--num90 { width: 90px; padding: 5px 8px; }
 .editor-input--full  { width: 100%; }
 
-/* the "Import" label styled to look like a button */
+/* the "Import" label styled to look like a DaisyUI btn */
 .editor-import-btn {
-  display: inline-block;
-  padding: 6px 10px;
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  height: 2rem;
+  border: 1px solid color-mix(in oklch, var(--color-base-content) 20%, transparent);
+  border-radius: var(--rounded-btn, 0.5rem);
   cursor: pointer;
-  background: rgba(255,255,255,0.07);
-  color: inherit;
-  font-size: inherit;
+  background: var(--color-base-200);
+  color: var(--color-base-content);
+  font-size: 0.875rem;
   font-family: inherit;
   transition: background 0.15s;
 }
-.editor-import-btn:hover { background: rgba(255,255,255,0.12); }
+.editor-import-btn:hover { background: var(--color-base-300); }
 
 /* tournament settings strip */
 .tournament-settings {
   display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
   padding: 10px 12px;
-  background: rgba(255,255,255,0.05);
+  background: color-mix(in oklch, var(--color-base-300) 50%, transparent);
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.10);
+  border: 1px solid color-mix(in oklch, var(--color-base-content) 10%, transparent);
 }
 .tournament-settings label {
   display: flex; flex-direction: column; gap: 3px; font-size: 12px; opacity: 0.85;
@@ -467,12 +445,12 @@ main, .main-content {
   max-width: 900px;
   margin: 0 auto;
   padding: 2.5em 1.5em 2em;
-  background: rgba(30,35,55,0.85);
+  background: color-mix(in oklch, var(--color-base-200) 85%, transparent);
   border-radius: 24px;
   box-shadow: 0 8px 32px 0 rgba(31,38,135,0.25);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1.5px solid rgba(255,255,255,0.10);
+  border: 1.5px solid color-mix(in oklch, var(--color-base-content) 10%, transparent);
   margin-top: 2.5em;
 }
 
@@ -518,20 +496,20 @@ main, .main-content {
   align-items: center;
   gap: 6px;
   padding: 5px 10px 5px 6px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.16);
+  background: color-mix(in oklch, var(--color-base-content) 8%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-base-content) 16%, transparent);
   border-radius: 20px;
   cursor: pointer;
   font-size: 0.88rem;
   font-weight: 600;
-  color: #f0f4ff;
+  color: var(--color-base-content);
   transition: background 0.15s, border-color 0.15s;
   white-space: nowrap;
   max-width: 180px;
 }
 .user-menu-trigger:hover {
-  background: rgba(255,255,255,0.14);
-  border-color: #7ee8fa;
+  background: color-mix(in oklch, var(--color-base-content) 14%, transparent);
+  border-color: var(--color-primary);
   box-shadow: none;
 }
 
@@ -566,8 +544,8 @@ main, .main-content {
   top: calc(100% + 8px);
   right: 0;
   min-width: 230px;
-  background: #1e2337;
-  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--color-base-200);
+  border: 1px solid color-mix(in oklch, var(--color-base-content) 12%, transparent);
   border-radius: 14px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
   padding: 14px;
@@ -608,15 +586,15 @@ main, .main-content {
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
-  color: #7ee8fa;
+  color: var(--color-primary);
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
 }
 .user-menu-action:hover {
-  background: rgba(0,224,255,0.1);
-  border-color: rgba(0,224,255,0.2);
+  background: color-mix(in oklch, var(--color-primary) 10%, transparent);
+  border-color: color-mix(in oklch, var(--color-primary) 20%, transparent);
   box-shadow: none;
 }
 
@@ -625,20 +603,7 @@ main, .main-content {
   flex-direction: column;
   gap: 7px;
 }
-.user-menu-input {
-  padding: 7px 10px;
-  border-radius: 8px;
-  border: 1.5px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.07);
-  color: #fff;
-  font-size: 0.9rem;
-  width: 100%;
-  margin-bottom: 0;
-}
-.user-menu-input:focus {
-  border-color: #7ee8fa;
-  outline: none;
-}
+/* user-menu-input uses DaisyUI .input */
 .user-menu-error {
   font-size: 0.78rem;
   color: #ff6b6b;
@@ -669,8 +634,8 @@ main, .main-content {
   gap: 1rem;
 }
 .tournament-card {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: color-mix(in oklch, var(--color-base-300) 60%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-base-content) 12%, transparent);
   border-radius: 14px;
   padding: 1rem 1.2rem;
   display: flex;
@@ -678,18 +643,18 @@ main, .main-content {
   gap: 0.5rem;
   transition: border-color 0.15s;
 }
-.tournament-card:hover { border-color: rgba(126,232,250,0.3); }
+.tournament-card:hover { border-color: color-mix(in oklch, var(--color-primary) 40%, transparent); }
 .tournament-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.tournament-status-badge { font-size: 0.75rem; font-weight: 600; }
+/* .tournament-status-badge replaced by DaisyUI .badge .badge-sm */
 .tournament-card-admin-btns { display: flex; gap: 4px; }
 .tournament-card-name { font-size: 1.1rem; font-weight: 700; margin: 0; }
 .tournament-card-meta { font-size: 0.8rem; color: rgba(255,255,255,0.55); display: flex; gap: 1rem; }
 .tournament-card-actions { display: flex; gap: 8px; margin-top: 0.4rem; }
-.btn-sm { font-size: 0.82rem; padding: 5px 12px; }
+/* .btn-sm handled by DaisyUI */
 .muted-text { color: rgba(255,255,255,0.45); font-style: italic; }
 .error-text { color: #ff6b6b; font-size: 0.85rem; margin: 0; }
 
@@ -736,28 +701,7 @@ main, .main-content {
   color: #4caf50;
   font-weight: 600;
 }
-.btn-register {
-  background: linear-gradient(135deg, #1a6b3a, #27ae60);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 18px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity 0.15s, box-shadow 0.15s;
-  box-shadow: 0 2px 8px rgba(39,174,96,0.3);
-}
-.btn-register:hover:not(:disabled) {
-  opacity: 0.88;
-  box-shadow: 0 4px 14px rgba(39,174,96,0.45);
-}
-.btn-register:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  background: #444;
-  box-shadow: none;
-}
+/* .btn-register handled by DaisyUI .btn.btn-success */
 .tournament-registered-badge {
   font-size: 0.82rem;
   color: #4caf50;

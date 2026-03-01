@@ -1,7 +1,8 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useTournamentApi } from "../lib/useTournamentApi";
 import { usePlayerApi } from "../lib/usePlayerApi";
+import ThemeSwitcher from "../components/ThemeSwitcher";
 
 const STATUS_LABEL = {
   pending:  "Venter",
@@ -9,10 +10,10 @@ const STATUS_LABEL = {
   finished: "Avsluttet",
 };
 
-const STATUS_COLOR = {
-  pending:  "#888",
-  running:  "#4caf50",
-  finished: "#999",
+const STATUS_BADGE = {
+  pending:  "badge-ghost",
+  running:  "badge-success",
+  finished: "badge-neutral",
 };
 
 export default function TournamentList() {
@@ -98,11 +99,12 @@ export default function TournamentList() {
         <h1 className="home-title">🃏 Turneringer</h1>
         <div className="home-header-right">
           {isAdmin && (
-            <button className="btn-primary" onClick={() => setShowForm(f => !f)}>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowForm(f => !f)}>
               {showForm ? "✕ Avbryt" : "+ Ny turnering"}
             </button>
           )}
-          <button className="btn-ghost" onClick={() => {
+          <ThemeSwitcher />
+          <button className="btn btn-ghost btn-sm" onClick={() => {
             localStorage.removeItem("poker_token");
             localStorage.removeItem("poker_role");
             nav("/login", { replace: true });
@@ -114,13 +116,13 @@ export default function TournamentList() {
       {showForm && isAdmin && (
         <form className="tournament-create-form" onSubmit={handleCreate}>
           <input
-            className="nickname-input"
+            className="input"
             value={newName}
             onChange={e => setNewName(e.target.value)}
             placeholder="Turneringsnavn…"
             maxLength={80}
           />
-          <button className="btn-primary" disabled={creating} type="submit">
+          <button className="btn btn-primary btn-sm" disabled={creating} type="submit">
             {creating ? "Oppretter…" : "Opprett"}
           </button>
           {createError && <p className="error-text">{createError}</p>}
@@ -133,15 +135,15 @@ export default function TournamentList() {
           <form className="modal-box" onSubmit={handleRename}>
             <h3>Endre turneringsnavn</h3>
             <input
-              className="nickname-input"
+              className="input w-full"
               value={renaming.name}
               onChange={e => setRenaming(r => ({ ...r, name: e.target.value }))}
               maxLength={80}
               autoFocus
             />
             <div className="modal-actions">
-              <button className="btn-primary" type="submit">Lagre</button>
-              <button className="btn-ghost" type="button" onClick={() => setRenaming(null)}>Avbryt</button>
+              <button className="btn btn-primary btn-sm" type="submit">Lagre</button>
+              <button className="btn btn-ghost btn-sm" type="button" onClick={() => setRenaming(null)}>Avbryt</button>
             </div>
             {renamingError && <p className="error-text">{renamingError}</p>}
           </form>
@@ -200,16 +202,15 @@ function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlocke
     <div className="tournament-card">
       <div className="tournament-card-header">
         <span
-          className="tournament-status-badge"
-          style={{ color: STATUS_COLOR[t.status] }}
+          className={`badge badge-sm ${STATUS_BADGE[t.status] ?? 'badge-ghost'}`}
         >
-          ● {STATUS_LABEL[t.status] ?? t.status}
+          {STATUS_LABEL[t.status] ?? t.status}
         </span>
         {isAdmin && (
           <div className="tournament-card-admin-btns">
-            <button className="btn-ghost btn-sm" onClick={onRename}>✏️</button>
+            <button className="btn btn-ghost btn-xs" onClick={onRename}>✏️</button>
             {t.status !== "finished" && (
-              <button className="btn-ghost btn-sm" onClick={onFinish}>🏁</button>
+              <button className="btn btn-ghost btn-xs" onClick={onFinish}>🏁</button>
             )}
           </div>
         )}
@@ -224,10 +225,10 @@ function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlocke
 
       {t.status !== "finished" && (
         <div className="tournament-card-actions">
-          <Link to={`/tournament/${t.id}`} className="btn-primary btn-sm">
+          <Link to={`/tournament/${t.id}`} className="btn btn-primary btn-sm">
             🕹 Klokke
           </Link>
-          <Link to={`/tournament/${t.id}/tv`} className="btn-secondary btn-sm">
+          <Link to={`/tournament/${t.id}/tv`} className="btn btn-secondary btn-sm">
             📺 TV
           </Link>
         </div>
@@ -238,7 +239,7 @@ function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlocke
           <div className="tournament-registered-badge">✅ Du er påmeldt</div>
         ) : (
           <button
-            className="btn-register btn-sm"
+            className="btn btn-success btn-sm"
             onClick={onRegister}
             disabled={registering || isBlockedByOther}
             title={isBlockedByOther ? "Du er allerede påmeldt en annen turnering" : ""}

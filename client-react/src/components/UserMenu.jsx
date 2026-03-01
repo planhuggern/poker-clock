@@ -88,7 +88,7 @@ export default function UserMenu({ token }) {
           ) : (
             <form className="user-menu-edit-form" onSubmit={handleSave}>
               <input
-                className="user-menu-input"
+                className="input input-sm w-full"
                 value={inputVal}
                 onChange={e => setInputVal(e.target.value)}
                 maxLength={64}
@@ -99,12 +99,12 @@ export default function UserMenu({ token }) {
                 <div className="user-menu-error">{saveError}</div>
               )}
               <div className="user-menu-edit-actions">
-                <button type="submit" className="btn-primary" disabled={saving}>
+                <button type="submit" className="btn btn-primary btn-sm flex-1" disabled={saving}>
                   {saving ? "Lagrer…" : "Lagre"}
                 </button>
                 <button
                   type="button"
-                  className="btn-ghost"
+                  className="btn btn-ghost btn-sm flex-1"
                   onClick={() => { setEditing(false); setSaveError(""); }}
                 >
                   Avbryt
