@@ -23,14 +23,14 @@ export default function Home() {
   const { profile, register } = usePlayerApi(token);
   const isRegistered = profile?.activeTournamentId === tournamentId;
 
-  const isAdmin = !!(profile && snapshot?.tournament &&
-    profile.username === snapshot.tournament.admin?.username);
-
   const {
     status, error, snapshot,
     start, pause, reset, next, prev, jump,
     updateTournament, addTime, setPlayers, rebuy, addOn, bustout,
   } = usePokerSocket(token, tournamentId);
+
+  const isAdmin = !!(profile && snapshot?.tournament &&
+    profile.username === snapshot.tournament.admin?.username);
 
   if (!token) return <Navigate to="/login" replace />;
 

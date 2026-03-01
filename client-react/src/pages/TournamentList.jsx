@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useTournamentApi } from "../lib/useTournamentApi";
 import { usePlayerApi } from "../lib/usePlayerApi";
 
@@ -16,6 +16,7 @@ const STATUS_COLOR = {
 };
 
 export default function TournamentList() {
+  const nav   = useNavigate();
   const token = localStorage.getItem("poker_token");
   const role  = localStorage.getItem("poker_role") || "viewer";
   const isAdmin = role === "admin";
@@ -104,7 +105,7 @@ export default function TournamentList() {
           <button className="btn-ghost" onClick={() => {
             localStorage.removeItem("poker_token");
             localStorage.removeItem("poker_role");
-            location.href = "/login";
+            nav("/login", { replace: true });
           }}>Logg ut</button>
         </div>
       </div>
