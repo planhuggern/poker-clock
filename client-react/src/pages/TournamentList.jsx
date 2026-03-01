@@ -95,9 +95,9 @@ export default function TournamentList() {
 
   return (
     <main className="main-content">
-      <div className="home-header">
-        <h1 className="home-title">🃏 Turneringer</h1>
-        <div className="home-header-right">
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <h1 className="m-0">🃏 Turneringer</h1>
+        <div className="flex items-center gap-3 flex-wrap">
           {isAdmin && (
             <button className="btn btn-primary btn-sm" onClick={() => setShowForm(f => !f)}>
               {showForm ? "✕ Avbryt" : "+ Ny turnering"}
@@ -114,7 +114,7 @@ export default function TournamentList() {
 
       {/* Create form */}
       {showForm && isAdmin && (
-        <form className="tournament-create-form" onSubmit={handleCreate}>
+        <form className="flex items-center gap-2 mb-6 flex-wrap" onSubmit={handleCreate}>
           <input
             className="input"
             value={newName}
@@ -125,14 +125,14 @@ export default function TournamentList() {
           <button className="btn btn-primary btn-sm" disabled={creating} type="submit">
             {creating ? "Oppretter…" : "Opprett"}
           </button>
-          {createError && <p className="error-text">{createError}</p>}
+          {createError && <p className="text-error text-sm m-0">{createError}</p>}
         </form>
       )}
 
       {/* Rename modal */}
       {renaming && (
-        <div className="modal-backdrop">
-          <form className="modal-box" onSubmit={handleRename}>
+        <div className="fixed inset-0 bg-black/55 flex items-center justify-center z-[999]">
+          <form className="bg-base-200 border border-base-content/15 rounded-xl p-6 min-w-[320px] flex flex-col gap-3" onSubmit={handleRename}>
             <h3>Endre turneringsnavn</h3>
             <input
               className="input w-full"
@@ -141,23 +141,23 @@ export default function TournamentList() {
               maxLength={80}
               autoFocus
             />
-            <div className="modal-actions">
+            <div className="flex gap-2">
               <button className="btn btn-primary btn-sm" type="submit">Lagre</button>
               <button className="btn btn-ghost btn-sm" type="button" onClick={() => setRenaming(null)}>Avbryt</button>
             </div>
-            {renamingError && <p className="error-text">{renamingError}</p>}
+            {renamingError && <p className="text-error text-sm m-0">{renamingError}</p>}
           </form>
         </div>
       )}
 
-      {registerError && <p className="error-text" style={{marginBottom: "0.5rem"}}>Påmelding feilet: {registerError}</p>}
-      {loading && <p className="muted-text">Laster turneringer…</p>}
-      {error   && <p className="error-text">Feil: {error}</p>}
+      {registerError && <p className="text-error text-sm m-0" style={{marginBottom: "0.5rem"}}>Påmelding feilet: {registerError}</p>}
+      {loading && <p className="opacity-45 italic">Laster turneringer…</p>}
+      {error   && <p className="text-error text-sm m-0">Feil: {error}</p>}
 
       {/* Active tournaments */}
       {active.length > 0 && (
-        <section className="tournament-section">
-          <h2 className="section-heading">Aktive turneringer</h2>
+        <section className="my-6">
+          <h2 className="text-xs uppercase tracking-widest opacity-45 mb-3">Aktive turneringer</h2>
           <div className="tournament-grid">
             {active.map(t => (
               <TournamentCard
@@ -177,15 +177,15 @@ export default function TournamentList() {
       )}
 
       {active.length === 0 && !loading && (
-        <p className="muted-text">
+        <p className="opacity-45 italic">
           Ingen aktive turneringer.{isAdmin ? " Opprett en ny ovenfor." : ""}
         </p>
       )}
 
       {/* Finished tournaments */}
       {finished.length > 0 && (
-        <section className="tournament-section">
-          <h2 className="section-heading">Avsluttede turneringer</h2>
+        <section className="my-6">
+          <h2 className="text-xs uppercase tracking-widest opacity-45 mb-3">Avsluttede turneringer</h2>
           <div className="tournament-grid">
             {finished.map(t => (
               <TournamentCard key={t.id} t={t} isAdmin={false} />
@@ -200,14 +200,14 @@ export default function TournamentList() {
 function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlockedByOther, onRegister, registering }) {
   return (
     <div className="tournament-card">
-      <div className="tournament-card-header">
+      <div className="flex justify-between items-center">
         <span
           className={`badge badge-sm ${STATUS_BADGE[t.status] ?? 'badge-ghost'}`}
         >
           {STATUS_LABEL[t.status] ?? t.status}
         </span>
         {isAdmin && (
-          <div className="tournament-card-admin-btns">
+          <div className="flex gap-1">
             <button className="btn btn-ghost btn-xs" onClick={onRename}>✏️</button>
             {t.status !== "finished" && (
               <button className="btn btn-ghost btn-xs" onClick={onFinish}>🏁</button>
@@ -216,15 +216,15 @@ function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlocke
         )}
       </div>
 
-      <h3 className="tournament-card-name">{t.name}</h3>
+      <h3 className="text-lg font-bold m-0">{t.name}</h3>
 
-      <div className="tournament-card-meta">
+      <div className="text-sm opacity-55 flex gap-4">
         <span>{t.playerCount} spiller{t.playerCount !== 1 ? "e" : ""}</span>
         {t.buyIn > 0 && <span>Buy-in: {t.buyIn} kr</span>}
       </div>
 
       {t.status !== "finished" && (
-        <div className="tournament-card-actions">
+        <div className="flex gap-2 mt-1">
           <Link to={`/tournament/${t.id}`} className="btn btn-primary btn-sm">
             🕹 Klokke
           </Link>
@@ -236,7 +236,7 @@ function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlocke
 
       {t.status !== "finished" && onRegister && (
         isRegistered ? (
-          <div className="tournament-registered-badge">✅ Du er påmeldt</div>
+          <div className="text-sm text-success font-semibold mt-1">✅ Du er påmeldt</div>
         ) : (
           <button
             className="btn btn-success btn-sm"

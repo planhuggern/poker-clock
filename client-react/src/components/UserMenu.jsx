@@ -1,6 +1,6 @@
-/**
- * UserMenu – avatar/nickname pill in the top-right corner.
- * Click → dropdown shows email + nickname + "Endre nickname" button.
+﻿/**
+ * UserMenu â€“ avatar/nickname pill in the top-right corner.
+ * Click â†’ dropdown shows email + nickname + "Endre nickname" button.
  */
 import { useEffect, useRef, useState } from "react";
 import { usePlayerApi } from "../lib/usePlayerApi";
@@ -39,7 +39,7 @@ export default function UserMenu({ token }) {
   async function handleSave(e) {
     e.preventDefault();
     const trimmed = inputVal.trim();
-    if (!trimmed) { setSaveError("Nickname kan ikke være tomt."); return; }
+    if (!trimmed) { setSaveError("Nickname kan ikke vÃ¦re tomt."); return; }
     if (trimmed.length > 64) { setSaveError("Maks 64 tegn."); return; }
     setSaving(true);
     setSaveError("");
@@ -54,7 +54,7 @@ export default function UserMenu({ token }) {
     }
   }
 
-  const displayName = profile?.nickname || profile?.username || "•••";
+  const displayName = profile?.nickname || profile?.username || "â€¢â€¢â€¢";
 
   return (
     <div className="user-menu" ref={menuRef}>
@@ -67,26 +67,26 @@ export default function UserMenu({ token }) {
         title="Min profil"
       >
         <span className="user-menu-avatar">{displayName[0]?.toUpperCase()}</span>
-        <span className="user-menu-name">{displayName}</span>
-        <span className="user-menu-chevron">{open ? "▲" : "▼"}</span>
+        <span className="overflow-hidden text-ellipsis flex-1">{displayName}</span>
+        <span className="text-xs opacity-60 shrink-0">{open ? "â–²" : "â–¼"}</span>
       </button>
 
       {/* Dropdown */}
       {open && (
         <div className="user-menu-dropdown">
-          <div className="user-menu-info">
-            <div className="user-menu-nickname">{displayName}</div>
-            <div className="user-menu-email">{profile?.username}</div>
+          <div className="pb-0.5">
+            <div className="text-base font-bold mb-0.5 break-all">{displayName}</div>
+            <div className="text-xs opacity-45 break-all">{profile?.username}</div>
           </div>
 
-          <div className="user-menu-divider" />
+          <div className="divider my-2" />
 
           {!editing ? (
             <button className="user-menu-action" onClick={startEdit}>
-              ✏️ Endre nickname
+              âœï¸ Endre nickname
             </button>
           ) : (
-            <form className="user-menu-edit-form" onSubmit={handleSave}>
+            <form className="flex flex-col gap-1.5" onSubmit={handleSave}>
               <input
                 className="input input-sm w-full"
                 value={inputVal}
@@ -96,11 +96,11 @@ export default function UserMenu({ token }) {
                 placeholder="Nytt nickname"
               />
               {saveError && (
-                <div className="user-menu-error">{saveError}</div>
+                <div className="text-error text-xs">{saveError}</div>
               )}
-              <div className="user-menu-edit-actions">
+              <div className="flex gap-1.5">
                 <button type="submit" className="btn btn-primary btn-sm flex-1" disabled={saving}>
-                  {saving ? "Lagrer…" : "Lagre"}
+                  {saving ? "Lagrerâ€¦" : "Lagre"}
                 </button>
                 <button
                   type="button"
