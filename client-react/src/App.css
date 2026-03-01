@@ -308,6 +308,7 @@ h1, h2, h3, h4, h5 {
 .btn-secondary {
   background: linear-gradient(90deg, #23243a 0%, #2b5876 100%);
   border-color: #2b5876;
+  color: #fff;
 }
 .btn-ghost {
   background: transparent;
