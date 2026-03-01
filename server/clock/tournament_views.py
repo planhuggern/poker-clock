@@ -91,6 +91,9 @@ class TournamentListView(View):
 
         # Load into in-memory state engine and start tick thread
         gs.init_state(state_json or None, tournament_id=tournament.id)
+        if admin_player:
+            admin_info = {"username": admin_player.username, "nickname": admin_player.nickname or ""}
+            gs.with_state(lambda s, info=admin_info: s["tournament"].update({"admin": info}), tournament_id=tournament.id)
         start_tick_thread(tournament_id=tournament.id)
 
         return JsonResponse(tournament.to_dict(), status=201)
