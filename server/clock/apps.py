@@ -20,7 +20,14 @@ class ClockConfig(AppConfig):
         if "runserver" in argv and os.environ.get("RUN_MAIN") != "true":
             return
 
-        _boot()
+        from django.db.models.signals import post_migrate
+        
+        def _on_post_migrate(sender, **kwargs):
+            try:
+                _boot()
+            except Exception as exc:
+                print(f"[boot] skipping state init: {exc}")
+        post_migrate.connect(_on_post_migrate, sender=self)
 
 
 def _boot() -> None:

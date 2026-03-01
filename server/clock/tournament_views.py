@@ -58,7 +58,7 @@ class TournamentListView(View):
 
     def post(self, request: HttpRequest) -> JsonResponse:
         """Admin: create a new tournament."""
-        _, err = _require_admin(request)
+        payload, err = _require_admin(request)
         if err:
             return err
 
@@ -76,10 +76,17 @@ class TournamentListView(View):
         if not isinstance(state_json, dict):
             state_json = {}
 
+        # Finn oppretter (admin) bruker
+        from .models import Player
+        admin_player = None
+        if payload and payload.get("username"):
+            admin_player, _ = Player.objects.get_or_create(username=payload["username"], defaults={"nickname": ""})
+
         tournament = Tournament.objects.create(
             name=name.strip(),
             status=Tournament.STATUS_PENDING,
             state_json=state_json,
+            admin=admin_player,
         )
 
         # Load into in-memory state engine and start tick thread

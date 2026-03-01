@@ -52,6 +52,7 @@ class Tournament(models.Model):
     state_json = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    admin      = models.ForeignKey('Player', null=True, blank=True, on_delete=models.SET_NULL, related_name='admin_tournaments')
 
     class Meta:
         db_table = "clock_tournament"
@@ -65,7 +66,7 @@ class Tournament(models.Model):
 
     def to_dict(self) -> dict:
         t_cfg = (self.state_json or {}).get("tournament") or {}
-        return {
+        data = {
             "id":           self.id,
             "name":         self.name,
             "status":       self.status,
@@ -74,6 +75,14 @@ class Tournament(models.Model):
             "buyIn":        t_cfg.get("buyIn", 0),
             "startingStack": t_cfg.get("startingStack", 0),
         }
+        if self.admin:
+            data["admin"] = {
+                "username": self.admin.username,
+                "nickname": self.admin.effective_nickname(),
+            }
+        else:
+            data["admin"] = None
+        return data
 
 
 class Player(models.Model):

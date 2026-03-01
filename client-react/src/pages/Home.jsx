@@ -14,7 +14,12 @@ export default function Home() {
 
   const token = localStorage.getItem("poker_token");
   const role = localStorage.getItem("poker_role") || "viewer";
-  const isAdmin = role === "admin";
+
+  // Sjekk om innlogget bruker er admin for denne turneringen
+  const isAdmin = (() => {
+    if (!profile || !snapshot?.tournament) return false;
+    return profile.username === snapshot.tournament.admin?.username;
+  })();
 
   const [editingPlayers, setEditingPlayers] = useState(false);
   const [playerInput, setPlayerInput] = useState("");
