@@ -380,11 +380,86 @@ h1, h2, h3, h4, h5 {
   text-align: center;
 }
 
-/* ─── AdminTournamentTable settings ─────────────────────────────────────── */
-.tournament-settings label select,
-.tournament-settings label input {
-  margin-bottom: 0;
+/* ─── AdminTournamentTable ───────────────────────────────────────────────── */
+.editor-root { margin-top: 18px; }
+.editor-root h3 { margin-bottom: 8px; }
+
+.editor-presets {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px;
 }
+.editor-presets label { opacity: 0.8; font-size: 13px; }
+
+.editor-name-row {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;
+}
+.editor-name-row label { opacity: 0.8; }
+
+.editor-hint { opacity: 0.7; font-size: 12px; }
+.editor-msg  { margin-top: 10px; opacity: 0.85; }
+
+.editor-actions {
+  display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap;
+}
+
+/* shared dark input / select used throughout the editor */
+.editor-input, .editor-select {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.07);
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+}
+.editor-input:disabled { opacity: 0.5; }
+.editor-input--wide  { min-width: 260px; padding: 8px; }
+.editor-input--sm    { width: 64px; }
+.editor-input--num   { width: 72px; }
+.editor-input--num90 { width: 90px; padding: 5px 8px; }
+.editor-input--full  { width: 100%; }
+
+/* the "Import" label styled to look like a button */
+.editor-import-btn {
+  display: inline-block;
+  padding: 6px 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  cursor: pointer;
+  background: rgba(255,255,255,0.07);
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.editor-import-btn:hover { background: rgba(255,255,255,0.12); }
+
+/* tournament settings strip */
+.tournament-settings {
+  display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.10);
+}
+.tournament-settings label {
+  display: flex; flex-direction: column; gap: 3px; font-size: 12px; opacity: 0.85;
+}
+.tournament-settings label select,
+.tournament-settings label input { margin-bottom: 0; }
+
+/* levels table */
+.editor-table-wrap { overflow-x: auto; }
+.editor-table { width: 100%; border-collapse: collapse; }
+.editor-table th {
+  padding: 8px; text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+  font-size: 0.85rem; opacity: 0.7;
+}
+.editor-table td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.editor-table td.w-34  { width: 34px; }
+.editor-table td.w-70  { width: 70px; }
+.editor-table td.w-80  { width: 80px; }
+.editor-table td.nowrap { white-space: nowrap; }
 
 /* ─── Shared layout ───────────────────────────────────────────────────────── */
 main, .main-content {

@@ -249,13 +249,14 @@ export default function AdminTournamentTable({
   if (!isAdmin) return null;
 
   return (
-    <div style={{ marginTop: 18 }}>
-      <h3 style={{ marginBottom: 8 }}>Admin: Rediger oppsett</h3>
+    <div className="editor-root">
+      <h3>Admin: Rediger oppsett</h3>
 
       {/* Presets */}
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-        <label style={{ opacity: 0.8, fontSize: 13 }}>Preset:</label>
+      <div className="editor-presets">
+        <label>Preset:</label>
         <select
+          className="editor-select"
           defaultValue=""
           onChange={(e) => {
             if (e.target.value) {
@@ -263,7 +264,6 @@ export default function AdminTournamentTable({
               e.target.value = "";
             }
           }}
-          style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #ddd" }}
         >
           <option value="">Bruk preset…</option>
           <option value="quick">Hurtigturnering (10 min)</option>
@@ -273,48 +273,35 @@ export default function AdminTournamentTable({
       </div>
 
       {/* Tournament settings */}
-      <div className="tournament-settings" style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14, padding: "10px 12px", background: "#f9f9f9", borderRadius: 10, border: "1px solid #eee" }}>
+      <div className="tournament-settings">
         {[
           { label: "Buy-in kr",   val: buyIn,         set: setBuyIn },
           { label: "Rebuy kr",    val: rebuyAmount,   set: setRebuyAmount },
           { label: "Add-on kr",   val: addOnAmount,   set: setAddOnAmount },
           { label: "Startstack",  val: startingStack, set: setStartingStack },
         ].map(({ label, val, set }) => (
-          <label key={label} style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 12, opacity: 0.85 }}>
+          <label key={label}>
             {label}
             <input
               type="number"
               min="0"
               value={val}
               onChange={(e) => { setDirty(true); set(e.target.value); }}
-              style={{ width: 90, padding: "5px 8px", borderRadius: 8, border: "1px solid #ddd" }}
+              className="editor-input editor-input--num90"
             />
           </label>
         ))}
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          gap: 10,
-          alignItems: "center",
-          flexWrap: "wrap",
-          marginBottom: 10,
-        }}
-      >
-        <label style={{ opacity: 0.8 }}>Turneringsnavn:</label>
+      <div className="editor-name-row">
+        <label>Turneringsnavn:</label>
         <input
           value={name}
           onChange={(e) => {
             setDirty(true);
             setName(e.target.value);
           }}
-          style={{
-            padding: 8,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-            minWidth: 260,
-          }}
+          className="editor-input editor-input--wide"
         />
 
         <button onClick={addLevel}>+ Legg til nivå</button>
@@ -335,14 +322,7 @@ export default function AdminTournamentTable({
         </button>
 
         <label
-          style={{
-            display: "inline-block",
-            padding: "6px 10px",
-            border: "1px solid #ddd",
-            borderRadius: 10,
-            cursor: "pointer",
-            background: "white",
-          }}
+          className="editor-import-btn"
           title="Importer oppsett fra JSON-fil"
         >
           Import
@@ -398,32 +378,24 @@ export default function AdminTournamentTable({
             setErr("");
             setImportMsg("");
           }}
-          style={{ opacity: 0.9 }}
         >
           Angre lokale endringer
         </button>
       </div>
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      {/* Levels table */}
+      <div className="editor-table-wrap">
+        <table className="editor-table">
           <thead>
-            <tr style={{ textAlign: "left" }}>
-              <th style={{ padding: 8, borderBottom: "1px solid #eee" }}>#</th>
-              <th style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                Type
-              </th>
-              <th style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                Tittel
-              </th>
-              <th style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                Min
-              </th>
-              <th style={{ padding: 8, borderBottom: "1px solid #eee" }}>SB</th>
-              <th style={{ padding: 8, borderBottom: "1px solid #eee" }}>BB</th>
-              <th style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                Ante
-              </th>
-              <th style={{ padding: 8, borderBottom: "1px solid #eee" }}></th>
+            <tr>
+              <th>#</th>
+              <th>Type</th>
+              <th>Tittel</th>
+              <th>Min</th>
+              <th>SB</th>
+              <th>BB</th>
+              <th>Ante</th>
+              <th></th>
             </tr>
           </thead>
 
@@ -432,18 +404,11 @@ export default function AdminTournamentTable({
               const isBreak = r.type === "break";
               return (
                 <tr key={i}>
-                  <td
-                    style={{
-                      padding: 8,
-                      borderBottom: "1px solid #f4f4f4",
-                      width: 34,
-                    }}
-                  >
-                    {i + 1}
-                  </td>
+                  <td className="w-34">{i + 1}</td>
 
-                  <td style={{ padding: 8, borderBottom: "1px solid #f4f4f4" }}>
+                  <td>
                     <select
+                      className="editor-select"
                       value={r.type}
                       onChange={(e) => setCell(i, "type", e.target.value)}
                     >
@@ -452,116 +417,58 @@ export default function AdminTournamentTable({
                     </select>
                   </td>
 
-                  <td style={{ padding: 8, borderBottom: "1px solid #f4f4f4" }}>
+                  <td>
                     <input
                       value={r.title}
                       onChange={(e) => setCell(i, "title", e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: 6,
-                        borderRadius: 8,
-                        border: "1px solid #ddd",
-                      }}
+                      className="editor-input editor-input--full"
                     />
                   </td>
 
-                  <td
-                    style={{
-                      padding: 8,
-                      borderBottom: "1px solid #f4f4f4",
-                      width: 70,
-                    }}
-                  >
+                  <td className="w-70">
                     <input
                       type="number"
                       min="1"
                       value={r.minutes}
                       onChange={(e) => setCell(i, "minutes", e.target.value)}
-                      style={{
-                        width: 64,
-                        padding: 6,
-                        borderRadius: 8,
-                        border: "1px solid #ddd",
-                      }}
+                      className="editor-input editor-input--sm"
                     />
                   </td>
 
-                  <td
-                    style={{
-                      padding: 8,
-                      borderBottom: "1px solid #f4f4f4",
-                      width: 80,
-                    }}
-                  >
+                  <td className="w-80">
                     <input
                       type="number"
                       min="0"
                       disabled={isBreak}
                       value={r.sb}
                       onChange={(e) => setCell(i, "sb", e.target.value)}
-                      style={{
-                        width: 72,
-                        padding: 6,
-                        borderRadius: 8,
-                        border: "1px solid #ddd",
-                        opacity: isBreak ? 0.5 : 1,
-                      }}
+                      className="editor-input editor-input--num"
                     />
                   </td>
 
-                  <td
-                    style={{
-                      padding: 8,
-                      borderBottom: "1px solid #f4f4f4",
-                      width: 80,
-                    }}
-                  >
+                  <td className="w-80">
                     <input
                       type="number"
                       min="0"
                       disabled={isBreak}
                       value={r.bb}
                       onChange={(e) => setCell(i, "bb", e.target.value)}
-                      style={{
-                        width: 72,
-                        padding: 6,
-                        borderRadius: 8,
-                        border: "1px solid #ddd",
-                        opacity: isBreak ? 0.5 : 1,
-                      }}
+                      className="editor-input editor-input--num"
                     />
                   </td>
 
-                  <td
-                    style={{
-                      padding: 8,
-                      borderBottom: "1px solid #f4f4f4",
-                      width: 80,
-                    }}
-                  >
+                  <td className="w-80">
                     <input
                       type="number"
                       min="0"
                       disabled={isBreak}
                       value={r.ante}
                       onChange={(e) => setCell(i, "ante", e.target.value)}
-                      style={{
-                        width: 72,
-                        padding: 6,
-                        borderRadius: 8,
-                        border: "1px solid #ddd",
-                        opacity: isBreak ? 0.5 : 1,
-                      }}
+                      className="editor-input editor-input--num"
                     />
                   </td>
 
-                  <td
-                    style={{
-                      padding: 8,
-                      borderBottom: "1px solid #f4f4f4",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <td className="nowrap">
                     <button
                       onClick={() => move(i, -1)}
                       disabled={i === 0}
@@ -588,18 +495,10 @@ export default function AdminTournamentTable({
       </div>
 
       {importMsg ? (
-        <div style={{ marginTop: 10, opacity: 0.85 }}>{importMsg}</div>
+        <div className="editor-msg">{importMsg}</div>
       ) : null}
 
-      <div
-        style={{
-          display: "flex",
-          gap: 10,
-          alignItems: "center",
-          marginTop: 12,
-          flexWrap: "wrap",
-        }}
-      >
+      <div className="editor-actions">
         <button
           disabled={!canApply}
           onClick={() => {
@@ -619,7 +518,7 @@ export default function AdminTournamentTable({
 
         {err ? <span style={{ color: "crimson" }}>{err}</span> : null}
 
-        <span style={{ opacity: 0.7, fontSize: 12 }}>
+        <span className="editor-hint">
           (durationSeconds = minutter × 60. Pauser ignorerer SB/BB/Ante.)
         </span>
       </div>
