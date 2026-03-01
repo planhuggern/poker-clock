@@ -1,6 +1,6 @@
 ﻿/**
- * UserMenu â€“ avatar/nickname pill in the top-right corner.
- * Click â†’ dropdown shows email + nickname + "Endre nickname" button.
+ * UserMenu – avatar/nickname pill in the top-right corner.
+ * Click → dropdown shows email + nickname + "Endre nickname" button.
  */
 import { useEffect, useRef, useState } from "react";
 import { usePlayerApi } from "../lib/usePlayerApi";
@@ -39,7 +39,7 @@ export default function UserMenu({ token }) {
   async function handleSave(e) {
     e.preventDefault();
     const trimmed = inputVal.trim();
-    if (!trimmed) { setSaveError("Nickname kan ikke vÃ¦re tomt."); return; }
+    if (!trimmed) { setSaveError("Nickname kan ikke være tomt."); return; }
     if (trimmed.length > 64) { setSaveError("Maks 64 tegn."); return; }
     setSaving(true);
     setSaveError("");
@@ -54,7 +54,7 @@ export default function UserMenu({ token }) {
     }
   }
 
-  const displayName = profile?.nickname || profile?.username || "â€¢â€¢â€¢";
+  const displayName = profile?.nickname || profile?.username || "•••";
 
   return (
     <div className="user-menu" ref={menuRef}>
@@ -68,7 +68,7 @@ export default function UserMenu({ token }) {
       >
         <span className="user-menu-avatar">{displayName[0]?.toUpperCase()}</span>
         <span className="overflow-hidden text-ellipsis flex-1">{displayName}</span>
-        <span className="text-xs opacity-60 shrink-0">{open ? "â–²" : "â–¼"}</span>
+        <span className="text-xs opacity-60 shrink-0">{open ? "▲" : "▼"}</span>
       </button>
 
       {/* Dropdown */}
@@ -83,7 +83,7 @@ export default function UserMenu({ token }) {
 
           {!editing ? (
             <button className="user-menu-action" onClick={startEdit}>
-              âœï¸ Endre nickname
+              ✏️ Endre nickname
             </button>
           ) : (
             <form className="flex flex-col gap-1.5" onSubmit={handleSave}>
@@ -100,7 +100,7 @@ export default function UserMenu({ token }) {
               )}
               <div className="flex gap-1.5">
                 <button type="submit" className="btn btn-primary btn-sm flex-1" disabled={saving}>
-                  {saving ? "Lagrerâ€¦" : "Lagre"}
+                  {saving ? "Lagrer…" : "Lagre"}
                 </button>
                 <button
                   type="button"

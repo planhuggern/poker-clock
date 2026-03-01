@@ -6,7 +6,7 @@ import ThemeSwitcher from "../components/ThemeSwitcher";
 
 const STATUS_LABEL = {
   pending:  "Venter",
-  running:  "Pågår",
+  running:  "P�g�r",
   finished: "Avsluttet",
 };
 
@@ -96,11 +96,11 @@ export default function TournamentList() {
   return (
     <main className="main-content">
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-        <h1 className="m-0">🃏 Turneringer</h1>
+        <h1 className="m-0">?? Turneringer</h1>
         <div className="flex items-center gap-3 flex-wrap">
           {isAdmin && (
             <button className="btn btn-primary btn-sm" onClick={() => setShowForm(f => !f)}>
-              {showForm ? "✕ Avbryt" : "+ Ny turnering"}
+              {showForm ? "? Avbryt" : "+ Ny turnering"}
             </button>
           )}
           <ThemeSwitcher />
@@ -119,11 +119,11 @@ export default function TournamentList() {
             className="input"
             value={newName}
             onChange={e => setNewName(e.target.value)}
-            placeholder="Turneringsnavn…"
+            placeholder="Turneringsnavn�"
             maxLength={80}
           />
           <button className="btn btn-primary btn-sm" disabled={creating} type="submit">
-            {creating ? "Oppretter…" : "Opprett"}
+            {creating ? "Oppretter�" : "Opprett"}
           </button>
           {createError && <p className="text-error text-sm m-0">{createError}</p>}
         </form>
@@ -150,8 +150,8 @@ export default function TournamentList() {
         </div>
       )}
 
-      {registerError && <p className="text-error text-sm m-0" style={{marginBottom: "0.5rem"}}>Påmelding feilet: {registerError}</p>}
-      {loading && <p className="opacity-45 italic">Laster turneringer…</p>}
+      {registerError && <p className="text-error text-sm m-0" style={{marginBottom: "0.5rem"}}>P�melding feilet: {registerError}</p>}
+      {loading && <p className="opacity-45 italic">Laster turneringer�</p>}
       {error   && <p className="text-error text-sm m-0">Feil: {error}</p>}
 
       {/* Active tournaments */}
@@ -208,9 +208,9 @@ function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlocke
         </span>
         {isAdmin && (
           <div className="flex gap-1">
-            <button className="btn btn-ghost btn-xs" onClick={onRename}>✏️</button>
+            <button className="btn btn-ghost btn-xs" onClick={onRename}>??</button>
             {t.status !== "finished" && (
-              <button className="btn btn-ghost btn-xs" onClick={onFinish}>🏁</button>
+              <button className="btn btn-ghost btn-xs" onClick={onFinish}>??</button>
             )}
           </div>
         )}
@@ -226,25 +226,25 @@ function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlocke
       {t.status !== "finished" && (
         <div className="flex gap-2 mt-1">
           <Link to={`/tournament/${t.id}`} className="btn btn-primary btn-sm">
-            🕹 Klokke
+            ?? Klokke
           </Link>
           <Link to={`/tournament/${t.id}/tv`} className="btn btn-secondary btn-sm">
-            📺 TV
+            ?? TV
           </Link>
         </div>
       )}
 
       {t.status !== "finished" && onRegister && (
         isRegistered ? (
-          <div className="text-sm text-success font-semibold mt-1">✅ Du er påmeldt</div>
+          <div className="text-sm text-success font-semibold mt-1">? Du er p�meldt</div>
         ) : (
           <button
             className="btn btn-success btn-sm"
             onClick={onRegister}
             disabled={registering || isBlockedByOther}
-            title={isBlockedByOther ? "Du er allerede påmeldt en annen turnering" : ""}
+            title={isBlockedByOther ? "Du er allerede p�meldt en annen turnering" : ""}
           >
-            {registering ? "Melder på…" : isBlockedByOther ? "Opptatt i annen turnering" : "+ Meld meg på"}
+            {registering ? "Melder p�" : isBlockedByOther ? "Opptatt i annen turnering" : "+ Meld meg p�"}
           </button>
         )
       )}

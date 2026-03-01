@@ -49,8 +49,8 @@ export default function Home() {
         <h1 className="m-0">{t?.name ?? "Pokerklokke"}</h1>
         <div className="flex items-center gap-3 flex-wrap">
           <span className={`clock-dot ${status === "connected" ? "running" : "paused"}`} />
-          <Link to={`/tournament/${tournamentId}/tv`} className="btn btn-secondary btn-sm">ðŸ“º TV</Link>
-          <Link to="/" className="btn btn-ghost btn-sm">â¬… Turneringer</Link>
+          <Link to={`/tournament/${tournamentId}/tv`} className="btn btn-secondary btn-sm">📺 TV</Link>
+          <Link to="/" className="btn btn-ghost btn-sm">⬅ Turneringer</Link>
           <UserMenu token={token} />
           <ThemeSwitcher />
           <button className="btn btn-ghost btn-sm" onClick={() => {
@@ -67,13 +67,13 @@ export default function Home() {
       {/* Registration */}
       <div className="flex items-center gap-2 my-3">
         {isRegistered ? (
-          <span className="text-sm text-success font-semibold">âœ… Du er pÃ¥meldt denne turneringen</span>
+          <span className="text-sm text-success font-semibold">✅ Du er påmeldt denne turneringen</span>
         ) : (
           <>
             <button
               className="btn btn-success btn-sm"
               disabled={registering || profile?.activeTournamentId != null}
-              title={profile?.activeTournamentId != null ? "Du er allerede pÃ¥meldt en annen turnering" : ""}
+              title={profile?.activeTournamentId != null ? "Du er allerede påmeldt en annen turnering" : ""}
               onClick={async () => {
                 setRegistering(true);
                 setRegisterError("");
@@ -82,7 +82,7 @@ export default function Home() {
                 finally { setRegistering(false); }
               }}
             >
-              {registering ? "Melder pÃ¥â€¦" : profile?.activeTournamentId != null ? "Opptatt i annen turnering" : "ï¼‹ Meld meg pÃ¥ turneringen"}
+              {registering ? "Melder på…" : profile?.activeTournamentId != null ? "Opptatt i annen turnering" : "＋ Meld meg på turneringen"}
             </button>
             {registerError && <span className="text-error text-sm ml-2">{registerError}</span>}
           </>
@@ -94,17 +94,17 @@ export default function Home() {
         <div className="bg-base-300/60 rounded-2xl border border-base-content/10 p-4 mb-4">
           <div className="flex gap-2 flex-wrap items-center mb-2">
               <button className={`btn btn-primary btn-sm${running ? " btn-active" : ""}`} onClick={running ? pause : start}>
-              {running ? "â¸ Pause" : "â–¶ Start"}
+              {running ? "⏸ Pause" : "▶ Start"}
             </button>
-            <button className="btn btn-secondary btn-sm" onClick={reset}>âŸ³ Reset nivÃ¥</button>
-            <button className="btn btn-secondary btn-sm" onClick={prev} disabled={currentIndex === 0}>â—€ Forrige</button>
-            <button className="btn btn-secondary btn-sm" onClick={next} disabled={currentIndex >= levels.length - 1}>Neste â–¶</button>
+            <button className="btn btn-secondary btn-sm" onClick={reset}>⟳ Reset nivå</button>
+            <button className="btn btn-secondary btn-sm" onClick={prev} disabled={currentIndex === 0}>◀ Forrige</button>
+            <button className="btn btn-secondary btn-sm" onClick={next} disabled={currentIndex >= levels.length - 1}>Neste ▶</button>
           </div>
           <div className="flex gap-2 flex-wrap items-center mb-2">
             <span className="text-xs opacity-50 min-w-[54px]">Legg til tid:</span>
             <button className="btn btn-ghost btn-sm" onClick={() => addTime(60)}>+1 min</button>
             <button className="btn btn-ghost btn-sm" onClick={() => addTime(300)}>+5 min</button>
-            <button className="btn btn-ghost btn-sm" onClick={() => addTime(-60)}>âˆ’1 min</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => addTime(-60)}>−1 min</button>
           </div>
         </div>
       ) : (
@@ -114,7 +114,7 @@ export default function Home() {
       {/* Level navigation */}
       {isAdmin && levels.length > 0 && (
         <div className="mb-4">
-          <div className="text-xs opacity-50 mb-2">Hopp til nivÃ¥:</div>
+          <div className="text-xs opacity-50 mb-2">Hopp til nivå:</div>
           <div className="flex flex-wrap gap-1.5">
             {levels.map((lvl, i) => (
               <button
@@ -123,7 +123,7 @@ export default function Home() {
                 onClick={() => jump(i)}
                 title={lvl.title}
               >
-                {lvl.type === "break" ? "â˜•" : `L${i + 1 - levels.slice(0, i + 1).filter(l => l.type === "break").length}`}
+                {lvl.type === "break" ? "☕" : `L${i + 1 - levels.slice(0, i + 1).filter(l => l.type === "break").length}`}
               </button>
             ))}
           </div>
@@ -191,7 +191,7 @@ export default function Home() {
 
           <div className="flex gap-2 flex-wrap items-center mt-2">
             <button className="btn btn-error btn-sm" onClick={bustout} disabled={!players?.active}>
-              ðŸ’€ Bust ({players?.active ?? 0} igjen)
+              💀 Bust ({players?.active ?? 0} igjen)
             </button>
             <button className="btn btn-secondary btn-sm" onClick={rebuy}>+ Rebuy</button>
             <button className="btn btn-secondary btn-sm" onClick={addOn}>+ Add-on</button>

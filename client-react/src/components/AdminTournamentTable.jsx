@@ -37,30 +37,30 @@ function toTournamentFromRows(name, rows, settings = {}) {
 }
 
 function validate(rows) {
-  if (!rows.length) return "MÃ¥ ha minst Ã©n rad.";
+  if (!rows.length) return "Må ha minst én rad.";
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const idx = i + 1;
     if (!r.type) return `Rad ${idx}: type mangler`;
     const m = Number(r.minutes);
     if (!Number.isFinite(m) || m <= 0)
-      return `Rad ${idx}: minutter mÃ¥ vÃ¦re > 0`;
+      return `Rad ${idx}: minutter må være > 0`;
 
     if (r.type === "level") {
       const sb = Number(r.sb),
         bb = Number(r.bb),
         ante = Number(r.ante);
-      if (!Number.isFinite(sb) || sb < 0) return `Rad ${idx}: SB mÃ¥ vÃ¦re >= 0`;
-      if (!Number.isFinite(bb) || bb <= 0) return `Rad ${idx}: BB mÃ¥ vÃ¦re > 0`;
+      if (!Number.isFinite(sb) || sb < 0) return `Rad ${idx}: SB må være >= 0`;
+      if (!Number.isFinite(bb) || bb <= 0) return `Rad ${idx}: BB må være > 0`;
       if (!Number.isFinite(ante) || ante < 0)
-        return `Rad ${idx}: Ante mÃ¥ vÃ¦re >= 0`;
-      if (sb > bb) return `Rad ${idx}: SB bÃ¸r ikke vÃ¦re stÃ¸rre enn BB`;
+        return `Rad ${idx}: Ante må være >= 0`;
+      if (sb > bb) return `Rad ${idx}: SB bør ikke være større enn BB`;
     }
   }
   return "";
 }
 
-// â”€â”€â”€ Preset structures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Preset structures ────────────────────────────────────────────────────────
 
 const PRESETS = {
   quick: {
@@ -172,7 +172,7 @@ export default function AdminTournamentTable({
   const [addOnAmount, setAddOnAmount] = useState("200");
   const [startingStack, setStartingStack] = useState("10000");
 
-  // NÃ¥r snapshot endrer seg fra server (f.eks. annen admin), sync inn â€“ men ikke overskriv hvis admin redigerer
+  // Når snapshot endrer seg fra server (f.eks. annen admin), sync inn – men ikke overskriv hvis admin redigerer
   useEffect(() => {
     if (!isAdmin || !t) return;
     if (dirty) return;
@@ -265,7 +265,7 @@ export default function AdminTournamentTable({
             }
           }}
         >
-          <option value="">Bruk presetâ€¦</option>
+          <option value="">Bruk preset…</option>
           <option value="quick">Hurtigturnering (10 min)</option>
           <option value="standard">Standard (15 min)</option>
           <option value="deep">Deep Stack (20 min)</option>
@@ -304,7 +304,7 @@ export default function AdminTournamentTable({
           className="input editor-input--wide"
         />
 
-        <button className="btn btn-sm" onClick={addLevel}>+ Legg til nivÃ¥</button>
+        <button className="btn btn-sm" onClick={addLevel}>+ Legg til nivå</button>
         <button className="btn btn-sm" onClick={addBreak}>+ Legg til pause</button>
 
         <button
@@ -344,7 +344,7 @@ export default function AdminTournamentTable({
                   !Array.isArray(parsed.levels) ||
                   parsed.levels.length === 0
                 ) {
-                  throw new Error("JSON mÃ¥ ha levels[] med minst ett element");
+                  throw new Error("JSON må ha levels[] med minst ett element");
                 }
 
                 const importedTournament = {
@@ -352,21 +352,21 @@ export default function AdminTournamentTable({
                   levels: parsed.levels,
                 };
 
-                // Oppdater UI (sÃ¥ tabellen viser hva som ble importert)
+                // Oppdater UI (så tabellen viser hva som ble importert)
                 setName(importedTournament.name);
                 setRows(toRowsFromTournament(importedTournament));
 
                 // Send direkte til server
                 updateTournament(importedTournament);
 
-                // Vi er â€œsynketâ€ med server nÃ¥
+                // Vi er “synket” med server nå
                 setDirty(false);
                 setErr("");
-                setImportMsg("Importert og sendt til server âœ…");
+                setImportMsg("Importert og sendt til server ✅");
               } catch (err) {
                 setImportMsg(`Import feilet: ${err?.message || "Ugyldig fil"}`);
               } finally {
-                // gjÃ¸r at du kan importere samme fil igjen
+                // gjør at du kan importere samme fil igjen
                 e.target.value = "";
               }
             }}
@@ -414,7 +414,7 @@ export default function AdminTournamentTable({
                       value={r.type}
                       onChange={(e) => setCell(i, "type", e.target.value)}
                     >
-                      <option value="level">NivÃ¥</option>
+                      <option value="level">Nivå</option>
                       <option value="break">Pause</option>
                     </select>
                   </td>
@@ -471,8 +471,8 @@ export default function AdminTournamentTable({
                   </td>
 
                   <td className="nowrap">
-                    <button className="btn btn-ghost btn-xs" onClick={() => move(i, -1)} disabled={i === 0} title="Opp">â†‘</button>{" "}
-                    <button className="btn btn-ghost btn-xs" onClick={() => move(i, +1)} disabled={i === rows.length - 1} title="Ned">â†“</button>{" "}
+                    <button className="btn btn-ghost btn-xs" onClick={() => move(i, -1)} disabled={i === 0} title="Opp">↑</button>{" "}
+                    <button className="btn btn-ghost btn-xs" onClick={() => move(i, +1)} disabled={i === rows.length - 1} title="Ned">↓</button>{" "}
                     <button className="btn btn-error btn-xs" onClick={() => delRow(i)} title="Slett">Slett</button>
                   </td>
                 </tr>
@@ -508,7 +508,7 @@ export default function AdminTournamentTable({
         {err ? <span style={{ color: "crimson" }}>{err}</span> : null}
 
         <span className="text-xs opacity-70">
-          (durationSeconds = minutter Ã— 60. Pauser ignorerer SB/BB/Ante.)
+          (durationSeconds = minutter × 60. Pauser ignorerer SB/BB/Ante.)
         </span>
       </div>
     </div>
