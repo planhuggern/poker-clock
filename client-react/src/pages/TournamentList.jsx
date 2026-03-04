@@ -30,6 +30,10 @@ export default function TournamentList() {
   const [registerError, setRegisterError] = useState("");
 
   async function handleRegister(tournamentId) {
+    if (profile?.activeTournamentId != null && profile.activeTournamentId !== tournamentId) {
+      setRegisterError("Du er allerede påmeldt en annen turnering.");
+      return;
+    }
     setRegistering(tournamentId);
     setRegisterError("");
     try {
@@ -237,14 +241,13 @@ function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlocke
       {t.status !== "finished" && onRegister && (
         isRegistered ? (
           <div className="text-sm text-success font-semibold mt-1">✅ Du er påmeldt</div>
-        ) : (
+        ) : isBlockedByOther ? null : (
           <button
             className="btn btn-success btn-sm"
             onClick={onRegister}
-            disabled={registering || isBlockedByOther}
-            title={isBlockedByOther ? "Du er allerede påmeldt en annen turnering" : ""}
+            disabled={registering}
           >
-            {registering ? "Melder på…" : isBlockedByOther ? "Opptatt i annen turnering" : "+ Meld meg på"}
+            {registering ? "Melder på…" : "+ Meld meg på"}
           </button>
         )
       )}
