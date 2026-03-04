@@ -58,8 +58,11 @@ export default function TournamentList() {
   const active   = tournaments.filter(t => t.status !== "finished");
   const finished = tournaments.filter(t => t.status === "finished");
 
+  const isInActiveTournament = profile?.activeTournamentId != null;
+
   async function handleCreate(e) {
     e.preventDefault();
+    if (isInActiveTournament) { setCreateError("Du må melde deg av nåværende turnering først."); return; }
     const name = newName.trim();
     if (!name) { setCreateError("Skriv inn et turneringsnavn"); return; }
     setCreating(true);
@@ -103,7 +106,12 @@ export default function TournamentList() {
         <h1 className="m-0">🃏 Turneringer</h1>
         <div className="flex items-center gap-3 flex-wrap">
           {isAdmin && (
-            <button className="btn btn-primary btn-sm" onClick={() => setShowForm(f => !f)}>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => setShowForm(f => !f)}
+              disabled={isInActiveTournament && !showForm}
+              title={isInActiveTournament ? "Du må melde deg av nåværende turnering først" : undefined}
+            >
               {showForm ? "✕ Avbryt" : "+ Ny turnering"}
             </button>
           )}
@@ -126,7 +134,7 @@ export default function TournamentList() {
             placeholder="Turneringsnavn…"
             maxLength={80}
           />
-          <button className="btn btn-primary btn-sm" disabled={creating} type="submit">
+          <button className="btn btn-primary btn-sm" disabled={creating || isInActiveTournament} type="submit">
             {creating ? "Oppretter…" : "Opprett"}
           </button>
           {createError && <p className="text-error text-sm m-0">{createError}</p>}
