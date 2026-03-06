@@ -12,7 +12,7 @@ python.exe -m pip install --upgrade pip
 pip install -r requirements.txt
 python manage.py makemigrations
 python manage.py migrate
-Start-Process powershell -ArgumentList '-NoExit', '-Command', '.venv\Scripts\Activate.ps1; $env:DEBUG = "true"; python manage.py runserver'
+Start-Process powershell -ArgumentList '-NoExit', '-Command', '.venv\Scripts\Activate.ps1; $env:DEBUG = \"true\"; python manage.py runserver'
 Pop-Location
 
 # Start frontend
