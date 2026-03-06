@@ -57,8 +57,14 @@ class TournamentListView(View):
         return JsonResponse([t.to_dict() for t in qs], safe=False)
 
     def post(self, request: HttpRequest) -> JsonResponse:
-        """Admin: create a new tournament."""
-        payload, err = _require_admin(request)
+        """Create a new tournament. Any authenticated user becomes admin/host for the tournament."""
+        def _require_auth(request):
+            payload = _decode_jwt(request)
+            if not payload:
+                return None, JsonResponse({"error": "Authentication required"}, status=401)
+            return payload, None
+
+        payload, err = _require_auth(request)
         if err:
             return err
 
@@ -76,23 +82,32 @@ class TournamentListView(View):
         if not isinstance(state_json, dict):
             state_json = {}
 
-        # Finn oppretter (admin) bruker
-        from .models import Player
-        admin_player = None
+
+        # Finn oppretter (host/admin) bruker
+        from .models import Player, TournamentEntry
+        creator = None
         if payload and payload.get("username"):
-            admin_player, _ = Player.objects.get_or_create(username=payload["username"], defaults={"nickname": ""})
+            creator, _ = Player.objects.get_or_create(username=payload["username"], defaults={"nickname": ""})
+        else:
+            return JsonResponse({"error": "User not found"}, status=400)
 
         tournament = Tournament.objects.create(
             name=name.strip(),
             status=Tournament.STATUS_PENDING,
             state_json=state_json,
-            admin=admin_player,
+            admin=creator,
+        )
+        # Register creator as participant if not already
+        TournamentEntry.objects.get_or_create(
+            player=creator,
+            tournament=tournament,
+            defaults={"is_active": True},
         )
 
         # Load into in-memory state engine and start tick thread
         gs.init_state(state_json or None, tournament_id=tournament.id)
-        if admin_player:
-            admin_info = {"username": admin_player.username, "nickname": admin_player.nickname or ""}
+        if creator:
+            admin_info = {"username": creator.username, "nickname": creator.nickname or ""}
             gs.with_state(lambda s, info=admin_info: s["tournament"].update({"admin": info}), tournament_id=tournament.id)
         start_tick_thread(tournament_id=tournament.id)
 

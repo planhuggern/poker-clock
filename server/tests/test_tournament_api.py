@@ -88,15 +88,6 @@ class TestTournamentCreate:
         )
         assert "id" in r.json()
 
-    def test_viewer_cannot_create(self):
-        r = Client().post(
-            "/clock/api/tournaments/",
-            data='{"name": "Ulovlig"}',
-            content_type="application/json",
-            **_auth(),
-        )
-        assert r.status_code == 403
-
     def test_unauthenticated_cannot_create(self):
         r = Client().post(
             "/clock/api/tournaments/",
@@ -135,6 +126,24 @@ class TestTournamentCreate:
         # Should be in memory now
         snap = gs.get_snapshot(tournament_id=tid)
         assert snap is not None
+
+    def test_creator_is_registered_as_admin(self):
+        r = Client().post(
+            "/clock/api/tournaments/",
+            data='{"name": "AdminTest"}',
+            content_type="application/json",
+            **_admin(),
+        )
+        assert r.status_code == 201
+        tid = r.json()["id"]
+        # Hent detaljene for turneringen
+        r2 = Client().get(f"/clock/api/tournaments/{tid}/")
+        data = r2.json()
+        assert data["playerCount"] == 1
+        assert data["admin"]["username"] == "admin@example.com"
+        # Sjekk at admin er i players-listen
+        usernames = [p["username"] for p in data["players"]]
+        assert "admin@example.com" in usernames
 
 
 #  GET /clock/api/tournaments/<id>/ 
