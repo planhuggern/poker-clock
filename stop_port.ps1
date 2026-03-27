@@ -2,6 +2,8 @@
 param(
     [int]$Port = 8081
 )
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 Write-Host "Søker etter prosess på port $Port ..."
 

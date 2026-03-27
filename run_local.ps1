@@ -1,4 +1,6 @@
+$OutputEncoding = [System.Text.Encoding]::UTF8
 # PowerShell script for å starte både backend (Django) og frontend (Vite/React) lokalt
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # Start backend
 Write-Host "Starter backend (Django)..."
@@ -18,7 +20,7 @@ Pop-Location
 # Start frontend
 Write-Host "Sjekker om port 8081 er i bruk og forsøker å stoppe eventuell prosess..."
 if (Test-Path "./stop_port.ps1") {
-    powershell -ExecutionPolicy Bypass -File ./stop_port.ps1 -Port 8081
+    pwsh -ExecutionPolicy Bypass -File ./stop_port.ps1 -Port 8081
 }
 
 Write-Host "Starter frontend (Vite/React)..."
