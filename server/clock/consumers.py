@@ -310,10 +310,19 @@ class ClockConsumer(AsyncWebsocketConsumer):
     #  Helpers 
 
     async def _require_admin(self) -> bool:
-        if getattr(self, "user", {}).get("role") != "admin":
-            await self.send_json({"type": "error_msg", "message": "Ikke autorisert (admin kreves)."})
+        # Allow the tournament's host (admin) to control the clock
+        from .models import Tournament
+        user = getattr(self, "user", {})
+        username = user.get("username")
+        try:
+            tournament = Tournament.objects.get(pk=self.tournament_id)
+        except Tournament.DoesNotExist:
+            await self.send_json({"type": "error_msg", "message": "Turnering ikke funnet."})
             return False
-        return True
+        if tournament.admin and tournament.admin.username == username:
+            return True
+        await self.send_json({"type": "error_msg", "message": "Ikke autorisert (kun host kan styre klokken)."})
+        return False
 
     async def _broadcast_snapshot(self) -> None:
         await self._broadcast({"type": "snapshot", **gs.get_snapshot(tournament_id=self.tournament_id)})
