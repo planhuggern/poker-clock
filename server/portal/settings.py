@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "channels",
     # ── Apper ──
     "clock.apps.ClockConfig",           # poker-clock
+    "oslo_conquest.apps.OsloConquestConfig",  # oslo-conquest
     # "my_other_app.apps.MyOtherAppConfig",
 ]
 

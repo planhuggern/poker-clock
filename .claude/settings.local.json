@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(ls \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\server\" | Where-Object { $_.Name -notin @\\('.venv','node_modules'\\) })",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\server\\\\public\\\\oslo-conquest\")",
+      "PowerShell(Copy-Item \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\oslo-conquest.html\" \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\server\\\\public\\\\oslo-conquest\\\\index.html\")"
+    ]
+  }
+}

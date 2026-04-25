@@ -57,10 +57,14 @@ if _base:
     # Prod / sub-path hosting: poker-clock montert under /<base>/
     urlpatterns = [
         *register_spa(_base, "clock.urls"),
+        *register_spa("oslo-conquest", "oslo_conquest.urls"),
         # Slik legger du til neste app:
         # *register_spa("min-app", "min_app.urls"),
     ]
 else:
     # Dev / root hosting: clock-API tilgjengelig uten prefix (React kjører på :8081)
     from clock.urls import urlpatterns as _clock_urls  # noqa: E402
-    urlpatterns = list(_clock_urls)
+    urlpatterns = [
+        *_clock_urls,
+        *register_spa("oslo-conquest", "oslo_conquest.urls"),
+    ]
