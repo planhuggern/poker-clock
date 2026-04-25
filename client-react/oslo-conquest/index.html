@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oslo Conquest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<!-- LOBBY -->
+<div id="lobby">
+  <div class="lobby-card">
+    <h1 class="title">Oslo Conquest</h1>
+    <p class="subtitle">Krig, handel og makt i Norges hjerte</p>
+
+    <div class="ws-status">
+      <div class="ws-dot" id="ws-dot"></div>
+      <span id="ws-status-text">Ikke tilkoblet</span>
+    </div>
+
+    <div class="form-group">
+      <label>WebSocket server</label>
+      <input type="text" id="ws-url" value="ws://localhost:8000/ws/oslo-conquest/" placeholder="ws://...">
+    </div>
+    <button class="btn" onclick="connectWS()">Koble til server</button>
+
+    <hr class="divider">
+
+    <div class="form-group">
+      <label>Ditt navn</label>
+      <input type="text" id="player-name" placeholder="Ola Nordmann" maxlength="20">
+    </div>
+
+    <div class="form-group">
+      <label>Rom-ID</label>
+      <input type="text" id="room-id" placeholder="oslo-1" maxlength="20">
+    </div>
+
+    <button class="btn primary" onclick="createGame()">Opprett spill</button>
+    <button class="btn" onclick="joinGame()">Bli med i spill</button>
+
+    <hr class="divider">
+
+    <button class="btn" onclick="startLocalGame()" style="border-color: #556; color: #aaa;">
+      Spill lokalt (testing)
+    </button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game-container">
+  <div id="map-container"></div>
+
+  <div id="hud">
+    <span class="hud-title">Oslo Conquest</span>
+    <div class="player-chips" id="player-chips"></div>
+    <button class="btn" style="width:auto; padding: 6px 16px; font-size:0.75rem;" onclick="endTurn()">
+      Avslutt tur →
+    </button>
+  </div>
+
+  <div id="turn-indicator">Laster...</div>
+
+  <div id="checkpoint-bar">
+    <div class="checkpoint" id="cp-lørenskog">
+      <div class="checkpoint-dot"></div> Lørenskog
+    </div>
+    <div class="checkpoint" id="cp-lysaker">
+      <div class="checkpoint-dot"></div> Lysaker
+    </div>
+    <div class="checkpoint" id="cp-kolbotn">
+      <div class="checkpoint-dot"></div> Kolbotn
+    </div>
+  </div>
+
+  <div id="log-panel">
+    <div class="panel-title">Hendelseslogg</div>
+    <div class="log-entries" id="log-entries"></div>
+  </div>
+
+  <div id="action-panel">
+    <div class="panel-title">Handlinger</div>
+    <div id="action-content">
+      <p style="color: var(--text-muted); font-style: italic; font-size: 0.9rem;">Velg et område på kartet</p>
+    </div>
+  </div>
+
+  <div id="mission-card">
+    <div class="mission-title">🎯 Ditt oppdrag</div>
+    <div class="mission-text mission-hidden" id="mission-text">Klikk for å se</div>
+  </div>
+
+  <div id="dice-display">
+    <div class="dice-title">Kampoppgjør</div>
+    <div style="margin-bottom:8px; font-size:0.85rem; color: var(--text-muted);">
+      <span id="attacker-name">Angriper</span> vs <span id="defender-name">Forsvarer</span>
+    </div>
+    <div class="dice-row" id="attacker-dice"></div>
+    <div style="font-size:0.75rem; color:var(--red); margin-bottom:4px;">↑ Angriper</div>
+    <div class="dice-row" id="defender-dice"></div>
+    <div style="font-size:0.75rem; color:var(--blue); margin-bottom:12px;">↑ Forsvarer</div>
+    <div class="dice-result" id="dice-result"></div>
+    <button class="btn" style="margin-top:12px;" onclick="closeDice()">Fortsett</button>
+  </div>
+  <div id="map-tooltip"></div>
+</div>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>
