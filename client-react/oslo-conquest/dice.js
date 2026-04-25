@@ -1,3 +1,6 @@
+// Viser kampoppgjøret som en popup med terningøyne og resultat.
+// Skjules igjen når spilleren klikker "Fortsett".
+
 const DICE_FACES = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
 
 export function showDiceResult(result) {

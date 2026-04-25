@@ -1,3 +1,6 @@
+// Tegner og oppdaterer SVG-kartet over Oslo.
+// Håndterer også pan (dra kartet rundt) og zoom (scroll), og tooltip når du holder over et område.
+
 import { TERRITORIES, DISTRICTS, ADJACENCY, CHECKPOINTS } from './game-data.js';
 import { state } from './state.js';
 import { renderHUD, renderActionPanel, renderCheckpointBar } from './ui.js';
@@ -349,6 +352,8 @@ function hideMapTooltip() {
   document.getElementById('map-tooltip').style.display = 'none';
 }
 
+// Farger alle territorier og bydeler basert på hvem som eier dem akkurat nå.
+// Kalles etter hvert trekk slik at kartet alltid speiler spilltilstanden.
 export function updateTerritoryVisuals() {
   if (!state.gameState) return;
   for (const t of TERRITORIES) {
@@ -401,6 +406,7 @@ export function updateTerritoryVisuals() {
   }
 }
 
+// Merker et territorium som valgt og oppdaterer handlingspanelet til høyre.
 export function selectTerritory(tid) {
   state.selectedTerritory = tid;
   document.querySelectorAll('.adj-line').forEach(l => l.classList.remove('highlight'));

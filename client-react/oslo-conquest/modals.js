@@ -1,3 +1,6 @@
+// Modaler som dukker opp midt i spillet: leie (når du lander på andres område) og seier.
+// onConfirm-callback i showRentModal gjør at vi slipper å importere actions.js hit (unngår sirkelimport).
+
 import { TERRITORIES } from './game-data.js';
 import { state } from './state.js';
 

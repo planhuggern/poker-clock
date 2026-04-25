@@ -1,6 +1,10 @@
+// Alle spillets konstanter: farger, bydeler, territorier, nabolister og oppdrag.
+// Ingen spillogikk her — bare data som de andre modulene leser.
+
 export const PLAYER_COLORS = ['#c0392b','#1a6b9a','#1a7a4a','#c0692b','#6b3fa0','#1a8a8a'];
 export const PLAYER_COLOR_NAMES = ['Rød','Blå','Grønn','Oransje','Lilla','Cyan'];
 
+// Bydeler med navn, bonusverdier og bakgrunnsfarge på kartet.
 export const DISTRICTS = {
   'gamle-oslo':         { name: 'Gamle Oslo',         bonus: { money: 300, units: 2 }, color: '#2d1f3d' },
   'grunerløkka':        { name: 'Grünerløkka',        bonus: { money: 250, units: 2 }, color: '#1f2d3d' },
@@ -19,6 +23,8 @@ export const DISTRICTS = {
   'søndre-nordstrand':  { name: 'Søndre Nordstrand',  bonus: { money: 250, units: 2 }, color: '#2d2d1f' },
 };
 
+// Alle 35 territorier med id, navn, hvilken bydel de tilhører, kjøpspris,
+// antall nøytrale bataljoner ved spillstart og normalisert kartposisjon (x/y 0–1).
 export const TERRITORIES = [
   { id: 't1',  name: 'Grønland',          district: 'gamle-oslo',        price: 300, neutralUnits: 2, x: 0.54, y: 0.62 },
   { id: 't2',  name: 'Gamlebyen',         district: 'gamle-oslo',        price: 280, neutralUnits: 2, x: 0.52, y: 0.66 },
@@ -57,6 +63,7 @@ export const TERRITORIES = [
   { id: 't35', name: 'Mortensrud',        district: 'søndre-nordstrand', price: 220, neutralUnits: 1, x: 0.59, y: 0.80 },
 ];
 
+// Hvilke territorier som grenser til hverandre — brukes for å avgjøre om et angrep er lovlig.
 export const ADJACENCY = {
   't1':  ['t2','t3','t4','t5','t9'],
   't2':  ['t1','t3','t32','t30'],
@@ -95,12 +102,14 @@ export const ADJACENCY = {
   't35': ['t31','t33','t34'],
 };
 
+// De tre runde-sjekkpunktene spillere må innom for å få bonusen på 500 kr + 3 bat.
 export const CHECKPOINTS = {
   'lørenskog': { name: 'Lørenskog', x: 0.82, y: 0.50 },
   'lysaker':   { name: 'Lysaker',   x: 0.24, y: 0.60 },
   'kolbotn':   { name: 'Kolbotn',   x: 0.62, y: 0.88 },
 };
 
+// Hjelpefunksjon: sjekker om en spiller eier alle territorier i de oppgitte bydelene.
 function checkDistrictOwnership(player, gs, districtIds) {
   return districtIds.every(did => {
     const terrs = TERRITORIES.filter(t => t.district === did);
@@ -108,6 +117,8 @@ function checkDistrictOwnership(player, gs, districtIds) {
   });
 }
 
+// De 11 hemmelige oppdragene. Hvert oppdrag har en check()-funksjon som returnerer
+// true når seiersbetingelsen er oppfylt. MISSIONS[i].secret = true betyr at målet ikke vises.
 export const MISSIONS = [
   {
     id: 'm1', emoji: '🗺️', title: 'Vestkanten',

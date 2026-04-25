@@ -1,3 +1,6 @@
+// Rendrer all UI utenom kartet: spillerchips i toppen, handlingspanelet til høyre,
+// sjekkpunktlinjen og hendelsesloggen. Ingen spillogikk — bare visning.
+
 import { TERRITORIES, DISTRICTS, ADJACENCY } from './game-data.js';
 import { state } from './state.js';
 import { getCurrentPlayer, isMyTurn } from './game-state.js';
@@ -30,6 +33,8 @@ export function renderHUD() {
   }
 }
 
+// Viser relevante knapper for det valgte territoriet: kjøp, invader eller forsterk.
+// Knappene disables automatisk når handlingen ikke er lovlig (feil tur, ikke råd etc).
 export function renderActionPanel() {
   const panel = document.getElementById('action-content');
   if (!state.selectedTerritory) {
@@ -125,6 +130,7 @@ export function addLog(msg, type = '') {
   }
 }
 
+// Oppdaterer all UI på en gang — brukes når spilltilstanden kommer fra serveren.
 export function renderGame() {
   renderHUD();
   renderActionPanel();

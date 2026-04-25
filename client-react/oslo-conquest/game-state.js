@@ -1,6 +1,11 @@
+// Funksjoner som leser og setter opp spilltilstanden.
+// Skiller seg fra state.js: her er logikken, der er bare dataene.
+
 import { TERRITORIES, MISSIONS, PLAYER_COLORS, PLAYER_COLOR_NAMES } from './game-data.js';
 import { state } from './state.js';
 
+// Bygger et nytt, blankt spillbrett med alle territorier nøytrale og spillerne klar.
+// Trekker tilfeldige oppdragskort og setter startposisjon til Lørenskog for alle.
 export function createInitialGameState(players) {
   const territories = {};
   for (const t of TERRITORIES) {

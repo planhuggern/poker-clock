@@ -1,3 +1,5 @@
+// Delt spilltilstand som alle moduler leser og skriver til.
+// Fordi ES-moduler eksporterer referanser, endres dette objektet live — ingen kopi.
 export const state = {
   gameState: null,
   myPlayerId: null,

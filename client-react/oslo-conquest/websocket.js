@@ -1,3 +1,6 @@
+// Alt som har med nettverkskommunikasjon å gjøre: koble til server, sende og motta meldinger.
+// Håndterer også lobby-knappene (opprett/bli med/lokal) fordi de trigger WS-meldinger.
+
 import { state } from './state.js';
 import { createInitialGameState } from './game-state.js';
 import { renderGame } from './ui.js';
@@ -39,6 +42,7 @@ export function sendWS(msg) {
   }
 }
 
+// Sender hele spilltilstanden til serveren, som videresender den til de andre spillerne.
 export function sendGameState() {
   sendWS({ type: 'game_action', state: state.gameState });
 }

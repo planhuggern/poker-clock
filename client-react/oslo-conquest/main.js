@@ -1,3 +1,8 @@
+// Inngangspunkt for appen. Gjør tre ting:
+//   1. Eksponerer spillfunksjoner globalt (window.*) slik at onclick-attributter i HTML fungerer.
+//   2. Kobler til klikk-lytteren på oppdragskortet.
+//   3. Passer på at kartet skaleres riktig når vinduet endrer størrelse.
+
 import { connectWS, createGame, joinGame, startLocalGame } from './websocket.js';
 import { rollDice, buyTerritory, invadeTerritory, reinforceTerritory, moveToTerritory, payRent, endTurn } from './actions.js';
 import { closeDice } from './dice.js';
@@ -5,7 +10,8 @@ import { fitMapToContainer } from './map.js';
 import { state } from './state.js';
 import { MISSIONS } from './game-data.js';
 
-// Expose functions used in inline onclick attributes
+// ES-moduler er isolert fra det globale scopet, så onclick="rollDice()" i HTML-en
+// ville feilet uten dette. Vi putter de nødvendige funksjonene på window manuelt.
 Object.assign(window, {
   connectWS, createGame, joinGame, startLocalGame,
   rollDice, buyTerritory, invadeTerritory, reinforceTerritory, moveToTerritory, payRent, endTurn,

@@ -1,3 +1,6 @@
+// Alle spillhandlinger som en spiller kan utføre i løpet av sin tur.
+// Hver funksjon validerer at handlingen er lovlig, muterer state, og sender oppdatert tilstand til serveren.
+
 import { TERRITORIES, DISTRICTS, ADJACENCY } from './game-data.js';
 import { state } from './state.js';
 import { getCurrentPlayer, isMyTurn } from './game-state.js';
@@ -71,6 +74,8 @@ export function buyTerritory(tid) {
   sendGameState();
 }
 
+// Angriper et territorium med Risk-regler: kaster terninger, sammenligner parvis (høyest vinner),
+// og avgjør hvem som mister bataljoner. Angriperen vinner hvis forsvareren tømmes.
 export function invadeTerritory(tid) {
   if (!isMyTurn()) return;
   const cp = getCurrentPlayer();
@@ -193,6 +198,8 @@ export function payRent(tid) {
   }
 }
 
+// Avslutter spillerens tur: deler ut bydels- og sjekkpunktbonuser, nullstiller terningen,
+// og gir turen til neste spiller som ikke er eliminert.
 export function endTurn() {
   if (!isMyTurn()) { addLog('Det er ikke din tur'); return; }
 

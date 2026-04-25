@@ -1,3 +1,5 @@
+// Sjekker om noen har vunnet. Kalles etter hvert trekk og etter at noen elimineres.
+
 import { MISSIONS } from './game-data.js';
 import { state } from './state.js';
 import { showWinModal } from './modals.js';
