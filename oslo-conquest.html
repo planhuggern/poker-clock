@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oslo Conquest</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
+
+  :root {
+    --bg: #0d0d0f;
+    --surface: #13131a;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --red: #c0392b;
+    --blue: #1a6b9a;
+    --green: #1a7a4a;
+    --purple: #6b3fa0;
+    --orange: #c0692b;
+    --cyan: #1a8a8a;
+    --text: #e8e0d0;
+    --text-muted: #888070;
+    --shadow: rgba(0,0,0,0.7);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Crimson Pro', Georgia, serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  #lobby {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, #1a1a2e 0%, #0d0d0f 70%);
+    z-index: 100;
+  }
+
+  .lobby-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--gold);
+    padding: 40px 48px;
+    width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .lobby-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  h1.title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 2rem;
+    color: var(--gold);
+    text-align: center;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-bottom: 32px;
+    font-size: 1rem;
+  }
+
+  .form-group { margin-bottom: 20px; }
+  label { display: block; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+
+  input, select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    font-family: 'Crimson Pro', serif;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus { border-color: var(--gold); }
+
+  .btn {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+  .btn:hover { background: var(--gold); color: var(--bg); }
+  .btn.primary { background: var(--gold); color: var(--bg); }
+  .btn.primary:hover { background: var(--gold-light); }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+
+  .ws-status {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.8rem; color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+  .ws-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red);
+    transition: background 0.3s;
+  }
+  .ws-dot.connected { background: #2ecc71; }
+
+  /* GAME UI */
+  #game-container {
+    position: fixed; inset: 0;
+    display: none;
+  }
+
+  #map-container {
+    position: absolute;
+    top: 60px; left: 0; right: 0; bottom: 0;
+    overflow: hidden;
+    background: #0d1520;
+    cursor: grab;
+  }
+  #map-container.grabbing { cursor: grabbing; }
+
+  #oslo-svg {
+    position: absolute;
+    transform-origin: 0 0;
+    user-select: none;
+  }
+
+  .svg-district { transition: filter 0.2s; }
+  .svg-district:hover { filter: brightness(1.25); }
+
+  .svg-territory {
+    cursor: pointer;
+    transition: filter 0.15s;
+  }
+  .svg-territory:hover { filter: brightness(1.4) drop-shadow(0 0 6px rgba(201,168,76,0.7)); }
+  .svg-territory.selected { filter: brightness(1.5) drop-shadow(0 0 10px rgba(255,215,0,0.9)); }
+
+  .terr-label {
+    font-family: 'Crimson Pro', serif;
+    font-size: 8px;
+    fill: #c9a84c;
+    pointer-events: none;
+    dominant-baseline: middle;
+    text-anchor: middle;
+  }
+  .terr-units {
+    font-family: 'Crimson Pro', serif;
+    font-size: 9px;
+    fill: #e8e0d0;
+    pointer-events: none;
+    dominant-baseline: middle;
+    text-anchor: middle;
+    font-weight: 600;
+  }
+  .district-label {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 8px;
+    fill: rgba(255,255,255,0.22);
+    letter-spacing: 1.5px;
+    pointer-events: none;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    text-transform: uppercase;
+  }
+  .checkpoint-label {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 9px;
+    fill: #ffd700;
+    pointer-events: none;
+    text-anchor: middle;
+  }
+  .adj-line {
+    stroke: #2a2a3a;
+    stroke-width: 1;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .adj-line.highlight {
+    stroke: rgba(201,168,76,0.4);
+    stroke-width: 1.5;
+  }
+
+  #map-tooltip {
+    position: fixed;
+    background: rgba(10,10,20,0.97);
+    border: 1px solid #c9a84c;
+    color: #e8e0d0;
+    font-family: 'Crimson Pro', serif;
+    font-size: 13px;
+    padding: 8px 12px;
+    pointer-events: none;
+    display: none;
+    z-index: 50;
+    line-height: 1.6;
+  }
+
+  #hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 60px;
+    background: linear-gradient(180deg, rgba(13,13,15,0.97) 0%, rgba(13,13,15,0.8) 100%);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    z-index: 10;
+  }
+
+  .hud-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1rem;
+    color: var(--gold);
+    margin-right: 8px;
+  }
+
+  .player-chips {
+    display: flex; gap: 8px; flex: 1;
+  }
+
+  .player-chip {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 12px;
+    border: 1px solid transparent;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    cursor: default;
+  }
+  .player-chip.active {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.1);
+  }
+  .player-chip .chip-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .player-chip .chip-money { color: var(--gold-light); margin-left: 4px; }
+  .player-chip .chip-units { color: #88aacc; margin-left: 4px; }
+
+  #action-panel {
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 320px;
+    background: rgba(13,13,15,0.97);
+    border-top: 1px solid var(--border);
+    border-left: 1px solid var(--border);
+    padding: 16px;
+    z-index: 10;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  .panel-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.8rem;
+    color: var(--gold);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+
+  .territory-info { margin-bottom: 12px; }
+  .territory-name { font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
+  .territory-district { font-size: 0.8rem; color: var(--text-muted); font-style: italic; }
+  .territory-stats { display: flex; gap: 12px; margin-top: 8px; font-size: 0.85rem; }
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat-label { color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; }
+
+  .action-buttons { display: flex; flex-direction: column; gap: 8px; }
+  .action-btn {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Crimson Pro', serif;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .action-btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+  .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .action-btn .price { color: var(--gold); font-size: 0.85rem; }
+
+  #log-panel {
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 280px;
+    background: rgba(13,13,15,0.93);
+    border-top: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding: 12px;
+    z-index: 10;
+    height: 200px;
+    display: flex; flex-direction: column;
+  }
+
+  .log-entries {
+    flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column-reverse;
+    gap: 4px;
+  }
+
+  .log-entry {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .log-entry.important { color: var(--gold-light); }
+  .log-entry.combat { color: #e87070; }
+  .log-entry.buy { color: #70e8a0; }
+
+  #turn-indicator {
+    position: absolute;
+    top: 70px; left: 50%; transform: translateX(-50%);
+    background: rgba(13,13,15,0.95);
+    border: 1px solid var(--border);
+    padding: 8px 24px;
+    font-size: 0.9rem;
+    z-index: 10;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  #dice-display {
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(13,13,15,0.98);
+    border: 1px solid var(--gold);
+    padding: 24px 40px;
+    text-align: center;
+    z-index: 50;
+    display: none;
+  }
+
+  .dice-title { font-family: 'Cinzel Decorative', serif; color: var(--gold); margin-bottom: 16px; font-size: 0.9rem; }
+  .dice-row { display: flex; gap: 12px; justify-content: center; margin-bottom: 8px; }
+  .die {
+    width: 48px; height: 48px;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem;
+    font-weight: bold;
+  }
+  .die.attacker { border-color: var(--red); }
+  .die.defender { border-color: var(--blue); }
+  .dice-result { font-size: 0.9rem; color: var(--text-muted); margin-top: 8px; }
+
+  #mission-card {
+    position: absolute;
+    top: 70px; right: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--gold);
+    padding: 12px 16px;
+    width: 220px;
+    z-index: 10;
+    cursor: pointer;
+  }
+  .mission-title { font-family: 'Cinzel Decorative', serif; font-size: 0.7rem; color: var(--gold); margin-bottom: 6px; }
+  .mission-text { font-size: 0.85rem; line-height: 1.4; }
+  .mission-hidden { font-style: italic; color: var(--text-muted); }
+
+  #checkpoint-bar {
+    position: absolute;
+    top: 70px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 16px;
+    background: rgba(13,13,15,0.95);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  .checkpoint {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.8rem; color: var(--text-muted);
+  }
+  .checkpoint.reached { color: var(--gold); }
+  .checkpoint-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+  .checkpoint.reached .checkpoint-dot { background: var(--gold); }
+
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--gold);
+    padding: 32px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+  }
+
+  .modal h2 {
+    font-family: 'Cinzel Decorative', serif;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+
+  .modal p { margin-bottom: 16px; line-height: 1.6; }
+
+  select option { background: var(--surface2); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .end-game-modal .winner { font-size: 1.5rem; color: var(--gold-light); margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<!-- LOBBY -->
+<div id="lobby">
+  <div class="lobby-card">
+    <h1 class="title">Oslo Conquest</h1>
+    <p class="subtitle">Krig, handel og makt i Norges hjerte</p>
+
+    <div class="ws-status">
+      <div class="ws-dot" id="ws-dot"></div>
+      <span id="ws-status-text">Ikke tilkoblet</span>
+    </div>
+
+    <div class="form-group">
+      <label>WebSocket server</label>
+      <input type="text" id="ws-url" value="ws://localhost:8000/ws/oslo-conquest/" placeholder="ws://...">
+    </div>
+    <button class="btn" onclick="connectWS()">Koble til server</button>
+
+    <hr class="divider">
+
+    <div class="form-group">
+      <label>Ditt navn</label>
+      <input type="text" id="player-name" placeholder="Ola Nordmann" maxlength="20">
+    </div>
+
+    <div class="form-group">
+      <label>Rom-ID</label>
+      <input type="text" id="room-id" placeholder="oslo-1" maxlength="20">
+    </div>
+
+    <button class="btn primary" onclick="createGame()">Opprett spill</button>
+    <button class="btn" onclick="joinGame()">Bli med i spill</button>
+
+    <hr class="divider">
+
+    <button class="btn" onclick="startLocalGame()" style="border-color: #556; color: #aaa;">
+      Spill lokalt (testing)
+    </button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game-container">
+  <div id="map-container"></div>
+
+  <div id="hud">
+    <span class="hud-title">Oslo Conquest</span>
+    <div class="player-chips" id="player-chips"></div>
+    <button class="btn" style="width:auto; padding: 6px 16px; font-size:0.75rem;" onclick="endTurn()">
+      Avslutt tur →
+    </button>
+  </div>
+
+  <div id="turn-indicator">Laster...</div>
+
+  <div id="checkpoint-bar">
+    <div class="checkpoint" id="cp-lorenskog">
+      <div class="checkpoint-dot"></div> Lørenskog
+    </div>
+    <div class="checkpoint" id="cp-lysaker">
+      <div class="checkpoint-dot"></div> Lysaker
+    </div>
+    <div class="checkpoint" id="cp-kolbotn">
+      <div class="checkpoint-dot"></div> Kolbotn
+    </div>
+  </div>
+
+  <div id="log-panel">
+    <div class="panel-title">Hendelseslogg</div>
+    <div class="log-entries" id="log-entries"></div>
+  </div>
+
+  <div id="action-panel">
+    <div class="panel-title">Handlinger</div>
+    <div id="action-content">
+      <p style="color: var(--text-muted); font-style: italic; font-size: 0.9rem;">Velg et område på kartet</p>
+    </div>
+  </div>
+
+  <div id="mission-card">
+    <div class="mission-title">🎯 Ditt oppdrag</div>
+    <div class="mission-text mission-hidden" id="mission-text">Klikk for å se</div>
+  </div>
+
+  <div id="dice-display">
+    <div class="dice-title">Kampoppgjør</div>
+    <div style="margin-bottom:8px; font-size:0.85rem; color: var(--text-muted);">
+      <span id="attacker-name">Angriper</span> vs <span id="defender-name">Forsvarer</span>
+    </div>
+    <div class="dice-row" id="attacker-dice"></div>
+    <div style="font-size:0.75rem; color:var(--red); margin-bottom:4px;">↑ Angriper</div>
+    <div class="dice-row" id="defender-dice"></div>
+    <div style="font-size:0.75rem; color:var(--blue); margin-bottom:12px;">↑ Forsvarer</div>
+    <div class="dice-result" id="dice-result"></div>
+    <button class="btn" style="margin-top:12px;" onclick="closeDice()">Fortsett</button>
+  </div>
+  <div id="map-tooltip"></div>
+</div>
+
+<script>
+// ========================================================
+
+const PLAYER_COLORS = ['#c0392b','#1a6b9a','#1a7a4a','#c0692b','#6b3fa0','#1a8a8a'];
+const PLAYER_COLOR_NAMES = ['Rød','Blå','Grønn','Oransje','Lilla','Cyan'];
+
+const DISTRICTS = {
+  'gamle-oslo': { name: 'Gamle Oslo', bonus: { money: 300, units: 2 }, color: '#2d1f3d' },
+  'grunerløkka': { name: 'Grünerløkka', bonus: { money: 250, units: 2 }, color: '#1f2d3d' },
+  'sagene': { name: 'Sagene', bonus: { money: 200, units: 1 }, color: '#1f3d2d' },
+  'st-hanshaugen': { name: 'St. Hanshaugen', bonus: { money: 250, units: 2 }, color: '#3d2d1f' },
+  'frogner': { name: 'Frogner', bonus: { money: 400, units: 3 }, color: '#2d3d1f' },
+  'ullern': { name: 'Ullern', bonus: { money: 350, units: 2 }, color: '#3d1f2d' },
+  'vestre-aker': { name: 'Vestre Aker', bonus: { money: 300, units: 2 }, color: '#1f3d3d' },
+  'nordre-aker': { name: 'Nordre Aker', bonus: { money: 300, units: 2 }, color: '#2d2d1f' },
+  'bjerke': { name: 'Bjerke', bonus: { money: 200, units: 1 }, color: '#1f2d2d' },
+  'grorud': { name: 'Grorud', bonus: { money: 200, units: 1 }, color: '#2d1f2d' },
+  'stovner': { name: 'Stovner', bonus: { money: 200, units: 1 }, color: '#2d2d2d' },
+  'alna': { name: 'Alna', bonus: { money: 250, units: 2 }, color: '#1f1f2d' },
+  'østensjø': { name: 'Østensjø', bonus: { money: 250, units: 2 }, color: '#2d1f1f' },
+  'nordstrand': { name: 'Nordstrand', bonus: { money: 300, units: 2 }, color: '#1f2d1f' },
+  'søndre-nordstrand': { name: 'Søndre Nordstrand', bonus: { money: 250, units: 2 }, color: '#2d2d1f' },
+};
+
+// Each territory: id, name, district, price, neutralUnits, x, y (SVG coords, normalized 0-1)
+const TERRITORIES = [
+  // Gamle Oslo
+  { id: 't1', name: 'Grønland', district: 'gamle-oslo', price: 300, neutralUnits: 2, x: 0.54, y: 0.62 },
+  { id: 't2', name: 'Gamlebyen', district: 'gamle-oslo', price: 280, neutralUnits: 2, x: 0.52, y: 0.66 },
+  { id: 't3', name: 'Tøyen', district: 'gamle-oslo', price: 260, neutralUnits: 1, x: 0.55, y: 0.58 },
+
+  // Grünerløkka
+  { id: 't4', name: 'Løkka', district: 'grunerløkka', price: 320, neutralUnits: 2, x: 0.52, y: 0.52 },
+  { id: 't5', name: 'Sofienberg', district: 'grunerløkka', price: 280, neutralUnits: 1, x: 0.55, y: 0.54 },
+  { id: 't6', name: 'Rodeløkka', district: 'grunerløkka', price: 260, neutralUnits: 1, x: 0.50, y: 0.56 },
+
+  // Sagene
+  { id: 't7', name: 'Torshov', district: 'sagene', price: 240, neutralUnits: 1, x: 0.49, y: 0.49 },
+  { id: 't8', name: 'Sandaker', district: 'sagene', price: 220, neutralUnits: 1, x: 0.47, y: 0.47 },
+
+  // St. Hanshaugen
+  { id: 't9', name: 'Bislett', district: 'st-hanshaugen', price: 320, neutralUnits: 2, x: 0.46, y: 0.54 },
+  { id: 't10', name: 'Adamstuen', district: 'st-hanshaugen', price: 280, neutralUnits: 1, x: 0.44, y: 0.52 },
+
+  // Frogner
+  { id: 't11', name: 'Majorstuen', district: 'frogner', price: 460, neutralUnits: 3, x: 0.40, y: 0.54 },
+  { id: 't12', name: 'Frognerparken', district: 'frogner', price: 420, neutralUnits: 3, x: 0.37, y: 0.56 },
+  { id: 't13', name: 'Bygdøy', district: 'frogner', price: 400, neutralUnits: 2, x: 0.34, y: 0.62 },
+
+  // Ullern
+  { id: 't14', name: 'Skøyen', district: 'ullern', price: 380, neutralUnits: 2, x: 0.31, y: 0.58 },
+  { id: 't15', name: 'Montebello', district: 'ullern', price: 360, neutralUnits: 2, x: 0.28, y: 0.54 },
+
+  // Vestre Aker
+  { id: 't16', name: 'Vinderen', district: 'vestre-aker', price: 340, neutralUnits: 2, x: 0.33, y: 0.46 },
+  { id: 't17', name: 'Røa', district: 'vestre-aker', price: 320, neutralUnits: 2, x: 0.29, y: 0.42 },
+  { id: 't18', name: 'Holmenkollen', district: 'vestre-aker', price: 360, neutralUnits: 2, x: 0.30, y: 0.36 },
+
+  // Nordre Aker
+  { id: 't19', name: 'Kjelsås', district: 'nordre-aker', price: 300, neutralUnits: 2, x: 0.44, y: 0.38 },
+  { id: 't20', name: 'Nydalen', district: 'nordre-aker', price: 320, neutralUnits: 2, x: 0.46, y: 0.42 },
+  { id: 't21', name: 'Maridalen', district: 'nordre-aker', price: 260, neutralUnits: 1, x: 0.40, y: 0.32 },
+
+  // Bjerke
+  { id: 't22', name: 'Økern', district: 'bjerke', price: 240, neutralUnits: 1, x: 0.56, y: 0.46 },
+  { id: 't23', name: 'Risløkka', district: 'bjerke', price: 220, neutralUnits: 1, x: 0.59, y: 0.44 },
+
+  // Grorud
+  { id: 't24', name: 'Romsås', district: 'grorud', price: 220, neutralUnits: 1, x: 0.62, y: 0.38 },
+  { id: 't25', name: 'Grorud sentrum', district: 'grorud', price: 200, neutralUnits: 1, x: 0.65, y: 0.42 },
+
+  // Stovner
+  { id: 't26', name: 'Stovner sentrum', district: 'stovner', price: 200, neutralUnits: 1, x: 0.70, y: 0.38 },
+  { id: 't27', name: 'Haugenstua', district: 'stovner', price: 200, neutralUnits: 1, x: 0.73, y: 0.42 },
+
+  // Alna
+  { id: 't28', name: 'Furuset', district: 'alna', price: 260, neutralUnits: 2, x: 0.71, y: 0.50 },
+  { id: 't29', name: 'Helsfyr', district: 'alna', price: 280, neutralUnits: 2, x: 0.63, y: 0.52 },
+
+  // Østensjø
+  { id: 't30', name: 'Manglerud', district: 'østensjø', price: 260, neutralUnits: 2, x: 0.63, y: 0.62 },
+  { id: 't31', name: 'Oppsal', district: 'østensjø', price: 240, neutralUnits: 1, x: 0.67, y: 0.64 },
+
+  // Nordstrand
+  { id: 't32', name: 'Ljan', district: 'nordstrand', price: 300, neutralUnits: 2, x: 0.60, y: 0.72 },
+  { id: 't33', name: 'Nordstrand sentrum', district: 'nordstrand', price: 320, neutralUnits: 2, x: 0.56, y: 0.76 },
+
+  // Søndre Nordstrand
+  { id: 't34', name: 'Holmlia', district: 'søndre-nordstrand', price: 240, neutralUnits: 1, x: 0.55, y: 0.82 },
+  { id: 't35', name: 'Mortensrud', district: 'søndre-nordstrand', price: 220, neutralUnits: 1, x: 0.59, y: 0.80 },
+];
+
+// Adjacency list (by territory id)
+const ADJACENCY = {
+  't1': ['t2','t3','t4','t5','t9'],
+  't2': ['t1','t3','t32','t30'],
+  't3': ['t1','t2','t4','t5'],
+  't4': ['t3','t5','t6','t7','t9'],
+  't5': ['t1','t3','t4','t6'],
+  't6': ['t4','t5','t7'],
+  't7': ['t4','t6','t8','t9'],
+  't8': ['t7','t9','t10','t19','t20'],
+  't9': ['t1','t4','t7','t8','t10'],
+  't10': ['t8','t9','t11','t19'],
+  't11': ['t10','t12','t16','t19','t20'],
+  't12': ['t11','t13','t16'],
+  't13': ['t12','t14'],
+  't14': ['t13','t15','t16'],
+  't15': ['t14','t16','t17'],
+  't16': ['t11','t12','t14','t15','t17','t18'],
+  't17': ['t15','t16','t18'],
+  't18': ['t16','t17','t21'],
+  't19': ['t8','t10','t11','t20','t21'],
+  't20': ['t8','t11','t19','t22'],
+  't21': ['t18','t19'],
+  't22': ['t20','t23','t29'],
+  't23': ['t22','t24','t25'],
+  't24': ['t23','t25','t26'],
+  't25': ['t23','t24','t27','t28'],
+  't26': ['t24','t25','t27'],
+  't27': ['t25','t26','t28'],
+  't28': ['t25','t27','t29','t31'],
+  't29': ['t22','t28','t30','t31'],
+  't30': ['t2','t29','t31','t32'],
+  't31': ['t28','t29','t30','t35'],
+  't32': ['t2','t30','t33'],
+  't33': ['t32','t34','t35'],
+  't34': ['t33','t35'],
+  't35': ['t31','t33','t34'],
+};
+
+const CHECKPOINTS = {
+  'lørenskog': { name: 'Lørenskog', x: 0.82, y: 0.50 },
+  'lysaker': { name: 'Lysaker', x: 0.24, y: 0.60 },
+  'kolbotn': { name: 'Kolbotn', x: 0.62, y: 0.88 },
+};
+
+const MISSIONS = [
+  {
+    id: 'm1', emoji: '🗺️', title: 'Vestkanten',
+    desc: 'Eie alle områder i Frogner, Ullern og Vestre Aker',
+    check: (p, gs) => checkDistrictOwnership(p, gs, ['frogner','ullern','vestre-aker'])
+  },
+  {
+    id: 'm2', emoji: '🏙️', title: 'Østkanten',
+    desc: 'Eie alle områder i Alna, Østensjø og Nordstrand',
+    check: (p, gs) => checkDistrictOwnership(p, gs, ['alna','østensjø','nordstrand'])
+  },
+  {
+    id: 'm3', emoji: '🌲', title: 'Nordmarka-porten',
+    desc: 'Eie alle områder i Nordre Aker og Vestre Aker',
+    check: (p, gs) => checkDistrictOwnership(p, gs, ['nordre-aker','vestre-aker'])
+  },
+  {
+    id: 'm4', emoji: '🔴', title: 'Sentrumsherren',
+    desc: 'Eie alle områder i Gamle Oslo, Grünerløkka og St. Hanshaugen',
+    check: (p, gs) => checkDistrictOwnership(p, gs, ['gamle-oslo','grunerløkka','st-hanshaugen'])
+  },
+  {
+    id: 'm5', emoji: '🏘️', title: 'Storby',
+    desc: 'Eie totalt 20 enkeltområder',
+    check: (p, gs) => Object.values(gs.territories).filter(t => t.owner === p.id).length >= 20
+  },
+  {
+    id: 'm6', emoji: '⚔️', title: 'Conquistador',
+    desc: 'Eie minst ett område i alle 15 bydeler',
+    check: (p, gs) => {
+      const ownedDistricts = new Set(Object.values(gs.territories).filter(t => t.owner === p.id).map(t => TERRITORIES.find(x => x.id === t.id)?.district));
+      return Object.keys(DISTRICTS).every(d => ownedDistricts.has(d));
+    }
+  },
+  {
+    id: 'm7', emoji: '💰', title: 'Kapitalist',
+    desc: 'Ha 5000 kr og eie minst 10 områder',
+    check: (p, gs) => p.money >= 5000 && Object.values(gs.territories).filter(t => t.owner === p.id).length >= 10
+  },
+  {
+    id: 'm8', emoji: '🗡️', title: 'Blodhevn',
+    desc: 'Slå ut din utvalgte fiende',
+    secret: true,
+    check: (p, gs) => p.target && gs.players.find(x => x.id === p.target)?.eliminated === true
+  },
+  {
+    id: 'm9', emoji: '🛣️', title: 'Ringveien',
+    desc: 'Eie minst ett område i hver bydel langs ruten fra Lørenskog til Kolbotn',
+    check: (p, gs) => {
+      const ownedDistricts = new Set(Object.values(gs.territories).filter(t => t.owner === p.id).map(t => TERRITORIES.find(x => x.id === t.id)?.district));
+      return Object.keys(DISTRICTS).filter(d => ['alna','stovner','grorud','bjerke','østensjø','nordstrand','søndre-nordstrand'].includes(d)).every(d => ownedDistricts.has(d));
+    }
+  },
+  {
+    id: 'm10', emoji: '🎯', title: 'Festning',
+    desc: 'Eie en komplett bydel med minst 10 bataljoner fordelt i den',
+    check: (p, gs) => {
+      for (const did of Object.keys(DISTRICTS)) {
+        const dTerrs = TERRITORIES.filter(t => t.district === did);
+        const allOwned = dTerrs.every(t => gs.territories[t.id]?.owner === p.id);
+        if (allOwned) {
+          const totalUnits = dTerrs.reduce((sum, t) => sum + (gs.territories[t.id]?.units || 0), 0);
+          if (totalUnits >= 10) return true;
+        }
+      }
+      return false;
+    }
+  },
+  {
+    id: 'm11', emoji: '🪓', title: 'Barbaren',
+    desc: 'Angrip og vinn minst 2 områder fra HVER motspiller',
+    check: (p, gs) => {
+      const others = gs.players.filter(x => x.id !== p.id && !x.eliminated);
+      return others.every(other => (p.conquests?.[other.id] || 0) >= 2);
+    }
+  },
+];
+
+function checkDistrictOwnership(player, gs, districtIds) {
+  return districtIds.every(did => {
+    const terrs = TERRITORIES.filter(t => t.district === did);
+    return terrs.every(t => gs.territories[t.id]?.owner === player.id);
+  });
+}
+
+// ========================================================
+// GAME STATE
+// ========================================================
+
+let gameState = null;
+let myPlayerId = null;
+let selectedTerritory = null;
+let missionRevealed = false;
+let ws = null;
+
+function createInitialGameState(players) {
+  const territories = {};
+  for (const t of TERRITORIES) {
+    territories[t.id] = {
+      id: t.id,
+      owner: null,
+      units: t.neutralUnits,
+    };
+  }
+
+  const missions = [...MISSIONS];
+  const shuffledMissions = missions.sort(() => Math.random() - 0.5);
+
+  const ps = players.map((p, i) => {
+    const mission = shuffledMissions[i % shuffledMissions.length];
+    const target = mission.id === 'm8' ? players[(i+1) % players.length].id : null;
+    return {
+      id: p.id,
+      name: p.name,
+      color: PLAYER_COLORS[i],
+      colorName: PLAYER_COLOR_NAMES[i],
+      money: 2000,
+      units: 10,
+      mission: mission.id,
+      target,
+      position: 'lørenskog',
+      checkpoints: { lørenskog: true, lysaker: false, kolbotn: false },
+      roundComplete: false,
+      diceRoll: null,
+      diceUsed: 0,
+      eliminated: false,
+      conquests: {},
+    };
+  });
+
+  return {
+    phase: 'playing',
+    round: 1,
+    currentPlayerIdx: 0,
+    players: ps,
+    territories,
+    log: [],
+  };
+}
+
+function getCurrentPlayer() {
+  return gameState?.players[gameState.currentPlayerIdx];
+}
+
+function isMyTurn() {
+  return getCurrentPlayer()?.id === myPlayerId;
+}
+
+// ========================================================
+// WEBSOCKET
+// ========================================================
+
+function connectWS() {
+  const url = document.getElementById('ws-url').value.trim();
+  if (!url) return;
+
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    document.getElementById('ws-dot').classList.add('connected');
+    document.getElementById('ws-status-text').textContent = 'Tilkoblet';
+  };
+
+  ws.onclose = () => {
+    document.getElementById('ws-dot').classList.remove('connected');
+    document.getElementById('ws-status-text').textContent = 'Frakoblet';
+  };
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    handleServerMessage(msg);
+  };
+}
+
+function sendWS(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg));
+  }
+}
+
+function handleServerMessage(msg) {
+  if (msg.type === 'game_state') {
+    gameState = msg.state;
+    renderGame();
+  } else if (msg.type === 'action_result') {
+    gameState = msg.state;
+    renderGame();
+    if (msg.dice) showDiceResult(msg.dice);
+  }
+}
+
+function createGame() {
+  const name = document.getElementById('player-name').value.trim();
+  const room = document.getElementById('room-id').value.trim();
+  if (!name || !room) return alert('Fyll inn navn og rom-ID');
+  myPlayerId = 'p_' + Math.random().toString(36).substr(2,8);
+  sendWS({ type: 'create_game', room, player: { id: myPlayerId, name } });
+}
+
+function joinGame() {
+  const name = document.getElementById('player-name').value.trim();
+  const room = document.getElementById('room-id').value.trim();
+  if (!name || !room) return alert('Fyll inn navn og rom-ID');
+  myPlayerId = 'p_' + Math.random().toString(36).substr(2,8);
+  sendWS({ type: 'join_game', room, player: { id: myPlayerId, name } });
+}
+
+function startLocalGame() {
+  const name = document.getElementById('player-name').value.trim() || 'Spiller 1';
+  myPlayerId = 'p1';
+  const players = [
+    { id: 'p1', name },
+    { id: 'p2', name: 'Spiller 2' },
+    { id: 'p3', name: 'Spiller 3' },
+  ];
+  gameState = createInitialGameState(players);
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('game-container').style.display = 'block';
+  initMap();
+}
+
+// ========================================================
+// SVG MAP
+// ========================================================
+
+// Map coordinate system: SVG viewBox is 900x800, territories have cx/cy in SVG coords
+const MAP_W = 900;
+const MAP_H = 800;
+
+// Territory SVG positions (cx, cy in the 900x800 space)
+const TERRITORY_POS = {
+  't1':  [375,340], 't2':  [360,362], 't3':  [394,330],
+  't4':  [378,272], 't5':  [400,288], 't6':  [365,290],
+  't7':  [348,254], 't8':  [328,240], 't9':  [306,286],
+  't10': [292,268], 't11': [268,274], 't12': [247,292],
+  't13': [228,316], 't14': [202,338], 't15': [178,354],
+  't16': [240,230], 't17': [216,214], 't18': [200,192],
+  't19': [320,198], 't20': [350,214], 't21': [290,178],
+  't22': [420,250], 't23': [444,236], 't24': [488,198],
+  't25': [510,216], 't26': [554,158], 't27': [576,174],
+  't28': [534,296], 't29': [460,282], 't30': [460,360],
+  't31': [490,375], 't32': [432,430], 't33': [406,446],
+  't34': [370,488], 't35': [400,498],
+};
+
+const CHECKPOINT_POS = {
+  'lørenskog': [680, 280],
+  'lysaker':   [140, 390],
+  'kolbotn':   [350, 590],
+};
+
+// Pan/zoom state
+let mapTransform = { x: 0, y: 0, scale: 1 };
+let panState = { active: false, hasMoved: false, startX: 0, startY: 0, lastX: 0, lastY: 0, startTx: 0, startTy: 0 };
+let svgEl = null;
+
+function initMap() {
+  const container = document.getElementById('map-container');
+  container.innerHTML = '';
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('id', 'oslo-svg');
+  svg.setAttribute('width', MAP_W);
+  svg.setAttribute('height', MAP_H);
+  svg.setAttribute('viewBox', `0 0 ${MAP_W} ${MAP_H}`);
+  svgEl = svg;
+
+  // --- DEFS ---
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = `
+    <pattern id="water-pat" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M0 10 Q5 7 10 10 Q15 13 20 10" fill="none" stroke="#1a3a5c" stroke-width="0.5" opacity="0.5"/>
+    </pattern>
+    <radialGradient id="terrain-grad" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#2a3a1a"/>
+      <stop offset="60%" stop-color="#1e2e12"/>
+      <stop offset="100%" stop-color="#141e0d"/>
+    </radialGradient>
+    <filter id="cp-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="sel-glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  `;
+  svg.appendChild(defs);
+
+  // --- BACKGROUND ---
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', MAP_W); bg.setAttribute('height', MAP_H); bg.setAttribute('fill', '#0d1520');
+  svg.appendChild(bg);
+
+  // Grid
+  const grid = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  grid.setAttribute('opacity', '0.15');
+  for (let x = 0; x < MAP_W; x += 40) {
+    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l.setAttribute('x1', x); l.setAttribute('y1', 0); l.setAttribute('x2', x); l.setAttribute('y2', MAP_H);
+    l.setAttribute('stroke', '#1a1a2a'); l.setAttribute('stroke-width', '0.5');
+    grid.appendChild(l);
+  }
+  for (let y = 0; y < MAP_H; y += 40) {
+    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l.setAttribute('x1', 0); l.setAttribute('y1', y); l.setAttribute('x2', MAP_W); l.setAttribute('y2', y);
+    l.setAttribute('stroke', '#1a1a2a'); l.setAttribute('stroke-width', '0.5');
+    grid.appendChild(l);
+  }
+  svg.appendChild(grid);
+
+  // Fjord water
+  const water = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  water.innerHTML = `
+    <path d="M0 620 Q50 600 100 580 Q150 560 180 540 Q200 530 220 520 Q240 510 260 520 Q280 530 300 540 Q320 550 340 530 Q360 510 370 490 Q380 470 360 460 Q340 450 320 455 Q300 460 280 470 Q260 480 240 475 Q220 470 200 460 Q180 450 160 440 Q140 430 120 440 Q100 450 80 460 Q60 470 40 480 Q20 490 0 500 Z" fill="#0f2540" opacity="0.92"/>
+    <path d="M0 620 Q50 600 100 580 Q150 560 180 540 Q200 530 220 520 Q240 510 260 520 Q280 530 300 540 Q320 550 340 530 Q360 510 370 490 Q380 470 360 460 Q340 450 320 455 Q300 460 280 470 Q260 480 240 475 Q220 470 200 460 Q180 450 160 440 Q140 430 120 440 Q100 450 80 460 Q60 470 40 480 Q20 490 0 500 Z" fill="url(#water-pat)" opacity="0.5"/>
+    <text font-family="Georgia,serif" font-size="11" fill="rgba(100,160,220,0.3)" letter-spacing="3" x="120" y="530" text-anchor="middle">OSLOFJORDEN</text>
+  `;
+  svg.appendChild(water);
+
+  // Oslo land
+  const land = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  land.setAttribute('d', 'M150 50 Q200 30 260 25 Q320 20 380 30 Q440 40 490 55 Q540 70 580 90 Q620 110 650 140 Q680 170 700 200 Q720 230 725 265 Q730 300 720 330 Q710 360 695 385 Q680 410 660 430 Q640 450 615 462 Q590 474 565 478 Q540 482 515 478 Q490 474 470 468 Q450 462 430 470 Q410 478 395 490 Q380 502 360 508 Q340 514 318 510 Q296 506 275 498 Q254 490 235 478 Q216 466 200 452 Q184 438 170 420 Q156 402 145 380 Q134 358 128 332 Q122 306 120 278 Q118 250 122 220 Q126 190 133 162 Q140 134 145 102 Q148 76 150 50 Z');
+  land.setAttribute('fill', 'url(#terrain-grad)');
+  land.setAttribute('stroke', '#2a3a1a');
+  land.setAttribute('stroke-width', '1.5');
+  svg.appendChild(land);
+
+  // Topo ring
+  const topo = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  topo.setAttribute('d', 'M200 100 Q300 80 400 90 Q500 100 580 130 Q640 155 660 200 Q680 245 665 300 Q650 350 620 390 Q580 430 530 450 Q480 468 420 462 Q360 456 320 440 Q280 424 250 400 Q220 376 205 342 Q190 308 188 270 Q186 232 195 195 Q204 158 200 100 Z');
+  topo.setAttribute('fill', 'none'); topo.setAttribute('stroke', '#2a3a1a'); topo.setAttribute('stroke-width', '0.5'); topo.setAttribute('opacity', '0.5');
+  svg.appendChild(topo);
+
+  // --- DISTRICTS ---
+  const districtShapes = {
+    'frogner':           'M200 280 Q220 260 250 250 Q270 245 290 255 Q305 265 310 285 Q315 305 305 325 Q295 345 270 355 Q245 360 225 350 Q205 340 200 320 Q196 304 200 280 Z',
+    'ullern':            'M155 330 Q170 310 195 305 Q215 302 225 315 Q235 328 230 350 Q225 368 205 378 Q185 385 168 375 Q152 363 150 345 Q149 338 155 330 Z',
+    'vestre-aker':       'M185 200 Q210 185 240 188 Q265 191 278 208 Q288 222 283 245 Q278 262 262 270 Q245 275 228 268 Q210 260 200 245 Q190 230 185 215 Q183 207 185 200 Z',
+    'nordre-aker':       'M290 160 Q320 145 355 148 Q382 152 395 172 Q405 188 400 210 Q395 228 378 238 Q360 246 340 242 Q320 238 308 225 Q296 212 292 194 Q288 176 290 160 Z',
+    'st-hanshaugen':     'M275 270 Q295 258 315 262 Q330 266 336 280 Q340 294 332 308 Q324 320 308 324 Q292 326 280 318 Q268 308 268 294 Q267 282 275 270 Z',
+    'sagene':            'M310 225 Q330 215 352 218 Q368 222 375 236 Q380 248 373 262 Q365 274 350 278 Q334 280 320 274 Q306 267 303 253 Q300 240 310 225 Z',
+    'grunerløkka':       'M360 248 Q382 240 402 246 Q418 252 422 268 Q426 282 418 296 Q410 308 394 312 Q378 315 365 306 Q352 297 350 282 Q348 267 360 248 Z',
+    'gamle-oslo':        'M355 315 Q378 308 400 315 Q418 322 422 340 Q425 356 412 368 Q398 378 378 378 Q358 376 346 362 Q336 348 338 334 Q340 320 355 315 Z',
+    'bjerke':            'M415 210 Q440 200 462 205 Q480 210 485 226 Q488 240 480 253 Q470 264 454 267 Q438 268 426 258 Q414 248 412 234 Q410 220 415 210 Z',
+    'grorud':            'M470 165 Q498 155 520 160 Q540 166 545 184 Q548 198 540 212 Q530 224 514 228 Q498 230 485 220 Q472 210 470 196 Q468 180 470 165 Z',
+    'stovner':           'M530 130 Q558 118 582 124 Q604 130 610 150 Q614 165 604 180 Q592 192 575 194 Q556 195 544 183 Q532 170 530 154 Q528 142 530 130 Z',
+    'alna':              'M468 272 Q492 264 515 270 Q535 276 540 294 Q544 308 534 322 Q524 334 506 337 Q488 338 476 326 Q464 314 464 298 Q462 285 468 272 Z',
+    'østensjø':          'M445 342 Q468 334 490 340 Q508 348 512 366 Q514 380 502 392 Q490 402 472 402 Q454 402 443 390 Q432 378 434 362 Q436 348 445 342 Z',
+    'nordstrand':        'M380 398 Q408 390 432 398 Q452 406 455 425 Q457 440 442 452 Q426 462 405 460 Q384 458 372 444 Q361 430 364 415 Q367 402 380 398 Z',
+    'søndre-nordstrand': 'M348 462 Q374 455 398 462 Q418 470 420 488 Q421 502 406 513 Q390 522 368 518 Q346 514 336 498 Q328 482 336 470 Q340 463 348 462 Z',
+  };
+  const districtLabelPos = {
+    'frogner': [252,302], 'ullern': [190,345], 'vestre-aker': [234,228],
+    'nordre-aker': [346,196], 'st-hanshaugen': [303,292], 'sagene': [340,248],
+    'grunerløkka': [386,276], 'gamle-oslo': [380,344], 'bjerke': [448,234],
+    'grorud': [508,192], 'stovner': [570,158], 'alna': [502,300],
+    'østensjø': [474,368], 'nordstrand': [409,426], 'søndre-nordstrand': [378,486],
+  };
+  const districtShortNames = {
+    'frogner':'Frogner','ullern':'Ullern','vestre-aker':'V. Aker',
+    'nordre-aker':'N. Aker','st-hanshaugen':'St. H.','sagene':'Sagene',
+    'grunerløkka':'Grünerl.','gamle-oslo':'G. Oslo','bjerke':'Bjerke',
+    'grorud':'Grorud','stovner':'Stovner','alna':'Alna',
+    'østensjø':'Østensjø','nordstrand':'Nordstr.','søndre-nordstrand':'S.Nordstr.',
+  };
+
+  const districtGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  districtGroup.setAttribute('id', 'district-layer');
+  for (const [did, pathD] of Object.entries(districtShapes)) {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', pathD);
+    p.setAttribute('id', 'district-' + did);
+    p.setAttribute('class', 'svg-district');
+    const dc = DISTRICTS[did];
+    p.setAttribute('fill', dc ? dc.color : '#1a1a2a');
+    p.setAttribute('fill-opacity', '0.75');
+    p.setAttribute('stroke', '#2a3a2a');
+    p.setAttribute('stroke-width', '1.5');
+    districtGroup.appendChild(p);
+
+    // Label
+    const lp = districtLabelPos[did];
+    if (lp) {
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('class', 'district-label');
+      t.setAttribute('x', lp[0]); t.setAttribute('y', lp[1]);
+      t.textContent = districtShortNames[did] || did;
+      districtGroup.appendChild(t);
+    }
+  }
+  svg.appendChild(districtGroup);
+
+  // Roads
+  const roads = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  roads.innerHTML = `
+    <path d="M200 100 Q300 80 400 90 Q500 100 580 130 Q640 155 660 200 Q680 245 665 300 Q650 350 620 390 Q580 430 530 450 Q480 468 420 462 Q360 456 320 440 Q280 424 250 400 Q220 376 205 342 Q190 308 188 270 Q186 232 195 195" fill="none" stroke="#4a3a1a" stroke-width="1.2" stroke-dasharray="6 4" opacity="0.4"/>
+    <path d="M160 430 Q200 418 240 410 Q290 400 340 398 Q390 396 430 405 Q470 414 510 430" fill="none" stroke="#4a3a1a" stroke-width="1.2" opacity="0.4"/>
+    <path d="M370 145 Q368 180 362 220 Q358 255 352 285 Q346 312 340 355 Q337 380 340 400" fill="none" stroke="#1a4a6a" stroke-width="1.5" stroke-linecap="round" opacity="0.55"/>
+  `;
+  svg.appendChild(roads);
+
+  // --- ADJACENCY LINES ---
+  const adjGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  adjGroup.setAttribute('id', 'adj-layer');
+  const drawn = new Set();
+  for (const [tid, neighbors] of Object.entries(ADJACENCY)) {
+    const pos1 = TERRITORY_POS[tid];
+    if (!pos1) continue;
+    for (const nid of neighbors) {
+      const key = [tid, nid].sort().join('-');
+      if (drawn.has(key)) continue;
+      drawn.add(key);
+      const pos2 = TERRITORY_POS[nid];
+      if (!pos2) continue;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('id', `adj-${key}`);
+      line.setAttribute('class', 'adj-line');
+      line.setAttribute('x1', pos1[0]); line.setAttribute('y1', pos1[1]);
+      line.setAttribute('x2', pos2[0]); line.setAttribute('y2', pos2[1]);
+      adjGroup.appendChild(line);
+    }
+  }
+  svg.appendChild(adjGroup);
+
+  // --- CHECKPOINTS ---
+  const cpGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  cpGroup.setAttribute('id', 'checkpoint-layer');
+  for (const [cid, cp] of Object.entries(CHECKPOINTS)) {
+    const [cx, cy] = CHECKPOINT_POS[cid];
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('filter', 'url(#cp-glow)');
+    g.innerHTML = `
+      <polygon points="${cx},${cy-22} ${cx+16},${cy} ${cx},${cy+22} ${cx-16},${cy}" fill="rgba(255,215,0,0.12)" stroke="#ffd700" stroke-width="1.8"/>
+      <circle cx="${cx}" cy="${cy}" r="3.5" fill="#ffd700"/>
+      <text class="checkpoint-label" x="${cx}" y="${cy+36}">${cp.name}</text>
+      <text class="checkpoint-label" x="${cx}" y="${cy+48}" style="font-size:7px;fill:rgba(255,215,0,0.6)">${cid === 'lørenskog' ? 'START' : 'CHECKPOINT'}</text>
+    `;
+    cpGroup.appendChild(g);
+  }
+  svg.appendChild(cpGroup);
+
+  // --- TERRITORY DOTS ---
+  const terrGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  terrGroup.setAttribute('id', 'territory-layer');
+  for (const t of TERRITORIES) {
+    const [cx, cy] = TERRITORY_POS[t.id] || [0, 0];
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('id', 'terr-' + t.id);
+    g.setAttribute('class', 'svg-territory');
+    g.setAttribute('data-id', t.id);
+
+    const isPremium = t.price >= 400;
+    const r = isPremium ? 16 : 14;
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', cx); circle.setAttribute('cy', cy); circle.setAttribute('r', r);
+    circle.setAttribute('fill', '#1a1a2a');
+    circle.setAttribute('stroke', '#c9a84c');
+    circle.setAttribute('stroke-width', isPremium ? '2' : '1.5');
+
+    const nameT = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    nameT.setAttribute('class', 'terr-label');
+    nameT.setAttribute('x', cx); nameT.setAttribute('y', cy - 3);
+    nameT.textContent = t.name.substring(0, 3).toUpperCase();
+
+    const unitsT = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    unitsT.setAttribute('class', 'terr-units');
+    unitsT.setAttribute('x', cx); unitsT.setAttribute('y', cy + 8);
+    unitsT.setAttribute('id', 'units-' + t.id);
+    unitsT.textContent = t.neutralUnits;
+
+    g.appendChild(circle);
+    g.appendChild(nameT);
+    g.appendChild(unitsT);
+
+    g.addEventListener('mouseenter', (e) => showMapTooltip(t, e));
+    g.addEventListener('mousemove', (e) => moveMapTooltip(e));
+    g.addEventListener('mouseleave', hideMapTooltip);
+    g.addEventListener('pointerup', () => {
+      if (!panState.hasMoved) selectTerritory(t.id);
+    });
+
+    terrGroup.appendChild(g);
+  }
+  svg.appendChild(terrGroup);
+
+  // Compass
+  const compass = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  compass.setAttribute('transform', 'translate(840,80)');
+  compass.innerHTML = `
+    <circle cx="0" cy="0" r="24" fill="rgba(10,10,20,0.75)" stroke="#2a2a3a" stroke-width="1"/>
+    <polygon points="0,-20 5,-7 -5,-7" fill="#c9a84c" opacity="0.9"/>
+    <polygon points="0,20 5,7 -5,7" fill="#555" opacity="0.6"/>
+    <polygon points="-20,0 -7,-5 -7,5" fill="#555" opacity="0.6"/>
+    <polygon points="20,0 7,-5 7,5" fill="#555" opacity="0.6"/>
+    <text font-family="Georgia,serif" font-size="11" fill="#c9a84c" x="0" y="-26" text-anchor="middle">N</text>
+  `;
+  svg.appendChild(compass);
+
+  container.appendChild(svg);
+
+  // --- PAN & ZOOM ---
+  requestAnimationFrame(() => {
+    fitMapToContainer();
+    setupMapInteraction(container, svg);
+    updateTerritoryVisuals();
+    renderHUD();
+    renderCheckpointBar();
+  });
+}
+
+function fitMapToContainer() {
+  const container = document.getElementById('map-container');
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+  const scale = Math.min(cw / MAP_W, ch / MAP_H) * 0.95;
+  mapTransform.scale = scale;
+  mapTransform.x = (cw - MAP_W * scale) / 2;
+  mapTransform.y = (ch - MAP_H * scale) / 2;
+  applyMapTransform();
+}
+
+function applyMapTransform() {
+  if (!svgEl) return;
+  svgEl.style.transform = `translate(${mapTransform.x}px, ${mapTransform.y}px) scale(${mapTransform.scale})`;
+}
+
+function setupMapInteraction(container, svg) {
+  container.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.svg-territory')) return; // territory handles its own click
+    panState.active = true;
+    panState.hasMoved = false;
+    panState.startX = e.clientX;
+    panState.startY = e.clientY;
+    panState.lastX = e.clientX;
+    panState.lastY = e.clientY;
+    panState.startTx = mapTransform.x;
+    panState.startTy = mapTransform.y;
+    container.classList.add('grabbing');
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!panState.active) return;
+    const dx = e.clientX - panState.startX;
+    const dy = e.clientY - panState.startY;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) panState.hasMoved = true;
+    mapTransform.x = panState.startTx + dx;
+    mapTransform.y = panState.startTy + dy;
+    applyMapTransform();
+    hideMapTooltip();
+  });
+
+  window.addEventListener('pointerup', () => {
+    panState.active = false;
+    container.classList.remove('grabbing');
+    setTimeout(() => { panState.hasMoved = false; }, 20);
+  });
+
+  // Pinch/wheel zoom
+  container.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = container.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.min(Math.max(mapTransform.scale * delta, 0.3), 4);
+    mapTransform.x = mx - (mx - mapTransform.x) * (newScale / mapTransform.scale);
+    mapTransform.y = my - (my - mapTransform.y) * (newScale / mapTransform.scale);
+    mapTransform.scale = newScale;
+    applyMapTransform();
+  }, { passive: false });
+}
+
+function showMapTooltip(territory, e) {
+  const ts = gameState?.territories[territory.id];
+  const owner = ts?.owner ? gameState.players.find(x => x.id === ts.owner) : null;
+  const district = DISTRICTS[territory.district];
+  const tt = document.getElementById('map-tooltip');
+  tt.innerHTML = `<strong style="color:#e8c97a">${territory.name}</strong><br>
+    <span style="color:#888;font-style:italic">${district?.name}</span><br>
+    <span style="color:${owner?.color || '#888'}">${owner?.name || 'Nøytral'}</span> · ${ts?.units || 0} bat.<br>
+    <span style="color:#c9a84c">💰 ${territory.price} kr</span>`;
+  tt.style.display = 'block';
+  moveMapTooltip(e);
+}
+
+function moveMapTooltip(e) {
+  const tt = document.getElementById('map-tooltip');
+  tt.style.left = Math.min(e.clientX + 14, window.innerWidth - 180) + 'px';
+  tt.style.top = Math.max(e.clientY - 10, 70) + 'px';
+}
+
+function hideMapTooltip() {
+  document.getElementById('map-tooltip').style.display = 'none';
+}
+
+function updateTerritoryVisuals() {
+  if (!gameState) return;
+  for (const t of TERRITORIES) {
+    const g = document.getElementById('terr-' + t.id);
+    if (!g) continue;
+    const ts = gameState.territories[t.id];
+    const owner = ts?.owner ? gameState.players.find(x => x.id === ts.owner) : null;
+    const circle = g.querySelector('circle');
+
+    if (owner) {
+      circle.setAttribute('fill', owner.color);
+      circle.setAttribute('fill-opacity', '0.75');
+      circle.setAttribute('stroke', owner.color);
+      circle.setAttribute('filter', '');
+    } else {
+      circle.setAttribute('fill', '#1a1a2a');
+      circle.setAttribute('fill-opacity', '1');
+      circle.setAttribute('stroke', '#c9a84c');
+      circle.setAttribute('filter', '');
+    }
+
+    const unitsEl = document.getElementById('units-' + t.id);
+    if (unitsEl) unitsEl.textContent = ts?.units || 0;
+
+    // Selected state
+    const isSelected = selectedTerritory === t.id;
+    g.classList.toggle('selected', isSelected);
+    if (isSelected) circle.setAttribute('filter', 'url(#sel-glow)');
+
+    // Highlight adjacent territories of selected
+    if (selectedTerritory) {
+      const adj = ADJACENCY[selectedTerritory] || [];
+      const key1 = [selectedTerritory, t.id].sort().join('-');
+      const adjLine = document.getElementById('adj-' + key1);
+      if (adjLine) {
+        adjLine.classList.toggle('highlight', adj.includes(t.id));
+      }
+    }
+  }
+
+  // Update district fills based on ownership
+  for (const [did] of Object.entries(DISTRICTS)) {
+    const terrs = TERRITORIES.filter(t => t.district === did);
+    const distEl = document.getElementById('district-' + did);
+    if (!distEl) continue;
+    // Check if one player owns all territories in district
+    const ownerIds = [...new Set(terrs.map(t => gameState.territories[t.id]?.owner).filter(Boolean))];
+    if (ownerIds.length === 1 && terrs.every(t => gameState.territories[t.id]?.owner === ownerIds[0])) {
+      const owner = gameState.players.find(p => p.id === ownerIds[0]);
+      distEl.setAttribute('fill', owner?.color || '#1a1a2a');
+      distEl.setAttribute('fill-opacity', '0.4');
+    } else {
+      distEl.setAttribute('fill', DISTRICTS[did]?.color || '#1a1a2a');
+      distEl.setAttribute('fill-opacity', '0.75');
+    }
+  }
+}
+
+function selectTerritory(tid) {
+  selectedTerritory = tid;
+  // Reset all adj line highlights
+  document.querySelectorAll('.adj-line').forEach(l => l.classList.remove('highlight'));
+  updateTerritoryVisuals();
+  renderActionPanel();
+}
+
+// ========================================================
+// GAME ACTIONS
+// ========================================================
+
+function rollDice() {
+  if (!isMyTurn()) return;
+  const cp = getCurrentPlayer();
+  if (cp.diceRoll !== null) return;
+
+  const roll = Math.ceil(Math.random() * 6);
+  cp.diceRoll = roll;
+  cp.diceUsed = 0;
+  addLog(`${cp.name} kastet terning: ${roll} øyne`, 'important');
+  renderHUD();
+  renderActionPanel();
+  sendGameState();
+}
+
+function moveToTerritory(tid) {
+  if (!isMyTurn()) return;
+  const cp = getCurrentPlayer();
+  if (cp.diceRoll === null || cp.diceUsed >= cp.diceRoll) return;
+
+  cp.diceUsed++;
+  cp.position = tid;
+
+  // Check checkpoints
+  if (tid === 'lysaker_cp') cp.checkpoints.lysaker = true;
+  if (tid === 'kolbotn_cp') cp.checkpoints.kolbotn = true;
+
+  const t = TERRITORIES.find(x => x.id === tid);
+  const ts = gameState.territories[tid];
+
+  addLog(`${cp.name} beveger seg til ${t.name} (${cp.diceUsed}/${cp.diceRoll})`);
+
+  // Land on territory – check if owned by others
+  if (cp.diceUsed === cp.diceRoll) {
+    if (ts.owner && ts.owner !== cp.id) {
+      const owner = gameState.players.find(x => x.id === ts.owner);
+      const rent = Math.floor(t.price * 0.15);
+      addLog(`${cp.name} lander på ${owner.name}s område. Leie: ${rent} kr`, 'important');
+      // Show rent modal
+      showRentModal(tid, rent);
+    }
+  }
+
+  renderCheckpointBar();
+  renderActionPanel();
+  sendGameState();
+}
+
+function buyTerritory(tid) {
+  if (!isMyTurn()) return;
+  const cp = getCurrentPlayer();
+  const t = TERRITORIES.find(x => x.id === tid);
+  const ts = gameState.territories[tid];
+
+  if (ts.owner) { addLog('Området er allerede eid'); return; }
+  if (cp.money < t.price) { addLog('Ikke nok penger'); return; }
+  if (cp.units < 1) { addLog('Ingen bataljoner å plassere'); return; }
+
+  cp.money -= t.price;
+  cp.units -= 1;
+  ts.owner = cp.id;
+  ts.units = 1;
+
+  addLog(`${cp.name} kjøpte ${t.name} for ${t.price} kr`, 'buy');
+  updateTerritoryVisuals();
+  renderHUD();
+  renderActionPanel();
+  checkMissionComplete(cp);
+  sendGameState();
+}
+
+function invadeTerritory(tid) {
+  if (!isMyTurn()) return;
+  const cp = getCurrentPlayer();
+  const ts = gameState.territories[tid];
+  const t = TERRITORIES.find(x => x.id === tid);
+
+  if (ts.owner === cp.id) { addLog('Du eier allerede dette området'); return; }
+  if (cp.units < 1) { addLog('Ingen bataljoner til invasjon'); return; }
+
+  // Check adjacency
+  const ownedNeighbors = ADJACENCY[tid]?.filter(nid => gameState.territories[nid]?.owner === cp.id);
+  if (ownedNeighbors.length === 0 && cp.position !== tid) {
+    addLog('Du kan bare angripe fra tilstøtende områder du eier');
+    return;
+  }
+
+  // Risk combat
+  const defUnits = ts.units;
+  const attUnits = Math.min(cp.units, 3);
+
+  const result = riskCombat(attUnits, defUnits);
+
+  const prevOwner = ts.owner;
+  if (result.attackerWins) {
+    const oldOwner = prevOwner ? gameState.players.find(x => x.id === prevOwner) : null;
+    ts.owner = cp.id;
+    ts.units = result.attackerRemaining;
+    cp.units -= result.attackerLost;
+
+    if (prevOwner) {
+      // Track conquests for Barbaren mission
+      if (!cp.conquests[prevOwner]) cp.conquests[prevOwner] = 0;
+      cp.conquests[prevOwner]++;
+    }
+
+    addLog(`${cp.name} tok ${t.name}! (${prevOwner ? (oldOwner?.name || 'ukjent') : 'nøytral'} tapte)`, 'combat');
+
+    // Check if player is eliminated
+    if (prevOwner) {
+      const remaining = Object.values(gameState.territories).filter(x => x.owner === prevOwner).length;
+      if (remaining === 0) {
+        const loser = gameState.players.find(x => x.id === prevOwner);
+        if (loser) { loser.eliminated = true; addLog(`${loser.name} er eliminert!`, 'important'); }
+        checkGameEnd();
+      }
+    }
+  } else {
+    cp.units -= result.attackerLost;
+    ts.units = result.defenderRemaining;
+    addLog(`${cp.name} angrep ${t.name} – mislyktes!`, 'combat');
+  }
+
+  showDiceResult({
+    attackerDice: result.attackerDice,
+    defenderDice: result.defenderDice,
+    attackerName: cp.name,
+    defenderName: prevOwner ? gameState.players.find(x => x.id === prevOwner)?.name : 'Nøytral',
+    attackerWins: result.attackerWins,
+    attackerLost: result.attackerLost,
+    defenderLost: result.defenderLost,
+  });
+
+  updateTerritoryVisuals();
+  renderHUD();
+  renderActionPanel();
+  checkMissionComplete(cp);
+  sendGameState();
+}
+
+function riskCombat(attackers, defenders) {
+  const aDice = Array.from({length: Math.min(attackers, 3)}, () => Math.ceil(Math.random()*6)).sort((a,b) => b-a);
+  const dDice = Array.from({length: Math.min(defenders, 2)}, () => Math.ceil(Math.random()*6)).sort((a,b) => b-a);
+
+  let aLost = 0, dLost = 0;
+  const pairs = Math.min(aDice.length, dDice.length);
+
+  for (let i = 0; i < pairs; i++) {
+    if (aDice[i] > dDice[i]) dLost++;
+    else aLost++;
+  }
+
+  return {
+    attackerDice: aDice,
+    defenderDice: dDice,
+    attackerLost: aLost,
+    defenderLost: dLost,
+    attackerWins: dLost > 0 && defenders - dLost <= 0,
+    attackerRemaining: Math.max(1, attackers - aLost),
+    defenderRemaining: Math.max(0, defenders - dLost),
+  };
+}
+
+function reinforceTerritory(tid) {
+  if (!isMyTurn()) return;
+  const cp = getCurrentPlayer();
+  if (cp.units < 1) { addLog('Ingen bataljoner å forsterke med'); return; }
+
+  const ts = gameState.territories[tid];
+  if (ts.owner !== cp.id) { addLog('Du eier ikke dette området'); return; }
+
+  cp.units -= 1;
+  ts.units += 1;
+
+  const t = TERRITORIES.find(x => x.id === tid);
+  addLog(`${cp.name} forsterket ${t.name}`);
+  updateTerritoryVisuals();
+  renderHUD();
+  renderActionPanel();
+  sendGameState();
+}
+
+function payRent(tid) {
+  const cp = getCurrentPlayer();
+  const t = TERRITORIES.find(x => x.id === tid);
+  const ts = gameState.territories[tid];
+  const rent = Math.floor(t.price * 0.15);
+
+  if (cp.money < rent) {
+    addLog(`${cp.name} har ikke råd til leie – tvangsangrep!`, 'combat');
+    invadeTerritory(tid);
+  } else {
+    cp.money -= rent;
+    const owner = gameState.players.find(x => x.id === ts.owner);
+    if (owner) owner.money += rent;
+    addLog(`${cp.name} betalte ${rent} kr i leie til ${owner?.name}`, 'buy');
+    renderHUD();
+    sendGameState();
+  }
+}
+
+function endTurn() {
+  if (!isMyTurn()) { addLog('Det er ikke din tur'); return; }
+
+  const cp = getCurrentPlayer();
+
+  // Collect district bonuses
+  let bonusMoney = 0, bonusUnits = 0;
+  for (const [did, district] of Object.entries(DISTRICTS)) {
+    const terrs = TERRITORIES.filter(t => t.district === did);
+    if (terrs.every(t => gameState.territories[t.id]?.owner === cp.id)) {
+      bonusMoney += district.bonus.money;
+      bonusUnits += district.bonus.units;
+    }
+  }
+
+  // Checkpoint bonus
+  if (cp.checkpoints.lørenskog && cp.checkpoints.lysaker && cp.checkpoints.kolbotn) {
+    bonusMoney += 500;
+    bonusUnits += 3;
+    cp.checkpoints = { lørenskog: true, lysaker: false, kolbotn: false };
+    addLog(`${cp.name} fullførte en runde! Bonus: +500 kr +3 bat.`, 'important');
+  }
+
+  if (bonusMoney > 0 || bonusUnits > 0) {
+    cp.money += bonusMoney;
+    cp.units += bonusUnits;
+    addLog(`${cp.name} får bonus: +${bonusMoney} kr, +${bonusUnits} bat.`);
+  }
+
+  // Reset turn
+  cp.diceRoll = null;
+  cp.diceUsed = 0;
+
+  // Next player
+  let nextIdx = (gameState.currentPlayerIdx + 1) % gameState.players.length;
+  while (gameState.players[nextIdx].eliminated) {
+    nextIdx = (nextIdx + 1) % gameState.players.length;
+  }
+
+  if (nextIdx === 0) gameState.round++;
+  gameState.currentPlayerIdx = nextIdx;
+
+  addLog(`--- ${getCurrentPlayer().name}s tur ---`, 'important');
+  renderHUD();
+  renderActionPanel();
+  renderCheckpointBar();
+  sendGameState();
+}
+
+// ========================================================
+// MISSION CHECKING
+// ========================================================
+
+function checkMissionComplete(player) {
+  const mission = MISSIONS.find(m => m.id === player.mission);
+  if (!mission) return;
+  if (mission.check(player, gameState)) {
+    showWinModal(player, mission);
+  }
+}
+
+function checkGameEnd() {
+  const alive = gameState.players.filter(p => !p.eliminated);
+  if (alive.length === 1) {
+    showWinModal(alive[0], { title: 'Siste mann stående', emoji: '🏆' });
+    return;
+  }
+
+  // Check if any mission-based winner (Blodhevn)
+  for (const p of alive) {
+    const mission = MISSIONS.find(m => m.id === p.mission);
+    if (mission?.id === 'm8' && mission.check(p, gameState)) {
+      showWinModal(p, mission);
+      return;
+    }
+  }
+}
+
+// ========================================================
+// UI RENDERING
+// ========================================================
+
+function renderHUD() {
+  if (!gameState) return;
+  const container = document.getElementById('player-chips');
+  container.innerHTML = '';
+
+  for (const p of gameState.players) {
+    const chip = document.createElement('div');
+    chip.className = 'player-chip' + (p.id === getCurrentPlayer()?.id ? ' active' : '');
+    if (p.eliminated) chip.style.opacity = '0.3';
+    chip.innerHTML = `
+      <div class="chip-dot" style="background:${p.color}"></div>
+      <span>${p.name}</span>
+      <span class="chip-money">💰 ${p.money}</span>
+      <span class="chip-units">⚔ ${p.units}</span>
+    `;
+    container.appendChild(chip);
+  }
+
+  const ind = document.getElementById('turn-indicator');
+  const cp = getCurrentPlayer();
+  if (cp) {
+    ind.innerHTML = `<span style="color:${cp.color}">●</span> ${cp.name}s tur – Runde ${gameState.round}`;
+    if (cp.diceRoll !== null) {
+      ind.innerHTML += ` | Terning: ${cp.diceRoll} (brukt: ${cp.diceUsed})`;
+    }
+  }
+}
+
+function renderActionPanel() {
+  const panel = document.getElementById('action-content');
+  if (!selectedTerritory) {
+    panel.innerHTML = '<p style="color:var(--text-muted);font-style:italic;font-size:0.9rem;">Velg et område på kartet</p>';
+
+    if (isMyTurn()) {
+      const cp = getCurrentPlayer();
+      panel.innerHTML += `
+        <div style="margin-top:12px;">
+          ${cp.diceRoll === null ? `<button class="action-btn" onclick="rollDice()">🎲 Kast terning</button>` : `<div style="color:var(--gold);margin-bottom:8px;">Terning: ${cp.diceRoll} (${cp.diceUsed} brukt)</div>`}
+        </div>`;
+    }
+    return;
+  }
+
+  const t = TERRITORIES.find(x => x.id === selectedTerritory);
+  const ts = gameState.territories[selectedTerritory];
+  const owner = ts.owner ? gameState.players.find(x => x.id === ts.owner) : null;
+  const cp = getCurrentPlayer();
+  const district = DISTRICTS[t.district];
+
+  panel.innerHTML = `
+    <div class="territory-info">
+      <div class="territory-name">${t.name}</div>
+      <div class="territory-district">${district.name}</div>
+      <div class="territory-stats">
+        <div class="stat"><span class="stat-label">Eier</span><span style="color:${owner?.color || '#888'}">${owner?.name || 'Nøytral'}</span></div>
+        <div class="stat"><span class="stat-label">Bataljoner</span><span>${ts.units}</span></div>
+        <div class="stat"><span class="stat-label">Pris</span><span style="color:var(--gold)">${t.price} kr</span></div>
+      </div>
+    </div>
+    <div class="action-buttons">
+  `;
+
+  if (isMyTurn()) {
+    const myTerr = ts.owner === cp.id;
+    const neutral = !ts.owner;
+    const enemy = ts.owner && ts.owner !== cp.id;
+    const adjacent = ADJACENCY[selectedTerritory]?.some(nid => gameState.territories[nid]?.owner === cp.id);
+
+    if (!myTerr) {
+      panel.innerHTML += `
+        <button class="action-btn" onclick="buyTerritory('${t.id}')" ${!neutral || cp.money < t.price ? 'disabled' : ''}>
+          Kjøp av bank <span class="price">${t.price} kr</span>
+        </button>
+        <button class="action-btn" onclick="invadeTerritory('${t.id}')" ${!adjacent && cp.position !== t.id ? 'disabled' : ''}>
+          ⚔ Invader ${enemy ? `(${ts.units} bat.)` : `(nøytral: ${ts.units} bat.)`}
+        </button>
+      `;
+    } else {
+      panel.innerHTML += `
+        <button class="action-btn" onclick="reinforceTerritory('${t.id}')" ${cp.units < 1 ? 'disabled' : ''}>
+          + Forsterke <span class="price">${cp.units} tilgjengelig</span>
+        </button>
+      `;
+    }
+
+    // Move button
+    if (cp.diceRoll !== null && cp.diceUsed < cp.diceRoll) {
+      panel.innerHTML += `<button class="action-btn" onclick="moveToTerritory('${t.id}')">🚶 Beveg hit (${cp.diceUsed+1}/${cp.diceRoll})</button>`;
+    }
+  }
+
+  panel.innerHTML += '</div>';
+}
+
+function renderCheckpointBar() {
+  if (!gameState) return;
+  const cp = getCurrentPlayer();
+  if (!cp) return;
+
+  ['lørenskog','lysaker','kolbotn'].forEach(cid => {
+    const el = document.getElementById(`cp-${cid}`);
+    if (el) el.className = 'checkpoint' + (cp.checkpoints[cid] ? ' reached' : '');
+  });
+}
+
+function addLog(msg, type = '') {
+  if (!gameState) return;
+  gameState.log = gameState.log || [];
+  gameState.log.unshift({ msg, type, time: new Date().toLocaleTimeString('no', {hour:'2-digit',minute:'2-digit'}) });
+  if (gameState.log.length > 50) gameState.log.pop();
+
+  const container = document.getElementById('log-entries');
+  if (container) {
+    container.innerHTML = gameState.log.slice(0, 30).map(e =>
+      `<div class="log-entry ${e.type}">${e.msg}</div>`
+    ).join('');
+  }
+}
+
+function renderGame() {
+  renderHUD();
+  renderActionPanel();
+  renderCheckpointBar();
+  updateTerritoryVisuals();
+}
+
+// ========================================================
+// DICE DISPLAY
+// ========================================================
+
+function showDiceResult(result) {
+  const el = document.getElementById('dice-display');
+  el.style.display = 'block';
+
+  document.getElementById('attacker-name').textContent = result.attackerName || 'Angriper';
+  document.getElementById('defender-name').textContent = result.defenderName || 'Forsvarer';
+
+  const DICE_FACES = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+  document.getElementById('attacker-dice').innerHTML = (result.attackerDice || []).map(d =>
+    `<div class="die attacker">${DICE_FACES[d]}</div>`
+  ).join('');
+  document.getElementById('defender-dice').innerHTML = (result.defenderDice || []).map(d =>
+    `<div class="die defender">${DICE_FACES[d]}</div>`
+  ).join('');
+
+  document.getElementById('dice-result').textContent = result.attackerWins
+    ? `✅ Angriperen vinner! Forsvarer tapte ${result.defenderLost} bat.`
+    : `❌ Angrepet mislyktes. Angriper tapte ${result.attackerLost} bat.`;
+}
+
+function closeDice() {
+  document.getElementById('dice-display').style.display = 'none';
+}
+
+// ========================================================
+// MODALS
+// ========================================================
+
+function showRentModal(tid, rent) {
+  const t = TERRITORIES.find(x => x.id === tid);
+  const cp = getCurrentPlayer();
+  const canPay = cp.money >= rent;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>Leie</h2>
+      <p>Du landet på <strong>${t.name}</strong>.<br>Leie: <span style="color:var(--gold)">${rent} kr</span></p>
+      ${!canPay ? '<p style="color:#e87070">Du har ikke råd! Tvangsangrep igangsettes.</p>' : ''}
+      <button class="btn primary" onclick="this.closest('.modal-overlay').remove(); payRent('${tid}')">
+        ${canPay ? `Betal ${rent} kr` : 'Angrip i stedet'}
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function showWinModal(player, mission) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal end-game-modal">
+      <h2>🏆 Spillet er over!</h2>
+      <div class="winner" style="color:${player.color}">${player.name} vinner!</div>
+      <p>${mission.emoji || ''} <strong>${mission.title}</strong><br>${mission.desc || ''}</p>
+      <button class="btn primary" onclick="location.reload()">Nytt spill</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+// Mission card toggle
+document.getElementById('mission-card').addEventListener('click', () => {
+  const el = document.getElementById('mission-text');
+  const myPlayer = gameState?.players.find(p => p.id === myPlayerId);
+  if (!myPlayer) return;
+
+  if (!missionRevealed) {
+    missionRevealed = true;
+    const mission = MISSIONS.find(m => m.id === myPlayer.mission);
+    el.classList.remove('mission-hidden');
+    el.textContent = `${mission?.emoji} ${mission?.title}: ${mission?.desc}`;
+    if (mission?.id === 'm8' && myPlayer.target) {
+      const target = gameState.players.find(p => p.id === myPlayer.target);
+      el.textContent += ` (Mål: ${target?.name})`;
+    }
+  } else {
+    missionRevealed = false;
+    el.classList.add('mission-hidden');
+    el.textContent = 'Klikk for å se';
+  }
+});
+
+// ========================================================
+// WEBSOCKET SYNC
+// ========================================================
+
+function sendGameState() {
+  sendWS({ type: 'game_action', state: gameState });
+}
+
+// ========================================================
+// RESIZE
+// ========================================================
+
+window.addEventListener('resize', () => {
+  if (svgEl) fitMapToContainer();
+});
+</script>
+</body>
+</html>
