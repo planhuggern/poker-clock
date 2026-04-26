@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<title>Oslo Conquest – Karteditor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    display: flex;
+    height: 100vh;
+    background: #0d0d0f;
+    color: #e8e0d0;
+    font-family: Georgia, serif;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 260px;
+    min-width: 260px;
+    background: #13131a;
+    border-right: 1px solid #2a2a3a;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #sidebar h1 {
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #c9a84c;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid #2a2a3a;
+  }
+
+  .section {
+    padding: 10px 16px;
+    border-bottom: 1px solid #2a2a3a;
+  }
+
+  .section label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888070;
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .mode-btns { display: flex; gap: 6px; }
+
+  .btn {
+    flex: 1;
+    padding: 7px 4px;
+    background: transparent;
+    border: 1px solid #2a2a3a;
+    color: #888070;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: #c9a84c; color: #c9a84c; }
+  .btn.active { background: #c9a84c; color: #0d0d0f; border-color: #c9a84c; }
+  .btn.danger { border-color: #c0392b; color: #c0392b; }
+  .btn.danger:hover { background: #c0392b; color: #fff; }
+
+  #file-input { display: none; }
+
+  .load-btn {
+    width: 100%;
+    padding: 8px;
+    background: transparent;
+    border: 1px dashed #2a2a3a;
+    color: #888070;
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .load-btn:hover { border-color: #c9a84c; color: #c9a84c; }
+
+  .list-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+
+  .list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 16px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.1s;
+    border-left: 2px solid transparent;
+  }
+  .list-item:hover { background: rgba(201,168,76,0.06); }
+  .list-item.selected { background: rgba(201,168,76,0.12); border-left-color: #c9a84c; color: #e8c97a; }
+  .list-item.done .check { color: #2ecc71; }
+  .list-item .check { width: 12px; font-size: 0.85rem; color: #2a2a3a; flex-shrink: 0; }
+  .list-item .swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .list-item .name { flex: 1; }
+  .list-item .coord { font-size: 0.65rem; color: #888070; }
+
+  .drawing-controls { display: flex; flex-direction: column; gap: 6px; }
+
+  #progress-bar {
+    font-size: 0.7rem;
+    color: #888070;
+    padding: 6px 16px;
+    border-bottom: 1px solid #2a2a3a;
+  }
+  #progress-bar span { color: #c9a84c; }
+
+  #export-section {
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  #hint {
+    padding: 8px 16px;
+    font-size: 0.72rem;
+    color: #888070;
+    font-style: italic;
+    line-height: 1.5;
+    border-top: 1px solid #2a2a3a;
+  }
+
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: #13131a; }
+  ::-webkit-scrollbar-thumb { background: #2a2a3a; }
+
+  /* ── Canvas ── */
+  #canvas-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    cursor: crosshair;
+  }
+
+  #drawing-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .terr-poly { cursor: pointer; }
+  .dist-poly { cursor: pointer; }
+
+  .pt-handle {
+    cursor: grab;
+    transition: r 0.1s;
+  }
+  .pt-handle:hover { r: 7; }
+  .pt-handle.first-pt { fill: #2ecc71; cursor: pointer; }
+
+  #coords-display {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    font-size: 0.7rem;
+    color: #888070;
+    background: rgba(13,13,15,0.85);
+    padding: 3px 8px;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<div id="sidebar">
+  <h1>Karteditor</h1>
+
+  <!-- Bakgrunnsbilde -->
+  <div class="section">
+    <label>Bakgrunnskart</label>
+    <input type="file" id="file-input" accept="image/*">
+    <div class="load-btn" onclick="document.getElementById('file-input').click()">
+      📂 Last inn kartbilde…
+    </div>
+  </div>
+
+  <!-- Modusvalgknapper -->
+  <div class="section">
+    <label>Modus</label>
+    <div class="mode-btns">
+      <button class="btn active" id="btn-terr" onclick="setMode('territory')">Territorier</button>
+      <button class="btn" id="btn-dist" onclick="setMode('district')">Bydeler</button>
+      <button class="btn" id="btn-special" onclick="setMode('special')">Spesial</button>
+    </div>
+  </div>
+
+  <!-- Snapping -->
+  <div class="section">
+    <label>Snapping (låser til nærmeste punkt)</label>
+    <div class="mode-btns" style="margin-bottom:6px">
+      <button class="btn active" id="btn-snap" onclick="toggleSnap()">🧲 På</button>
+      <input type="range" id="snap-radius" min="5" max="40" value="15"
+             style="flex:1;accent-color:#c9a84c" oninput="updateSnapLabel()">
+      <span id="snap-label" style="font-size:0.7rem;color:#888070;white-space:nowrap">15 px</span>
+    </div>
+    <div style="font-size:0.7rem;color:#888070">Grønn sirkel = snap-kandidat</div>
+  </div>
+
+  <!-- Fremdrift -->
+  <div id="progress-bar">
+    Terr: <span id="prog-terr">0</span>/37 &nbsp;|&nbsp; Bydeler: <span id="prog-dist">0</span>/16 &nbsp;|&nbsp; Spesial: <span id="prog-special">0</span>/6
+  </div>
+
+  <!-- Liste (byttes mellom territorier og bydeler) -->
+  <div class="list-wrap" id="item-list"></div>
+
+  <!-- Kontroller for territorietegning (vises bare i territory-modus) -->
+  <div class="section drawing-controls" id="territory-controls" style="display:none">
+    <button class="btn" onclick="closeTerritoryPolygon()">✓ Lukk polygon</button>
+    <button class="btn" onclick="undoTerritoryPoint()">↩ Angre siste punkt</button>
+    <button class="btn danger" onclick="clearTerritory()">✕ Slett polygon</button>
+  </div>
+
+  <!-- Kontroller for bydeltegning (vises bare i district-modus) -->
+  <div class="section drawing-controls" id="district-controls" style="display:none">
+    <button class="btn" onclick="closePolygon()">✓ Lukk polygon</button>
+    <button class="btn" onclick="undoPoint()">↩ Angre siste punkt</button>
+    <button class="btn danger" onclick="clearDistrict()">✕ Slett tegning</button>
+  </div>
+
+  <!-- Kontroller for spesialsteder (vises bare i special-modus) -->
+  <div class="section drawing-controls" id="special-controls" style="display:none">
+    <button class="btn" onclick="closeSpecialPolygon()">✓ Lukk polygon</button>
+    <button class="btn" onclick="undoSpecialPoint()">↩ Angre siste punkt</button>
+    <button class="btn danger" onclick="clearSpecial()">✕ Slett polygon</button>
+  </div>
+
+  <!-- Eksport / import -->
+  <div id="export-section">
+    <button class="btn" onclick="exportJSON()" style="border-color:#c9a84c;color:#c9a84c">💾 Eksporter JSON</button>
+    <button class="btn" onclick="triggerImport()">📂 Importer JSON</button>
+    <input type="file" id="import-input" accept=".json" style="display:none" onchange="importJSON(event)">
+  </div>
+
+  <!-- Konteksthjelp -->
+  <div id="hint">Velg et territorium i listen og klikk på kartet for å plassere det.</div>
+</div>
+
+<!-- ══════════════════ TEGNFLATE ══════════════════ -->
+<div id="canvas-wrap">
+  <svg id="drawing-svg" viewBox="0 0 900 800" preserveAspectRatio="xMidYMid meet">
+    <!-- Bakgrunnsbilde -->
+    <image id="bg-image" x="0" y="0" width="900" height="800"
+           preserveAspectRatio="xMidYMid meet" style="display:none"/>
+
+    <!-- Spesialsteder (fjord, skoger, nabokommuner) — underst -->
+    <g id="layer-special"></g>
+
+    <!-- Bydelslag (ferdige polygoner) -->
+    <g id="layer-districts"></g>
+
+    <!-- Territoriepolygoner (innenfor bydeler) -->
+    <g id="layer-terr-polygons"></g>
+
+    <!-- Aktivt polygon under tegning -->
+    <g id="layer-drawing">
+      <polyline id="draw-line" fill="none" stroke="#c9a84c" stroke-width="1.5" stroke-dasharray="5 3" points=""/>
+      <line id="rubber-band" stroke="#c9a84c" stroke-width="1" stroke-dasharray="4 4"
+            x1="0" y1="0" x2="0" y2="0" style="display:none"/>
+      <!-- Snap-indikator: vises når musepekeren er nær et eksisterende punkt -->
+      <circle id="snap-indicator" r="10" fill="none" stroke="#2ecc71" stroke-width="2"
+              stroke-dasharray="3 2" style="display:none" pointer-events="none"/>
+    </g>
+
+  </svg>
+
+  <div id="coords-display">x: 0  y: 0</div>
+</div>
+
+<script>
+// ── Spilldata: alle territorier og bydeler ──────────────────────────────────
+
+const TERR_LIST = [
+  { id: 't0a', name: 'Karl Johans gate',    district: 'sentrum' },
+  { id: 't0b', name: 'Aker Brygge',         district: 'sentrum' },
+  { id: 't1',  name: 'Grønland',           district: 'gamle-oslo' },
+  { id: 't2',  name: 'Gamlebyen',          district: 'gamle-oslo' },
+  { id: 't3',  name: 'Tøyen',              district: 'gamle-oslo' },
+  { id: 't4',  name: 'Løkka',              district: 'grunerløkka' },
+  { id: 't5',  name: 'Sofienberg',         district: 'grunerløkka' },
+  { id: 't6',  name: 'Rodeløkka',          district: 'grunerløkka' },
+  { id: 't7',  name: 'Torshov',            district: 'sagene' },
+  { id: 't8',  name: 'Sandaker',           district: 'sagene' },
+  { id: 't9',  name: 'Bislett',            district: 'st-hanshaugen' },
+  { id: 't10', name: 'Adamstuen',          district: 'st-hanshaugen' },
+  { id: 't11', name: 'Majorstuen',         district: 'frogner' },
+  { id: 't12', name: 'Frognerparken',      district: 'frogner' },
+  { id: 't13', name: 'Bygdøy',             district: 'frogner' },
+  { id: 't14', name: 'Skøyen',             district: 'ullern' },
+  { id: 't15', name: 'Montebello',         district: 'ullern' },
+  { id: 't16', name: 'Vinderen',           district: 'vestre-aker' },
+  { id: 't17', name: 'Røa',               district: 'vestre-aker' },
+  { id: 't18', name: 'Holmenkollen',       district: 'vestre-aker' },
+  { id: 't19', name: 'Kjelsås',            district: 'nordre-aker' },
+  { id: 't20', name: 'Nydalen',            district: 'nordre-aker' },
+  { id: 't21', name: 'Maridalen',          district: 'nordre-aker' },
+  { id: 't22', name: 'Økern',              district: 'bjerke' },
+  { id: 't23', name: 'Risløkka',           district: 'bjerke' },
+  { id: 't24', name: 'Romsås',             district: 'grorud' },
+  { id: 't25', name: 'Grorud sentrum',     district: 'grorud' },
+  { id: 't26', name: 'Stovner sentrum',    district: 'stovner' },
+  { id: 't27', name: 'Haugenstua',         district: 'stovner' },
+  { id: 't28', name: 'Furuset',            district: 'alna' },
+  { id: 't29', name: 'Helsfyr',            district: 'alna' },
+  { id: 't30', name: 'Manglerud',          district: 'østensjø' },
+  { id: 't31', name: 'Oppsal',             district: 'østensjø' },
+  { id: 't32', name: 'Ljan',               district: 'nordstrand' },
+  { id: 't33', name: 'Nordstrand sentrum', district: 'nordstrand' },
+  { id: 't34', name: 'Holmlia',            district: 'søndre-nordstrand' },
+  { id: 't35', name: 'Mortensrud',         district: 'søndre-nordstrand' },
+];
+
+const DIST_LIST = [
+  { id: 'sentrum',           name: 'Sentrum',            color: '#c9a84c' },
+  { id: 'gamle-oslo',        name: 'Gamle Oslo',        color: '#7a4a9a' },
+  { id: 'grunerløkka',       name: 'Grünerløkka',       color: '#4a6a9a' },
+  { id: 'sagene',            name: 'Sagene',             color: '#4a9a6a' },
+  { id: 'st-hanshaugen',     name: 'St. Hanshaugen',    color: '#9a6a4a' },
+  { id: 'frogner',           name: 'Frogner',            color: '#6a9a4a' },
+  { id: 'ullern',            name: 'Ullern',             color: '#9a4a6a' },
+  { id: 'vestre-aker',       name: 'Vestre Aker',        color: '#4a9a9a' },
+  { id: 'nordre-aker',       name: 'Nordre Aker',        color: '#9a9a4a' },
+  { id: 'bjerke',            name: 'Bjerke',             color: '#4a6a6a' },
+  { id: 'grorud',            name: 'Grorud',             color: '#6a4a6a' },
+  { id: 'stovner',           name: 'Stovner',            color: '#6a6a6a' },
+  { id: 'alna',              name: 'Alna',               color: '#4a4a6a' },
+  { id: 'østensjø',          name: 'Østensjø',           color: '#6a4a4a' },
+  { id: 'nordstrand',        name: 'Nordstrand',         color: '#4a6a4a' },
+  { id: 'søndre-nordstrand', name: 'Søndre Nordstrand',  color: '#6a6a4a' },
+];
+
+const SPECIAL_LIST = [
+  { id: 'oslofjorden', name: 'Oslofjorden', color: '#1a5a8a' },
+  { id: 'nordmarka',   name: 'Nordmarka',   color: '#2a5a2a' },
+  { id: 'østmarka',    name: 'Østmarka',    color: '#3a5a2a' },
+  { id: 'lørenskog',   name: 'Lørenskog',   color: '#7a5a2a' },
+  { id: 'kolbotn',     name: 'Kolbotn',     color: '#5a7a3a' },
+  { id: 'lysaker',     name: 'Lysaker',     color: '#2a7a7a' },
+];
+
+// ── Editortilstand ─────────────────────────────────────────────────────────
+
+let mode = 'territory';           // 'territory' | 'district'
+let selectedTerr = null;          // id for valgt territorium
+let selectedDist = null;          // id for valgt bydel
+let territories = {};             // { 't1': [[x,y], ...], ... } — polygon-punkter
+let districtPolygons = {};        // { 'frogner': [[x,y], ...], ... }
+let specialPolygons = {};         // { 'oslofjorden': [[x,y], ...], ... }
+let drawingPoints = [];           // pågående bydelpolygon
+let terrDrawingPoints = [];       // pågående territoriumpolygon
+let specialDrawingPoints = [];    // pågående spesialstedpolygon
+let selectedSpecial = null;       // id for valgt spesialsted
+let mousePos = { x: 0, y: 0 };
+let snapEnabled = true;
+let snapTarget = null;
+
+// Gjeldende viewBox for zoom/pan
+let vb = { x: 0, y: 0, w: 900, h: 800 };
+// Pan-tilstand: aktiv ved midtklikk eller høyreklikk-drag
+let panState = { active: false, moved: false, sx: 0, sy: 0, vbx0: 0, vby0: 0 };
+
+// ── SVG-element og ViewBox ─────────────────────────────────────────────────
+
+const svg = document.getElementById('drawing-svg');
+
+function applyVB() {
+  svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+}
+
+// Scroll-hjul zoomer inn/ut sentrert rundt muspekeren
+svg.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 0.85 : 1 / 0.85;
+  const p = toSVGCoords(e);
+  vb.x = p.x - (p.x - vb.x) * factor;
+  vb.y = p.y - (p.y - vb.y) * factor;
+  vb.w *= factor;
+  vb.h *= factor;
+  applyVB();
+}, { passive: false });
+
+// Midtklikk eller høyreklikk-drag = panorering
+svg.addEventListener('mousedown', (e) => {
+  if (e.button === 1 || e.button === 2) {
+    e.preventDefault();
+    panState.active = true;
+    panState.moved = false;
+    panState.sx = e.clientX;
+    panState.sy = e.clientY;
+    panState.vbx0 = vb.x;
+    panState.vby0 = vb.y;
+  }
+});
+
+window.addEventListener('mouseup', () => { panState.active = false; });
+
+// Hindrer kontekstmenyen fra å dukke opp etter høyreklikk-pan
+svg.addEventListener('contextmenu', (e) => {
+  if (panState.moved) e.preventDefault();
+  panState.moved = false;
+});
+
+// ── Snap-kontroller ────────────────────────────────────────────────────────
+
+function toggleSnap() {
+  snapEnabled = !snapEnabled;
+  const btn = document.getElementById('btn-snap');
+  btn.textContent = snapEnabled ? '🧲 På' : '🧲 Av';
+  btn.classList.toggle('active', snapEnabled);
+  if (!snapEnabled) hideSnapIndicator();
+}
+
+function updateSnapLabel() {
+  document.getElementById('snap-label').textContent =
+    document.getElementById('snap-radius').value + ' px';
+}
+
+function getSnapRadius() {
+  // Konverterer skjermpiksler til SVG-koordinatenheter via skalaen i matrisen
+  const screenPx = parseInt(document.getElementById('snap-radius').value);
+  const m = svg.getScreenCTM();
+  return screenPx / m.a;
+}
+
+// Finner nærmeste punkt fra alle polygoner (bydeler + territorier + pågående)
+function findSnapPoint(x, y) {
+  if (!snapEnabled) return null;
+  const radius = getSnapRadius();
+  let best = null;
+  let bestDist = radius;
+
+  const allPoints = [
+    ...Object.values(specialPolygons).flat(),
+    ...Object.values(districtPolygons).flat(),
+    ...Object.values(territories).flat(),
+    ...drawingPoints,
+    ...terrDrawingPoints,
+    ...specialDrawingPoints,
+  ];
+
+  for (const [px, py] of allPoints) {
+    const d = Math.hypot(x - px, y - py);
+    if (d < bestDist) { bestDist = d; best = [px, py]; }
+  }
+  return best;
+}
+
+function showSnapIndicator(x, y) {
+  const el = document.getElementById('snap-indicator');
+  el.setAttribute('cx', x);
+  el.setAttribute('cy', y);
+  el.style.display = '';
+}
+
+function hideSnapIndicator() {
+  document.getElementById('snap-indicator').style.display = 'none';
+}
+
+// ── SVG-hjelpere ───────────────────────────────────────────────────────────
+
+// Konverterer skjermkoordinater til SVG-koordinater (tar hensyn til viewBox/zoom)
+function toSVGCoords(e) {
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX;
+  pt.y = e.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+function r(n) { return Math.round(n); }
+
+// Returnerer true hvis brukeren er midt i en polygon-tegning akkurat nå
+function isDrawing() {
+  return (mode === 'territory' && terrDrawingPoints.length > 0)
+    || (mode === 'district' && drawingPoints.length > 0)
+    || (mode === 'special' && specialDrawingPoints.length > 0);
+}
+
+// Videresender et klikk til riktig punkt-tilleggsfunksjon basert på gjeldende modus
+function forwardClickAsPoint(e) {
+  const p = toSVGCoords(e);
+  if (mode === 'territory') addTerritoryPoint(r(p.x), r(p.y));
+  else if (mode === 'district') addDistrictPoint(r(p.x), r(p.y));
+  else if (mode === 'special') addSpecialPoint(r(p.x), r(p.y));
+}
+
+function calcCentroid(pts) {
+  return [
+    Math.round(pts.reduce((s, p) => s + p[0], 0) / pts.length),
+    Math.round(pts.reduce((s, p) => s + p[1], 0) / pts.length),
+  ];
+}
+
+// ── Bakgrunnsbilde ─────────────────────────────────────────────────────────
+
+document.getElementById('file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const img = document.getElementById('bg-image');
+  img.setAttribute('href', url);
+  img.style.display = '';
+});
+
+// ── Modus ──────────────────────────────────────────────────────────────────
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-terr').classList.toggle('active', m === 'territory');
+  document.getElementById('btn-dist').classList.toggle('active', m === 'district');
+  document.getElementById('btn-special').classList.toggle('active', m === 'special');
+  document.getElementById('territory-controls').style.display = m === 'territory' ? '' : 'none';
+  document.getElementById('district-controls').style.display = m === 'district' ? '' : 'none';
+  document.getElementById('special-controls').style.display = m === 'special' ? '' : 'none';
+
+  drawingPoints = [];
+  terrDrawingPoints = [];
+  specialDrawingPoints = [];
+  updateDrawingLayer([]);
+
+  if (m === 'territory') { selectedDist = null; selectedSpecial = null; }
+  else if (m === 'district') { selectedSpecial = null; }
+  else { selectedDist = null; }
+
+  renderList();
+  updateHint();
+}
+
+// ── Musinteraksjon på SVG-flaten ───────────────────────────────────────────
+
+svg.addEventListener('mousemove', (e) => {
+  // Panorering har prioritet
+  if (panState.active) {
+    panState.moved = true;
+    const m = svg.getScreenCTM();
+    vb.x = panState.vbx0 - (e.clientX - panState.sx) / m.a;
+    vb.y = panState.vby0 - (e.clientY - panState.sy) / m.d;
+    applyVB();
+    return;
+  }
+
+  const p = toSVGCoords(e);
+  mousePos = p;
+
+  const activePoints = mode === 'district' ? drawingPoints
+    : mode === 'special' ? specialDrawingPoints
+    : terrDrawingPoints;
+  const isDrawing = (mode === 'district' && selectedDist)
+    || (mode === 'territory' && selectedTerr)
+    || (mode === 'special' && selectedSpecial);
+
+  if (isDrawing) {
+    const snap = findSnapPoint(p.x, p.y);
+    snapTarget = snap ? { x: snap[0], y: snap[1] } : null;
+    if (snapTarget) showSnapIndicator(snapTarget.x, snapTarget.y);
+    else hideSnapIndicator();
+  } else {
+    snapTarget = null;
+    hideSnapIndicator();
+  }
+
+  const ex = snapTarget ? snapTarget.x : r(p.x);
+  const ey = snapTarget ? snapTarget.y : r(p.y);
+  document.getElementById('coords-display').textContent =
+    `x: ${ex}  y: ${ey}` + (snapTarget ? '  🧲' : '');
+
+  if (isDrawing && activePoints.length > 0) {
+    const rb = document.getElementById('rubber-band');
+    const last = activePoints[activePoints.length - 1];
+    rb.setAttribute('x1', last[0]); rb.setAttribute('y1', last[1]);
+    rb.setAttribute('x2', ex); rb.setAttribute('y2', ey);
+    rb.style.display = '';
+  } else {
+    document.getElementById('rubber-band').style.display = 'none';
+  }
+});
+
+svg.addEventListener('click', (e) => {
+  if (e.target.classList.contains('pt-handle')) return;
+  if (e.target.classList.contains('terr-poly') || e.target.closest('.terr-poly-group')) return;
+
+  const p = toSVGCoords(e);
+  if (mode === 'territory') addTerritoryPoint(r(p.x), r(p.y));
+  else if (mode === 'district') addDistrictPoint(r(p.x), r(p.y));
+  else if (mode === 'special') addSpecialPoint(r(p.x), r(p.y));
+});
+
+svg.addEventListener('dblclick', (e) => {
+  if (mode === 'district' && drawingPoints.length >= 3) closePolygon();
+  if (mode === 'territory' && terrDrawingPoints.length >= 3) closeTerritoryPolygon();
+  if (mode === 'special' && specialDrawingPoints.length >= 3) closeSpecialPolygon();
+});
+
+svg.addEventListener('mouseleave', () => {
+  if (!panState.active) { snapTarget = null; hideSnapIndicator(); }
+});
+
+// ── Territoriehandlinger (polygon) ─────────────────────────────────────────
+
+function selectTerr(id) {
+  // Lagre pågående tegning for forrige valg
+  if (selectedTerr && terrDrawingPoints.length >= 3) {
+    territories[selectedTerr] = [...terrDrawingPoints];
+  }
+  selectedTerr = id;
+  terrDrawingPoints = territories[id] ? [...territories[id]] : [];
+  updateDrawingLayer(terrDrawingPoints);
+  renderTerritoryPolygons();
+  renderList();
+  updateHint();
+}
+
+function addTerritoryPoint(x, y) {
+  if (!selectedTerr) {
+    const next = TERR_LIST.find(t => !territories[t.id]);
+    if (next) { selectedTerr = next.id; terrDrawingPoints = []; }
+    else return;
+  }
+
+  const sx = snapTarget ? snapTarget.x : x;
+  const sy = snapTarget ? snapTarget.y : y;
+
+  if (terrDrawingPoints.length >= 3) {
+    const [fx, fy] = terrDrawingPoints[0];
+    if (Math.hypot(sx - fx, sy - fy) < getSnapRadius() * 1.5) {
+      closeTerritoryPolygon();
+      return;
+    }
+  }
+
+  terrDrawingPoints.push([sx, sy]);
+  updateDrawingLayer(terrDrawingPoints);
+}
+
+function closeTerritoryPolygon() {
+  if (!selectedTerr || terrDrawingPoints.length < 3) return;
+  territories[selectedTerr] = [...terrDrawingPoints];
+
+  // Auto-advance til neste ubehandlede territorium i samme bydel
+  const cur = TERR_LIST.find(t => t.id === selectedTerr);
+  const next = TERR_LIST.find(t => t.district === cur?.district && !territories[t.id]);
+  selectedTerr = next ? next.id : null;
+  terrDrawingPoints = [];
+
+  document.getElementById('rubber-band').style.display = 'none';
+  updateDrawingLayer([]);
+  renderTerritoryPolygons();
+  renderList();
+  updateProgress();
+  updateHint();
+}
+
+function undoTerritoryPoint() {
+  terrDrawingPoints.pop();
+  updateDrawingLayer(terrDrawingPoints);
+}
+
+function clearTerritory() {
+  if (!selectedTerr) return;
+  delete territories[selectedTerr];
+  terrDrawingPoints = [];
+  document.getElementById('rubber-band').style.display = 'none';
+  updateDrawingLayer([]);
+  renderTerritoryPolygons();
+  renderList();
+  updateProgress();
+}
+
+function renderTerritoryPolygons() {
+  const layer = document.getElementById('layer-terr-polygons');
+  layer.innerHTML = '';
+
+  for (const t of TERR_LIST) {
+    const pts = territories[t.id];
+    if (!pts || pts.length < 3) continue;
+    const dist = DIST_LIST.find(d => d.id === t.district);
+    const color = dist?.color || '#c9a84c';
+    const isSelected = selectedTerr === t.id;
+
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'terr-poly-group');
+
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points', pts.map(p => p.join(',')).join(' '));
+    poly.setAttribute('fill', color);
+    poly.setAttribute('fill-opacity', isSelected ? '0.5' : '0.25');
+    poly.setAttribute('stroke', isSelected ? '#fff' : color);
+    poly.setAttribute('stroke-width', isSelected ? '2' : '1');
+    poly.setAttribute('class', 'terr-poly');
+    poly.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (mode !== 'territory') forwardClickAsPoint(e);
+      else if (terrDrawingPoints.length > 0) forwardClickAsPoint(e);
+      else selectTerr(t.id);
+    });
+
+    const [cx, cy] = calcCentroid(pts);
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', cx); label.setAttribute('y', cy + 3);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('font-size', '6');
+    label.setAttribute('fill', 'rgba(255,255,255,0.85)');
+    label.setAttribute('pointer-events', 'none');
+    label.textContent = t.name.substring(0, 5).toUpperCase();
+
+    g.appendChild(poly);
+    g.appendChild(label);
+    layer.appendChild(g);
+  }
+}
+
+// ── Spesialsteder (fjord, skoger, nabokommuner) ────────────────────────────
+
+function selectSpecial(id) {
+  if (selectedSpecial && specialDrawingPoints.length >= 3) {
+    specialPolygons[selectedSpecial] = [...specialDrawingPoints];
+  }
+  selectedSpecial = id;
+  specialDrawingPoints = specialPolygons[id] ? [...specialPolygons[id]] : [];
+  updateDrawingLayer(specialDrawingPoints);
+  renderSpecialPolygons();
+  renderList();
+  updateHint();
+}
+
+function addSpecialPoint(x, y) {
+  if (!selectedSpecial) return;
+  const sx = snapTarget ? snapTarget.x : x;
+  const sy = snapTarget ? snapTarget.y : y;
+
+  if (specialDrawingPoints.length >= 3) {
+    const [fx, fy] = specialDrawingPoints[0];
+    if (Math.hypot(sx - fx, sy - fy) < getSnapRadius() * 1.5) {
+      closeSpecialPolygon();
+      return;
+    }
+  }
+  specialDrawingPoints.push([sx, sy]);
+  updateDrawingLayer(specialDrawingPoints);
+}
+
+function closeSpecialPolygon() {
+  if (!selectedSpecial || specialDrawingPoints.length < 3) return;
+  specialPolygons[selectedSpecial] = [...specialDrawingPoints];
+  specialDrawingPoints = [];
+  document.getElementById('rubber-band').style.display = 'none';
+  updateDrawingLayer([]);
+  renderSpecialPolygons();
+  renderList();
+  updateProgress();
+}
+
+function undoSpecialPoint() {
+  specialDrawingPoints.pop();
+  updateDrawingLayer(specialDrawingPoints);
+}
+
+function clearSpecial() {
+  if (!selectedSpecial) return;
+  delete specialPolygons[selectedSpecial];
+  specialDrawingPoints = [];
+  document.getElementById('rubber-band').style.display = 'none';
+  updateDrawingLayer([]);
+  renderSpecialPolygons();
+  renderList();
+  updateProgress();
+}
+
+function renderSpecialPolygons() {
+  const layer = document.getElementById('layer-special');
+  layer.innerHTML = '';
+
+  for (const s of SPECIAL_LIST) {
+    const pts = specialPolygons[s.id];
+    if (!pts || pts.length < 3) continue;
+    const isSelected = selectedSpecial === s.id;
+
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points', pts.map(p => p.join(',')).join(' '));
+    poly.setAttribute('fill', s.color);
+    poly.setAttribute('fill-opacity', isSelected ? '0.55' : '0.35');
+    poly.setAttribute('stroke', isSelected ? '#fff' : s.color);
+    poly.setAttribute('stroke-width', isSelected ? '2' : '1.5');
+    poly.setAttribute('stroke-dasharray', '6 3');
+    poly.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (mode !== 'special') forwardClickAsPoint(e);
+      else if (specialDrawingPoints.length > 0) forwardClickAsPoint(e);
+      else selectSpecial(s.id);
+    });
+
+    const [cx, cy] = calcCentroid(pts);
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', cx); label.setAttribute('y', cy + 4);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('font-size', '10');
+    label.setAttribute('fill', 'rgba(255,255,255,0.7)');
+    label.setAttribute('font-style', 'italic');
+    label.setAttribute('pointer-events', 'none');
+    label.textContent = s.name;
+
+    layer.appendChild(poly);
+    layer.appendChild(label);
+  }
+}
+
+// ── Bydelstegning ──────────────────────────────────────────────────────────
+
+function selectDist(id) {
+  if (selectedDist && drawingPoints.length >= 3) {
+    districtPolygons[selectedDist] = [...drawingPoints];
+  }
+  selectedDist = id;
+  drawingPoints = districtPolygons[id] ? [...districtPolygons[id]] : [];
+  updateDrawingLayer(drawingPoints);
+  renderDistricts();
+  renderList();
+  updateHint();
+}
+
+function addDistrictPoint(x, y) {
+  if (!selectedDist) return;
+  const sx = snapTarget ? snapTarget.x : x;
+  const sy = snapTarget ? snapTarget.y : y;
+
+  if (drawingPoints.length >= 3) {
+    const [fx, fy] = drawingPoints[0];
+    if (Math.hypot(sx - fx, sy - fy) < getSnapRadius() * 1.5) {
+      closePolygon();
+      return;
+    }
+  }
+  drawingPoints.push([sx, sy]);
+  updateDrawingLayer(drawingPoints);
+}
+
+function closePolygon() {
+  if (!selectedDist || drawingPoints.length < 3) return;
+  districtPolygons[selectedDist] = [...drawingPoints];
+  drawingPoints = [];
+  document.getElementById('rubber-band').style.display = 'none';
+  updateDrawingLayer([]);
+  renderDistricts();
+  renderList();
+  updateProgress();
+}
+
+function undoPoint() {
+  drawingPoints.pop();
+  updateDrawingLayer(drawingPoints);
+}
+
+function clearDistrict() {
+  if (!selectedDist) return;
+  delete districtPolygons[selectedDist];
+  drawingPoints = [];
+  document.getElementById('rubber-band').style.display = 'none';
+  updateDrawingLayer([]);
+  renderDistricts();
+  renderList();
+  updateProgress();
+}
+
+// Tegner polylinjen og interaktive punkthåndtak for aktiv tegning (brukes av begge modi)
+function updateDrawingLayer(points) {
+  const line = document.getElementById('draw-line');
+  document.querySelectorAll('.pt-handle').forEach(el => el.remove());
+  if (points.length === 0) { line.setAttribute('points', ''); return; }
+
+  line.setAttribute('points', points.map(p => p.join(',')).join(' '));
+
+  const layer = document.getElementById('layer-drawing');
+  points.forEach(([x, y], i) => {
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 5);
+    c.setAttribute('fill', i === 0 ? '#2ecc71' : '#c9a84c');
+    c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', '1');
+    c.setAttribute('class', 'pt-handle' + (i === 0 ? ' first-pt' : ''));
+
+    if (i === 0) {
+      c.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (mode === 'district') closePolygon();
+        else if (mode === 'special') closeSpecialPolygon();
+        else closeTerritoryPolygon();
+      });
+    }
+
+    let dragging = false;
+    c.addEventListener('pointerdown', (e) => { e.stopPropagation(); dragging = true; c.setPointerCapture(e.pointerId); });
+    c.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const p = toSVGCoords(e);
+      points[i] = [r(p.x), r(p.y)];
+      updateDrawingLayer(points);
+    });
+    c.addEventListener('pointerup', () => { dragging = false; });
+    layer.appendChild(c);
+  });
+}
+
+function renderDistricts() {
+  const layer = document.getElementById('layer-districts');
+  layer.innerHTML = '';
+
+  for (const [id, pts] of Object.entries(districtPolygons)) {
+    if (pts.length < 3) continue;
+    const dist = DIST_LIST.find(d => d.id === id);
+    const color = dist?.color || '#888';
+
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points', pts.map(p => p.join(',')).join(' '));
+    poly.setAttribute('fill', color);
+    poly.setAttribute('fill-opacity', selectedDist === id ? '0.5' : '0.3');
+    poly.setAttribute('stroke', color);
+    poly.setAttribute('stroke-width', selectedDist === id ? '2' : '1');
+    poly.setAttribute('class', 'dist-poly');
+    poly.setAttribute('data-id', id);
+
+    // Klikk på polygon → velg bydelen, eller legg til punkt i annen modus
+    poly.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (mode !== 'district') forwardClickAsPoint(e);
+      else if (drawingPoints.length > 0) forwardClickAsPoint(e);
+      else selectDist(id);
+    });
+
+    // Bydelsnavn midt i polygonen
+    const cx = Math.round(pts.reduce((s, p) => s + p[0], 0) / pts.length);
+    const cy = Math.round(pts.reduce((s, p) => s + p[1], 0) / pts.length);
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', cx); label.setAttribute('y', cy + 4);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('font-size', '9');
+    label.setAttribute('fill', 'rgba(255,255,255,0.6)');
+    label.setAttribute('pointer-events', 'none');
+    label.textContent = dist?.name || id;
+
+    layer.appendChild(poly);
+    layer.appendChild(label);
+  }
+}
+
+// ── Sidefelt-liste ─────────────────────────────────────────────────────────
+
+function renderList() {
+  const list = document.getElementById('item-list');
+  list.innerHTML = '';
+
+  if (mode === 'territory') {
+    for (const t of TERR_LIST) {
+      const done = territories[t.id]?.length >= 3;
+      const dist = DIST_LIST.find(d => d.id === t.district);
+      const item = document.createElement('div');
+      item.className = 'list-item' + (done ? ' done' : '') + (selectedTerr === t.id ? ' selected' : '');
+      item.innerHTML = `
+        <span class="check">${done ? '✓' : '○'}</span>
+        <span class="swatch" style="background:${dist?.color || '#888'}"></span>
+        <span class="name">${t.name}</span>
+        ${done ? `<span class="coord">${territories[t.id].length} pts</span>` : ''}
+      `;
+      item.addEventListener('click', () => selectTerr(t.id));
+      list.appendChild(item);
+    }
+  } else if (mode === 'district') {
+    for (const d of DIST_LIST) {
+      const drawn = !!districtPolygons[d.id];
+      const item = document.createElement('div');
+      item.className = 'list-item' + (drawn ? ' done' : '') + (selectedDist === d.id ? ' selected' : '');
+      item.innerHTML = `
+        <span class="check">${drawn ? '✓' : '○'}</span>
+        <span class="swatch" style="background:${d.color}"></span>
+        <span class="name">${d.name}</span>
+        ${drawn ? `<span class="coord">${districtPolygons[d.id].length} pts</span>` : ''}
+      `;
+      item.addEventListener('click', () => selectDist(d.id));
+      list.appendChild(item);
+    }
+  } else {
+    for (const s of SPECIAL_LIST) {
+      const drawn = !!specialPolygons[s.id];
+      const item = document.createElement('div');
+      item.className = 'list-item' + (drawn ? ' done' : '') + (selectedSpecial === s.id ? ' selected' : '');
+      item.innerHTML = `
+        <span class="check">${drawn ? '✓' : '○'}</span>
+        <span class="swatch" style="background:${s.color}"></span>
+        <span class="name">${s.name}</span>
+        ${drawn ? `<span class="coord">${specialPolygons[s.id].length} pts</span>` : ''}
+      `;
+      item.addEventListener('click', () => selectSpecial(s.id));
+      list.appendChild(item);
+    }
+  }
+}
+
+// ── Fremdrift og hint ──────────────────────────────────────────────────────
+
+function updateProgress() {
+  document.getElementById('prog-terr').textContent =
+    Object.values(territories).filter(p => p?.length >= 3).length;
+  document.getElementById('prog-dist').textContent = Object.keys(districtPolygons).length;
+  document.getElementById('prog-special').textContent = Object.keys(specialPolygons).length;
+}
+
+function updateHint() {
+  const el = document.getElementById('hint');
+  if (mode === 'territory') {
+    if (!selectedTerr) {
+      el.textContent = 'Velg et territorium i listen for å tegne grensene som polygon.';
+    } else {
+      const t = TERR_LIST.find(x => x.id === selectedTerr);
+      const pts = terrDrawingPoints.length;
+      el.textContent = pts === 0
+        ? `Klikk på kartet for å starte polygon for "${t?.name}". Scroll for å zoome.`
+        : pts < 3
+          ? `${pts} punkt${pts > 1 ? 'er' : ''}. Legg til minst ${3 - pts} til.`
+          : `${pts} punkter. Dobbelklikk, klikk grønt punkt, eller "Lukk polygon".`;
+    }
+  } else if (mode === 'district') {
+    if (!selectedDist) {
+      el.textContent = 'Velg en bydel i lista og klikk på kartet for å tegne polygonen punkt for punkt.';
+    } else {
+      const d = DIST_LIST.find(x => x.id === selectedDist);
+      const pts = drawingPoints.length;
+      el.textContent = pts === 0
+        ? `Klikk på kartet for å starte polygon for "${d?.name}".`
+        : pts < 3
+          ? `${pts} punkt${pts > 1 ? 'er' : ''}. Legg til minst ${3 - pts} til.`
+          : `${pts} punkter. Dobbelklikk, klikk grønt punkt, eller "Lukk polygon".`;
+    }
+  } else {
+    if (!selectedSpecial) {
+      el.textContent = 'Velg et spesialsted i lista og klikk på kartet for å tegne polygonen.';
+    } else {
+      const s = SPECIAL_LIST.find(x => x.id === selectedSpecial);
+      const pts = specialDrawingPoints.length;
+      el.textContent = pts === 0
+        ? `Klikk på kartet for å starte polygon for "${s?.name}".`
+        : pts < 3
+          ? `${pts} punkt${pts > 1 ? 'er' : ''}. Legg til minst ${3 - pts} til.`
+          : `${pts} punkter. Dobbelklikk, klikk grønt punkt, eller "Lukk polygon".`;
+    }
+  }
+}
+
+// ── Eksport / import ───────────────────────────────────────────────────────
+
+function exportJSON() {
+  // TERRITORY_POS: tyngdepunkt (centroid) for hvert territorium — klar til map.js
+  const terrPos = {};
+  for (const [id, pts] of Object.entries(territories)) {
+    if (pts?.length >= 3) terrPos[id] = calcCentroid(pts);
+  }
+
+  // territoryShapes: SVG-paths for territoriepolygoner
+  const terrShapes = {};
+  for (const [id, pts] of Object.entries(territories)) {
+    if (pts?.length >= 3) {
+      terrShapes[id] = 'M' + pts[0].join(' ') + ' ' +
+        pts.slice(1).map(p => 'L' + p.join(' ')).join(' ') + ' Z';
+    }
+  }
+
+  // districtShapes: SVG-paths for bydelpolygoner
+  const distShapes = {};
+  for (const [id, pts] of Object.entries(districtPolygons)) {
+    if (pts.length < 3) continue;
+    distShapes[id] = 'M' + pts[0].join(' ') + ' ' +
+      pts.slice(1).map(p => 'L' + p.join(' ')).join(' ') + ' Z';
+  }
+
+  // specialShapes: SVG-paths for spesialsteder
+  const specShapes = {};
+  for (const [id, pts] of Object.entries(specialPolygons)) {
+    if (pts.length < 3) continue;
+    specShapes[id] = 'M' + pts[0].join(' ') + ' ' +
+      pts.slice(1).map(p => 'L' + p.join(' ')).join(' ') + ' Z';
+  }
+
+  const data = {
+    _info: 'Oslo Conquest kartdata. Lim inn i map.js.',
+    TERRITORY_POS: terrPos,
+    territoryShapes: terrShapes,
+    districtShapes: distShapes,
+    specialShapes: specShapes,
+    _rawTerritories: territories,
+    _rawDistricts: districtPolygons,
+    _rawSpecial: specialPolygons,
+  };
+
+  const json = JSON.stringify(data, null, 2);
+  navigator.clipboard.writeText(json).then(() => {
+    alert('✓ JSON kopiert til utklippstavlen!');
+  }).catch(() => {
+    const blob = new Blob([json], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'oslo-conquest-map.json';
+    a.click();
+  });
+}
+
+function triggerImport() {
+  document.getElementById('import-input').click();
+}
+
+function importJSON(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data._rawTerritories) {
+        territories = data._rawTerritories;
+      } else if (data.TERRITORY_POS) {
+        // Gammelt format med enkeltpunkter — importer som tomt polygon (krever re-tegning)
+        territories = {};
+      }
+      if (data._rawDistricts) {
+        districtPolygons = data._rawDistricts;
+      } else if (data._rawPoints) {
+        districtPolygons = data._rawPoints;
+      }
+      if (data._rawSpecial) specialPolygons = data._rawSpecial;
+      drawingPoints = [];
+      terrDrawingPoints = [];
+      specialDrawingPoints = [];
+      renderSpecialPolygons();
+      renderTerritoryPolygons();
+      renderDistricts();
+      renderList();
+      updateProgress();
+      updateHint();
+    } catch {
+      alert('Kunne ikke lese JSON-filen.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Escape avbryter pågående tegning, Ctrl+Z angrer siste punkt
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (mode === 'district' && drawingPoints.length > 0) {
+      drawingPoints = [];
+      document.getElementById('rubber-band').style.display = 'none';
+      updateDrawingLayer([]);
+    }
+    if (mode === 'territory' && terrDrawingPoints.length > 0) {
+      terrDrawingPoints = [];
+      document.getElementById('rubber-band').style.display = 'none';
+      updateDrawingLayer([]);
+    }
+    if (mode === 'special' && specialDrawingPoints.length > 0) {
+      specialDrawingPoints = [];
+      document.getElementById('rubber-band').style.display = 'none';
+      updateDrawingLayer([]);
+    }
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    e.preventDefault();
+    if (mode === 'district') undoPoint();
+    if (mode === 'territory') undoTerritoryPoint();
+    if (mode === 'special') undoSpecialPoint();
+  }
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+
+setMode('territory');  // viser territory-controls fra start
+</script>
+</body>
+</html>
