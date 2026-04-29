@@ -1,7 +1,7 @@
 // Tegner og oppdaterer SVG-kartet over Oslo.
 // Håndterer også pan (dra kartet rundt) og zoom (scroll), og tooltip når du holder over et område.
 
-import { TERRITORIES, DISTRICTS, ADJACENCY, CHECKPOINTS } from './game-data.js';
+import { TERRITORIES, DISTRICTS, CHECKPOINTS } from './game-data.js';
 import { state } from './state.js';
 import { renderHUD, renderActionPanel, renderCheckpointBar } from './ui.js';
 import mapData from './map.json';
@@ -141,48 +141,6 @@ export function initMap() {
   }
   svg.appendChild(districtGroup);
 
-  // ── Territoriepolygoner (synlige grenser) ────────────────────────────────
-
-  const terrBorderGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  terrBorderGroup.setAttribute('id', 'terr-border-layer');
-  for (const [tid, pathD] of Object.entries(mapData.territoryShapes)) {
-    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p.setAttribute('d', pathD);
-    p.setAttribute('fill', 'none');
-    p.setAttribute('stroke', 'rgba(255,255,255,0.15)');
-    p.setAttribute('stroke-width', '0.8');
-    p.setAttribute('stroke-dasharray', '4 3');
-    p.setAttribute('pointer-events', 'none');
-    terrBorderGroup.appendChild(p);
-  }
-  svg.appendChild(terrBorderGroup);
-
-  // ── Nabolinjer mellom territorier ─────────────────────────────────────────
-
-  const adjGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  adjGroup.setAttribute('id', 'adj-layer');
-  const drawn = new Set();
-  for (const [tid, neighbors] of Object.entries(ADJACENCY)) {
-    const pos1 = TERRITORY_POS[tid];
-    if (!pos1) continue;
-    for (const nid of neighbors) {
-      const key = [tid, nid].sort().join('-');
-      if (drawn.has(key)) continue;
-      drawn.add(key);
-      const pos2 = TERRITORY_POS[nid];
-      if (!pos2) continue;
-      const t1info = TERRITORIES.find(t => t.id === tid);
-      const t2info = TERRITORIES.find(t => t.id === nid);
-      const sameDistrict = t1info && t2info && t1info.district === t2info.district;
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('id', `adj-${key}`);
-      line.setAttribute('class', sameDistrict ? 'adj-line intra-district' : 'adj-line');
-      line.setAttribute('x1', pos1[0]); line.setAttribute('y1', pos1[1]);
-      line.setAttribute('x2', pos2[0]); line.setAttribute('y2', pos2[1]);
-      adjGroup.appendChild(line);
-    }
-  }
-  svg.appendChild(adjGroup);
 
   // ── Sjekkpunkt-markører ───────────────────────────────────────────────────
 
@@ -207,27 +165,31 @@ export function initMap() {
   const terrGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   terrGroup.setAttribute('id', 'territory-layer');
   for (const t of TERRITORIES) {
+    const pathD = mapData.territoryShapes[t.id];
+    if (!pathD) continue;
     const pos = TERRITORY_POS[t.id];
     if (!pos) continue;
     const [cx, cy] = pos;
+
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('id', 'terr-' + t.id);
     g.setAttribute('class', 'svg-territory');
     g.setAttribute('data-id', t.id);
 
-    const isPremium = t.price >= 400;
-    const r = isPremium ? 16 : 14;
-
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', cx); circle.setAttribute('cy', cy); circle.setAttribute('r', r);
-    circle.setAttribute('fill', '#1a1a2a');
-    circle.setAttribute('stroke', '#c9a84c');
-    circle.setAttribute('stroke-width', isPremium ? '2' : '1.5');
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    poly.setAttribute('d', pathD);
+    poly.setAttribute('class', 'terr-poly');
+    poly.setAttribute('fill', '#1a1a2a');
+    poly.setAttribute('fill-opacity', '0.6');
+    poly.setAttribute('stroke', 'rgba(201,168,76,0.5)');
+    poly.setAttribute('stroke-width', '1');
+    poly.setAttribute('stroke-dasharray', '4 3');
+    poly.setAttribute('pointer-events', 'all');
 
     const nameT = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     nameT.setAttribute('class', 'terr-label');
     nameT.setAttribute('x', cx); nameT.setAttribute('y', cy - 3);
-    nameT.textContent = t.name.substring(0, 3).toUpperCase();
+    nameT.textContent = t.name;
 
     const unitsT = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     unitsT.setAttribute('class', 'terr-units');
@@ -235,7 +197,7 @@ export function initMap() {
     unitsT.setAttribute('id', 'units-' + t.id);
     unitsT.textContent = t.neutralUnits;
 
-    g.appendChild(circle);
+    g.appendChild(poly);
     g.appendChild(nameT);
     g.appendChild(unitsT);
 
@@ -296,7 +258,6 @@ function setupMapInteraction(container) {
   const ps = state.panState;
 
   container.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('.svg-territory')) return;
     ps.active = true;
     ps.hasMoved = false;
     ps.startX = e.clientX; ps.startY = e.clientY;
@@ -367,18 +328,18 @@ export function updateTerritoryVisuals() {
     if (!g) continue;
     const ts = state.gameState.territories[t.id];
     const owner = ts?.owner ? state.gameState.players.find(x => x.id === ts.owner) : null;
-    const circle = g.querySelector('circle');
+    const poly = g.querySelector('.terr-poly');
 
     if (owner) {
-      circle.setAttribute('fill', owner.color);
-      circle.setAttribute('fill-opacity', '0.75');
-      circle.setAttribute('stroke', owner.color);
-      circle.setAttribute('filter', '');
+      poly.setAttribute('fill', owner.color);
+      poly.setAttribute('fill-opacity', '0.55');
+      poly.setAttribute('stroke', owner.color);
+      poly.setAttribute('filter', '');
     } else {
-      circle.setAttribute('fill', '#1a1a2a');
-      circle.setAttribute('fill-opacity', '1');
-      circle.setAttribute('stroke', '#c9a84c');
-      circle.setAttribute('filter', '');
+      poly.setAttribute('fill', '#1a1a2a');
+      poly.setAttribute('fill-opacity', '0.6');
+      poly.setAttribute('stroke', 'rgba(201,168,76,0.5)');
+      poly.setAttribute('filter', '');
     }
 
     const unitsEl = document.getElementById('units-' + t.id);
@@ -386,13 +347,14 @@ export function updateTerritoryVisuals() {
 
     const isSelected = state.selectedTerritory === t.id;
     g.classList.toggle('selected', isSelected);
-    if (isSelected) circle.setAttribute('filter', 'url(#sel-glow)');
-
-    if (state.selectedTerritory) {
-      const adj = ADJACENCY[state.selectedTerritory] || [];
-      const key1 = [state.selectedTerritory, t.id].sort().join('-');
-      const adjLine = document.getElementById('adj-' + key1);
-      if (adjLine) adjLine.classList.toggle('highlight', adj.includes(t.id));
+    if (isSelected) {
+      poly.setAttribute('stroke', 'rgba(255,215,0,0.9)');
+      poly.setAttribute('stroke-width', '2');
+      poly.setAttribute('stroke-dasharray', 'none');
+      poly.setAttribute('filter', 'url(#sel-glow)');
+    } else {
+      poly.setAttribute('stroke-width', '1');
+      poly.setAttribute('stroke-dasharray', '4 3');
     }
   }
 
@@ -415,7 +377,6 @@ export function updateTerritoryVisuals() {
 // Merker et territorium som valgt og oppdaterer handlingspanelet til høyre.
 export function selectTerritory(tid) {
   state.selectedTerritory = tid;
-  document.querySelectorAll('.adj-line').forEach(l => l.classList.remove('highlight'));
   updateTerritoryVisuals();
   renderActionPanel();
 }

@@ -148,14 +148,13 @@ input:focus, select:focus { border-color: var(--gold); }
 
 .svg-territory {
   cursor: pointer;
-  transition: filter 0.15s;
 }
-.svg-territory:hover { filter: brightness(1.4) drop-shadow(0 0 6px rgba(201,168,76,0.7)); }
-.svg-territory.selected { filter: brightness(1.5) drop-shadow(0 0 10px rgba(255,215,0,0.9)); }
+.svg-territory:hover .terr-poly { filter: brightness(1.35); }
+.terr-poly { transition: filter 0.15s, stroke 0.15s; }
 
 .terr-label {
   font-family: 'Crimson Pro', serif;
-  font-size: 8px;
+  font-size: 6.5px;
   fill: #c9a84c;
   pointer-events: none;
   dominant-baseline: middle;
