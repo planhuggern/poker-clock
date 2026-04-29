@@ -212,6 +212,21 @@ export function initMap() {
   }
   svg.appendChild(terrGroup);
 
+  // ── Bydelgrenser over territorier (sikrer heltrukne linjer) ──────────────
+
+  const distBorderLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  distBorderLayer.setAttribute('id', 'district-border-layer');
+  distBorderLayer.setAttribute('pointer-events', 'none');
+  for (const [did, pathD] of Object.entries(mapData.districtShapes)) {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', pathD);
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke', '#3a4a3a');
+    p.setAttribute('stroke-width', '1.8');
+    distBorderLayer.appendChild(p);
+  }
+  svg.appendChild(distBorderLayer);
+
   // ── Kompass ───────────────────────────────────────────────────────────────
 
   const compass = document.createElementNS('http://www.w3.org/2000/svg', 'g');
