@@ -155,9 +155,12 @@ export function initMap() {
       drawn.add(key);
       const pos2 = TERRITORY_POS[nid];
       if (!pos2) continue;
+      const t1info = TERRITORIES.find(t => t.id === tid);
+      const t2info = TERRITORIES.find(t => t.id === nid);
+      const sameDistrict = t1info && t2info && t1info.district === t2info.district;
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('id', `adj-${key}`);
-      line.setAttribute('class', 'adj-line');
+      line.setAttribute('class', sameDistrict ? 'adj-line intra-district' : 'adj-line');
       line.setAttribute('x1', pos1[0]); line.setAttribute('y1', pos1[1]);
       line.setAttribute('x2', pos2[0]); line.setAttribute('y2', pos2[1]);
       adjGroup.appendChild(line);
