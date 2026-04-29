@@ -141,6 +141,22 @@ export function initMap() {
   }
   svg.appendChild(districtGroup);
 
+  // ── Territoriepolygoner (synlige grenser) ────────────────────────────────
+
+  const terrBorderGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  terrBorderGroup.setAttribute('id', 'terr-border-layer');
+  for (const [tid, pathD] of Object.entries(mapData.territoryShapes)) {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', pathD);
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke', 'rgba(255,255,255,0.15)');
+    p.setAttribute('stroke-width', '0.8');
+    p.setAttribute('stroke-dasharray', '4 3');
+    p.setAttribute('pointer-events', 'none');
+    terrBorderGroup.appendChild(p);
+  }
+  svg.appendChild(terrBorderGroup);
+
   // ── Nabolinjer mellom territorier ─────────────────────────────────────────
 
   const adjGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
