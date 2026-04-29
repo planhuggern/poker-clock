@@ -6,6 +6,7 @@ export const PLAYER_COLOR_NAMES = ['Rød','Blå','Grønn','Oransje','Lilla','Cya
 
 // Bydeler med navn, bonusverdier og bakgrunnsfarge på kartet.
 export const DISTRICTS = {
+  'sentrum':            { name: 'Sentrum',             bonus: { money: 500, units: 3 }, color: '#3d2d0a' },
   'gamle-oslo':         { name: 'Gamle Oslo',         bonus: { money: 300, units: 2 }, color: '#2d1f3d' },
   'grunerløkka':        { name: 'Grünerløkka',        bonus: { money: 250, units: 2 }, color: '#1f2d3d' },
   'sagene':             { name: 'Sagene',              bonus: { money: 200, units: 1 }, color: '#1f3d2d' },
@@ -26,6 +27,8 @@ export const DISTRICTS = {
 // Alle 35 territorier med id, navn, hvilken bydel de tilhører, kjøpspris,
 // antall nøytrale bataljoner ved spillstart og normalisert kartposisjon (x/y 0–1).
 export const TERRITORIES = [
+  { id: 't0a', name: 'Karl Johans gate',  district: 'sentrum',           price: 500, neutralUnits: 3, x: 0.38, y: 0.63 },
+  { id: 't0b', name: 'Aker Brygge',       district: 'sentrum',           price: 480, neutralUnits: 3, x: 0.39, y: 0.65 },
   { id: 't1',  name: 'Grønland',          district: 'gamle-oslo',        price: 300, neutralUnits: 2, x: 0.54, y: 0.62 },
   { id: 't2',  name: 'Gamlebyen',         district: 'gamle-oslo',        price: 280, neutralUnits: 2, x: 0.52, y: 0.66 },
   { id: 't3',  name: 'Tøyen',             district: 'gamle-oslo',        price: 260, neutralUnits: 1, x: 0.55, y: 0.58 },
@@ -63,43 +66,45 @@ export const TERRITORIES = [
   { id: 't35', name: 'Mortensrud',        district: 'søndre-nordstrand', price: 220, neutralUnits: 1, x: 0.59, y: 0.80 },
 ];
 
-// Hvilke territorier som grenser til hverandre — brukes for å avgjøre om et angrep er lovlig.
+// Hvilke territorier som grenser til hverandre — beregnet automatisk fra kartpolygonene.
 export const ADJACENCY = {
-  't1':  ['t2','t3','t4','t5','t9'],
-  't2':  ['t1','t3','t32','t30'],
-  't3':  ['t1','t2','t4','t5'],
-  't4':  ['t3','t5','t6','t7','t9'],
-  't5':  ['t1','t3','t4','t6'],
-  't6':  ['t4','t5','t7'],
-  't7':  ['t4','t6','t8','t9'],
-  't8':  ['t7','t9','t10','t19','t20'],
-  't9':  ['t1','t4','t7','t8','t10'],
-  't10': ['t8','t9','t11','t19'],
-  't11': ['t10','t12','t16','t19','t20'],
-  't12': ['t11','t13','t16'],
-  't13': ['t12','t14'],
-  't14': ['t13','t15','t16'],
-  't15': ['t14','t16','t17'],
-  't16': ['t11','t12','t14','t15','t17','t18'],
-  't17': ['t15','t16','t18'],
-  't18': ['t16','t17','t21'],
-  't19': ['t8','t10','t11','t20','t21'],
-  't20': ['t8','t11','t19','t22'],
-  't21': ['t18','t19'],
-  't22': ['t20','t23','t29'],
-  't23': ['t22','t24','t25'],
-  't24': ['t23','t25','t26'],
-  't25': ['t23','t24','t27','t28'],
-  't26': ['t24','t25','t27'],
-  't27': ['t25','t26','t28'],
-  't28': ['t25','t27','t29','t31'],
-  't29': ['t22','t28','t30','t31'],
-  't30': ['t2','t29','t31','t32'],
-  't31': ['t28','t29','t30','t35'],
-  't32': ['t2','t30','t33'],
-  't33': ['t32','t34','t35'],
-  't34': ['t33','t35'],
-  't35': ['t31','t33','t34'],
+  't0a': ['t0b', 't1', 't4', 't9', 't11', 't12'],
+  't0b': ['t0a'],
+  't1':  ['t0a', 't2', 't3', 't4', 't6'],
+  't2':  ['t1', 't3', 't30', 't33'],
+  't3':  ['t1', 't2', 't6', 't29', 't30'],
+  't4':  ['t0a', 't1', 't5', 't6', 't9'],
+  't5':  ['t4', 't6', 't7', 't9'],
+  't6':  ['t1', 't3', 't4', 't5', 't7', 't19', 't22'],
+  't7':  ['t5', 't6', 't8', 't10'],
+  't8':  ['t7', 't19', 't20'],
+  't9':  ['t0a', 't4', 't5', 't10', 't11'],
+  't10': ['t7', 't9', 't11', 't20'],
+  't11': ['t0a', 't9', 't10', 't12', 't14', 't16', 't20'],
+  't12': ['t0a', 't11', 't13', 't14'],
+  't13': ['t12', 't14'],
+  't14': ['t11', 't12', 't13', 't15', 't16', 't17'],
+  't15': ['t14', 't17'],
+  't16': ['t11', 't14', 't17', 't20'],
+  't17': ['t14', 't15', 't16', 't18'],
+  't18': ['t17'],
+  't19': ['t6', 't8', 't20', 't21', 't22', 't23'],
+  't20': ['t8', 't10', 't11', 't16', 't19', 't21'],
+  't21': ['t19', 't20'],
+  't22': ['t6', 't19', 't23', 't29'],
+  't23': ['t19', 't22', 't25', 't28', 't29'],
+  't24': ['t25', 't26'],
+  't25': ['t23', 't24', 't26', 't28'],
+  't26': ['t24', 't25', 't27', 't28'],
+  't27': ['t26', 't28'],
+  't28': ['t23', 't25', 't26', 't27', 't29'],
+  't29': ['t3', 't22', 't23', 't28', 't30', 't31'],
+  't30': ['t2', 't3', 't29', 't31', 't32', 't33', 't35'],
+  't31': ['t29', 't30'],
+  't32': ['t30', 't33', 't34', 't35'],
+  't33': ['t2', 't30', 't32'],
+  't34': ['t32', 't35'],
+  't35': ['t30', 't32', 't34'],
 };
 
 // De tre runde-sjekkpunktene spillere må innom for å få bonusen på 500 kr + 3 bat.
@@ -147,7 +152,7 @@ export const MISSIONS = [
   },
   {
     id: 'm6', emoji: '⚔️', title: 'Conquistador',
-    desc: 'Eie minst ett område i alle 15 bydeler',
+    desc: 'Eie minst ett område i alle 16 bydeler',
     check: (p, gs) => {
       const owned = new Set(
         Object.values(gs.territories)

@@ -18,6 +18,20 @@ from django.http import FileResponse, HttpRequest, HttpResponse
 from django.urls import include, path, re_path
 
 
+def _home_view(request: HttpRequest) -> HttpResponse:
+    from django.template.loader import render_to_string
+    if settings.DEBUG:
+        clock_url = "http://localhost:8081/"
+    else:
+        base = settings.BASE_PATH.strip("/")
+        clock_url = f"/{base}/" if base else "/"
+    html = render_to_string("home.html", {
+        "clock_url": clock_url,
+        "oslo_url": "/oslo-conquest/",
+    }, request=request)
+    return HttpResponse(html, content_type="text/html")
+
+
 def _spa_view(app_name: str):
     """Returnerer en Django-view som server index.html for en gitt SPA-app."""
     def view(request: HttpRequest) -> HttpResponse:
@@ -56,6 +70,7 @@ _base = settings.BASE_PATH.strip("/")
 if _base:
     # Prod / sub-path hosting: poker-clock montert under /<base>/
     urlpatterns = [
+        path("", _home_view),
         *register_spa(_base, "clock.urls"),
         *register_spa("oslo-conquest", "oslo_conquest.urls"),
         # Slik legger du til neste app:
@@ -65,6 +80,7 @@ else:
     # Dev / root hosting: clock-API tilgjengelig uten prefix (React kjører på :8081)
     from clock.urls import urlpatterns as _clock_urls  # noqa: E402
     urlpatterns = [
+        path("", _home_view),
         *_clock_urls,
         *register_spa("oslo-conquest", "oslo_conquest.urls"),
     ]
