@@ -7,7 +7,7 @@ import { renderHUD, renderActionPanel, renderCheckpointBar } from './ui.js';
 import mapData from './map.json';
 
 export const MAP_W = 900;
-export const MAP_H = 800;
+export const MAP_H = 850;
 
 // Territorieposisjoner (sentrum) beregnet fra tegnede polygoner i karteditoren
 export const TERRITORY_POS = mapData.TERRITORY_POS;
