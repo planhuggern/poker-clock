@@ -22,12 +22,14 @@ def _home_view(request: HttpRequest) -> HttpResponse:
     from django.template.loader import render_to_string
     if settings.DEBUG:
         clock_url = "http://localhost:8081/"
+        oslo_url = "http://localhost:8081/oslo-conquest/"
     else:
         base = settings.BASE_PATH.strip("/")
         clock_url = f"/{base}/" if base else "/"
+        oslo_url = "/oslo-conquest/"
     html = render_to_string("home.html", {
         "clock_url": clock_url,
-        "oslo_url": "/oslo-conquest/",
+        "oslo_url": oslo_url,
     }, request=request)
     return HttpResponse(html, content_type="text/html")
 

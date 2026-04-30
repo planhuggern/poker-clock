@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && vite build --config oslo-conquest/vite.config.js",
-    "build:oslo": "vite build --config oslo-conquest/vite.config.js",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
