@@ -1,8 +1,0 @@
-{
-  "name": "poker-clock-root",
-  "private": true,
-  "scripts": {
-    "dev": "npm run dev --prefix client-react"
-  },
-  "devDependencies": {}
-}
