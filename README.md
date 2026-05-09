@@ -250,3 +250,10 @@ sudo ufw enable
 sudo ufw status
 ```
 
+
+
+
+###
+
+## AI skills
+Write specs and tests that make the code dispenible
