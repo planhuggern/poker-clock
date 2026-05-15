@@ -1,23 +1,64 @@
 # Oslo Conquest – Prosjektkontekst
 
 ## Hva er dette?
-Et turbasert strategispill inspirert av Risk + Monopol, satt til Oslo. Spilles i nettleseren som én HTML-fil. Multiplayer via WebSocket mot en Django Channels-backend.
+Et turbasert strategispill inspirert av Risk + Monopol, satt til Oslo. Spilles i nettleseren. Multiplayer via WebSocket mot en Django Channels-backend. Kjøres som en egen SPA innenfor poker-clock-portalen.
 
 ## Tech stack
-- **Frontend:** Vanilla JS + SVG-kart (Phaser ble droppet – ikke nødvendig for turbasert)
-- **Kart:** SVG tegnet i kode, skal erstattes med manuelt tegnet kart
+- **Frontend:** Preact + SVG.js, JSX, CSS — bygget med Vite som eget entry point
+- **Kart:** SVG.js med polygon-data fra `map.json` (tegnet i `map-editor.html`)
 - **Multiplayer:** WebSocket mot Django Channels (`ws://server/ws/oslo-conquest/`)
-- **Filen:** `oslo-conquest.html` – én selvstending fil
+- **Backend state:** In-memory dict `_rooms` på serveren — ingen DB-persistens
+- **Auth:** Ingen — spillere identifiserer seg med generert `p_<random>`-ID
+
+## Filstruktur
+
+### Frontend (`client-react/oslo-conquest/`)
+| Fil | Ansvar |
+|---|---|
+| `index.html` | Entry point |
+| `main.js` | Bootstrap, eksponerer globale funksjoner |
+| `state.js` | Globalt mutable objekt: `gameState`, `myPlayerId`, `selectedTerritory`, `svgEl`, `mapTransform` |
+| `game-data.js` | Konstanter: 16 bydeler, 35 territorier (pris, inntekt, nøytrale enheter), 11 oppdrag, 6 spillerfarger, adjacency-graf, checkpoints |
+| `game-state.js` | Spillinitialisering (shuffle oppdrag, sett opp territorier), tur-/spillerqueries |
+| `actions.js` | Alle spillmutasjoner: `rollDice`, `buyTerritory`, `invadeTerritory`, `reinforceTerritory`, `payRent`, `moveToTerritory`, `endTurn` |
+| `missions.js` | Seiersvilkår — kalles etter hver handling |
+| `map.js` | SVG-render, pan/zoom/drag, territorievalg, visuell oppdatering |
+| `map.json` | Forhåndsberegnet polygon-data for territorier og bydelsgrenser |
+| `ui.js` | HUD: spillerbrikker, handlingspanel (kontekstsensitivt), checkpoint-bar, hendelseslogg |
+| `dice.js` | Kamptærning-modal |
+| `modals.js` | Leie-modal, seiersskjerm-modal |
+| `websocket.js` | WebSocket tilkobling/frakobling, lobby (opprett/bli med/lokal), send/motta state |
+| `style.css` | Mørkt tema (`#0d0d0f` bakgrunn, `#c9a84c` gull-aksenter), Cinzel Decorative + Crimson Pro |
+| `map-editor.html` | Dev-verktøy for å tegne territoriepolygoner |
+
+### Backend (`server/oslo_conquest/`)
+| Fil | Ansvar |
+|---|---|
+| `consumers.py` | `OsloConquestConsumer` — WebSocket-handler, in-memory `_rooms`-dict |
+| `routing.py` | WebSocket URL: `ws/oslo-conquest/` |
+| `urls.py` | HTTP-URLer (tom foreløpig) |
 
 ## Spillregler
-- **2–6 spillere**, alle starter med 2000 kr og 10 bataljoner
-- **35 territorier** fordelt på Oslos 15 offisielle bydeler
-- **Kjøp:** Betal bankpris, plasser minst 1 bataljon – du eier området
+- **2–6 spillere**, alle starter med 2000 kr og 10 bataljoner ved Lørenskog
+- **35 territorier** fordelt på Oslos 16 bydeler
+- **Kjøp:** Betal bankpris for nøytralt territorium — du eier det
 - **Invasjon:** Risk-regler med terningkast. Dyrere områder har 2–4 nøytrale bataljoner
-- **Bevegelse:** Kast terning, flytt øye-antall steg valgfritt
-- **Leie:** Lander du på andres område betaler du leie, eller angriper i stedet
-- **Bydelsbonus:** Eier du alle områder i en bydel får du penge- og bataljonbonus
-- **Checkpoints:** Ruten går Lørenskog → (valgfri vei) → Lysaker → (valgfri vei) → Kolbotn → tilbake. Fullfører du runden får du +500 kr og +3 bat.
+- **Bevegelse:** Kast terning (1–6), flytt øye-antall steg
+- **Leie:** Lander du på andres område betaler du 15 % av territorieprisen, eller angriper i stedet
+- **Bydelsbonus:** Eier du alle områder i en bydel får du inntektsbonus
+- **Checkpoints:** Lørenskog → Lysaker → Kolbotn. Passerer du ett får du +500 kr og +3 bat.
+
+## Turrekkefølge
+1. Kast terning (1–6) — setter bevegelsesbudsjett
+2. Flytt opp til det antall steg; på hvert territorium: kjøp nøytralt, forsterk eget, invader eller betal leie
+3. Samle inntekt fra fullstendige bydeler
+4. Samle checkpoint-bonus ved Lørenskog / Lysaker / Kolbotn
+5. Avslutt tur → neste spiller som ikke er eliminert
+
+## Kamp (Risk-regler)
+- Angriper kaster inntil 3 terninger, forsvarer inntil 2
+- Sammenlign høyeste kast parvis — uavgjort går til forsvarer
+- Taper fjerner bataljoner; territoriet skifter eier når forsvarer når 0
 
 ## Oppdragskort (11 stk, trekkes tilfeldig ved start)
 1. 🗺️ Vestkanten – eie alle områder i Frogner, Ullern og Vestre Aker
@@ -25,28 +66,18 @@ Et turbasert strategispill inspirert av Risk + Monopol, satt til Oslo. Spilles i
 3. 🌲 Nordmarka-porten – eie alle i Nordre Aker og Vestre Aker
 4. 🔴 Sentrumsherren – eie alle i Gamle Oslo, Grünerløkka og St. Hanshaugen
 5. 🏘️ Storby – eie totalt 20 enkeltområder
-6. ⚔️ Conquistador – minst ett område i alle 15 bydeler
+6. ⚔️ Conquistador – minst ett område i alle 16 bydeler
 7. 💰 Kapitalist – 5000 kr og minst 10 områder samtidig
-8. 🗡️ Blodhevn – slå ut en tilfeldig utpekt motspiller (skjult mål)
-9. 🛣️ Ringveien – minst ett område i hver bydel langs østsiden
+8. 🗡️ Blodhevn *(skjult)* – slå ut en tilfeldig utpekt motspiller
+9. 🛣️ Ringveien – minst ett område i hver bydel langs ruten Lørenskog → Kolbotn
 10. 🎯 Festning – komplett bydel med minst 10 bataljoner
 11. 🪓 Barbaren – vinn minst 2 områder fra HVER motspiller i kamp
 
+Oppdrag 8 (Blodhevn) er skjult — målet vises ikke før det er fullført.
+
 ## Seier
 - Fullfør oppdraget ditt → umiddelbar seier
-- Blodhevn: vinner selv om du ikke er rikest
-- Barbaren: vinner umiddelbart
 - Siste spiller igjen vinner automatisk
-- Hvis spiller slås ut og ingen har fullført oppdrag → rikeste spiller vinner
-
-## Kart – status og problem
-SVG-kartet er laget i kode men ser ikke bra ut og hadde bugs (container fikk ikke høyde).
-**Neste steg:** Lag et tegneverktøy der bruker kan:
-1. Laste inn et Oslo-kartbilde som bakgrunn
-2. Klikke for å plassere de 35 territoriene
-3. Klikke punkt for punkt for å tegne 15 bydelspolygoner
-4. Eksportere alt som JSON
-Så injiseres JSON-koordinatene inn i spillet.
 
 ## Datastrukturer
 
@@ -55,7 +86,7 @@ Så injiseres JSON-koordinatene inn i spillet.
 { id: 't1', name: 'Grønland', district: 'gamle-oslo', price: 300, neutralUnits: 2, x: 0.54, y: 0.62 }
 ```
 
-### DISTRICTS (15 stk)
+### DISTRICTS (16 stk)
 ```js
 'gamle-oslo': { name: 'Gamle Oslo', bonus: { money: 300, units: 2 }, color: '#2d1f3d' }
 ```
@@ -81,18 +112,17 @@ Så injiseres JSON-koordinatene inn i spillet.
 Klienten sender:
 ```json
 { "type": "create_game", "room": "oslo-1", "player": { "id": "p1", "name": "Ola" } }
-{ "type": "join_game", "room": "oslo-1", "player": { "id": "p2", "name": "Kari" } }
+{ "type": "join_game",   "room": "oslo-1", "player": { "id": "p2", "name": "Kari" } }
 { "type": "game_action", "state": { ...full gameState... } }
 ```
-Serveren sender:
+Serveren broadcaster til alle i rommet:
 ```json
 { "type": "game_state", "state": { ...full gameState... } }
-{ "type": "action_result", "state": { ... }, "dice": { ... } }
 ```
 
-## Kjente bugs / TODO
-- [ ] Kartvisning buggy – trenger manuelt tegnet kart
-- [ ] Bevegelseslogikk (terningkast + trekk-til-territorium) er delvis implementert
-- [ ] Django Channels consumer er ikke laget ennå
-- [ ] Spiller 2 og 3 har ingen AI – må spilles manuelt lokalt eller via WebSocket
-- [ ] Checkpoint-logikk for Lysaker og Kolbotn må kobles til faktiske kartposisjoner
+State eies av den handlende klienten og broadcastes i sin helhet — ingen server-side validering av trekk.
+
+## Designvalg
+- **Ingen server-side validering.** Handlende klient muterer state lokalt, broadcaster det. Alle klienter (inkludert avsender) oppdaterer fra broadcasten.
+- **Ingen DB-persistens.** Restarter serveren → alle spill mistes.
+- **Lokal spillemodus.** Man kan starte et spill uten WebSocket-tilkobling — state håndteres utelukkende klientsiden.
