@@ -1,30 +1,44 @@
-# poker-clock
-Enkel pokerklokke. Backend: Django + Channels (Python). Frontend: React (Vite).
+# poker-clock portal
+Multi-app portal med felles Django-backend og Vite-frontend. Backend: Django + Channels (Python). Frontend: React/Preact (Vite).
+
+## Apper
+
+| App | URL | Beskrivelse |
+|-----|-----|-------------|
+| poker-clock | `/` (dev) / `/<base>/` (prod) | Turneringsklokke med WebSocket-synkronisering |
+| oslo-conquest | `/oslo-conquest/` | Turbasert strategispill (Risk + Monopol, Oslo-kart) |
+| trading | `/trading/` | Trading-dashboards — historisk og live kursdata |
 
 ## Serverstruktur
 
 ```
 server/
-  portal/           ← Django-prosjekt (nøytral container)
-    settings.py     ← konfig, ALLOWED_HOSTS, SECRET_KEY, BASE_PATH
-    urls.py         ← register_spa("poker-clock", "clock.urls") — legg ny app her
-    asgi.py         ← HTTP + WebSocket routing
-  clock/            ← Django-app: poker-clock
-    consumers.py    ← WebSocket-consumer
-    views.py        ← Auth (Google OAuth, dev-login)
-    state.py        ← Klokketilstand (thread-safe)
-    tick.py         ← Bakgrunnstråd som sender tick ~1/sek
-    models.py       ← AppState (SQLite singleton)
-    urls.py         ← /auth/google, /auth/google/callback, /auth/dev
-    routing.py      ← WebSocket URL-mønster
-  public/           ← WhiteNoise serverer dette som statiske filer
-    poker-clock/    ← React-build (VITE_BASE_PATH=/poker-clock/)
-      index.html
-      assets/
-  config.json       ← konfig (JWT, Google OAuth, adminEmails osv.)
+  portal/              ← Django-prosjekt (nøytral container)
+    settings.py        ← konfig, ALLOWED_HOSTS, SECRET_KEY, BASE_PATH
+    urls.py            ← register_spa() + path("trading/", ...) — legg ny app her
+    asgi.py            ← HTTP + WebSocket routing
+  clock/               ← Django-app: poker-clock
+    consumers.py       ← WebSocket-consumer
+    views.py           ← Auth (Google OAuth, dev-login)
+    state.py           ← Klokketilstand (thread-safe)
+    tick.py            ← Bakgrunnstråd som sender tick ~1/sek
+    models.py          ← AppState (SQLite singleton)
+    urls.py            ← /auth/google, /auth/google/callback, /auth/dev
+    routing.py         ← WebSocket URL-mønster
+  oslo_conquest/       ← Django-app: oslo-conquest (in-memory state, ingen DB)
+    consumers.py       ← WebSocket-consumer
+    routing.py         ← WebSocket URL-mønster
+  trading/             ← Django-app: trading REST API
+    views.py           ← Henter og cacher kursdata fra yfinance
+    urls.py            ← GET /trading/api/ohlcv/ o.l.
+    routing.py         ← WebSocket URL-mønster (live data, fremtidig)
+  public/              ← WhiteNoise serverer dette som statiske filer
+    poker-clock/       ← React-build (VITE_BASE_PATH=/poker-clock/)
+    oslo-conquest/     ← Preact-build
+  config.json          ← konfig (JWT, Google OAuth, adminEmails osv.)
   manage.py
 
-client-react/       ← React + Vite (frontend)
+client-react/          ← React/Preact + Vite (alle frontends)
 ```
 
 ### Legge til en ny app
@@ -253,7 +267,3 @@ sudo ufw status
 
 
 
-###
-
-## AI skills
-Write specs and tests that make the code dispenible
