@@ -23,13 +23,16 @@ def _home_view(request: HttpRequest) -> HttpResponse:
     if settings.DEBUG:
         clock_url = "http://localhost:8081/"
         oslo_url = "http://localhost:8081/oslo-conquest/"
+        trading_url = "http://localhost:8000/trading/"
     else:
         base = settings.BASE_PATH.strip("/")
         clock_url = f"/{base}/" if base else "/"
         oslo_url = "/oslo-conquest/"
+        trading_url = "/trading/"
     html = render_to_string("home.html", {
         "clock_url": clock_url,
         "oslo_url": oslo_url,
+        "trading_url": trading_url,
     }, request=request)
     return HttpResponse(html, content_type="text/html")
 
