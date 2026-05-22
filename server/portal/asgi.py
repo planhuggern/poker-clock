@@ -17,12 +17,12 @@ django.setup()
 # Importer etter django.setup()
 from clock.routing import websocket_urlpatterns as clock_ws  # noqa: E402
 from oslo_conquest.routing import websocket_urlpatterns as oslo_ws  # noqa: E402
-# from my_other_app.routing import websocket_urlpatterns as other_ws  # noqa: E402
+from trading.routing import websocket_urlpatterns as trading_ws  # noqa: E402
 
 websocket_urlpatterns = [
     *clock_ws,
     *oslo_ws,
-    # *other_ws,
+    *trading_ws,
 ]
 
 application = ProtocolTypeRouter(

@@ -6,6 +6,10 @@ PyJWT>=2.8
 requests>=2.31
 whitenoise>=6.7
 
+# trading
+yfinance>=0.2
+pandas>=2.0
+
 # testing
 pytest>=8.0
 pytest-django>=4.8

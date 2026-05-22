@@ -76,7 +76,7 @@ INSTALLED_APPS = [
     # ── Apper ──
     "clock.apps.ClockConfig",           # poker-clock
     "oslo_conquest.apps.OsloConquestConfig",  # oslo-conquest
-    # "my_other_app.apps.MyOtherAppConfig",
+    "trading.apps.TradingConfig",       # trading – REST API for finansdata
 ]
 
 MIDDLEWARE = [

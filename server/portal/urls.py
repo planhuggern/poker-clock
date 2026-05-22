@@ -75,8 +75,7 @@ if _base:
         path("", _home_view),
         *register_spa(_base, "clock.urls"),
         *register_spa("oslo-conquest", "oslo_conquest.urls"),
-        # Slik legger du til neste app:
-        # *register_spa("min-app", "min_app.urls"),
+        path("trading/", include("trading.urls")),
     ]
 else:
     # Dev / root hosting: clock-API tilgjengelig uten prefix (React kjører på :8081)
@@ -85,4 +84,5 @@ else:
         path("", _home_view),
         *_clock_urls,
         *register_spa("oslo-conquest", "oslo_conquest.urls"),
+        path("trading/", include("trading.urls")),
     ]
