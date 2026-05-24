@@ -23,4 +23,8 @@ export default defineConfig({
       },
     },
   },
+  test: {
+    environment: 'node',
+    include: ['oslo-conquest/__tests__/**/*.test.js'],
+  },
 });
