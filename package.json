@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "concurrently --names VITE,DJANGO --prefix-colors cyan,green \"npm run dev --prefix client-react\" \"npm run dev:server\"",
-    "dev:server": "cd server && .venv\\Scripts\\python.exe manage.py runserver [::]:8000"
+    "dev:server": "cd server && set DEBUG=true && .venv\\Scripts\\python.exe manage.py runserver [::]:8000"
   },
   "devDependencies": {
     "concurrently": "^9"
