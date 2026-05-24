@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "validate-map": "node oslo-conquest/validate-adjacency.js"
   },
   "dependencies": {
     "daisyui": "^5.5.19",
