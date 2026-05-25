@@ -1,11 +1,21 @@
 import { defineConfig } from "vite";
+import preact from "@preact/preset-vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "path";
 
+const osloConquestJsx = /oslo-conquest[\\/].*\.jsx$/;
+
 export default defineConfig({
   base: "/",
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react({ exclude: osloConquestJsx }),
+    ...preact({
+      include: osloConquestJsx,
+      reactAliasesEnabled: false,
+    }),
+    tailwindcss(),
+  ],
   server: {
     port: 8081,
     strictPort: true,
