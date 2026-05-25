@@ -1,6 +1,7 @@
 """Minimal server-authoritative rules for Oslo Conquest MVP."""
 
 PLAYER_SIDES = ("red", "blue")
+MAX_PLAYERS = len(PLAYER_SIDES)
 PLAYER_COLORS = {
     "red": "#c0392b",
     "blue": "#1a6b9a",
@@ -105,3 +106,22 @@ def end_turn(room_state: dict, player_id: str | None) -> tuple[dict, str | None]
 
 def log_entry(message: str) -> dict:
     return {"msg": message, "type": "important", "time": ""}
+
+
+def summarize_rooms(rooms: dict[str, dict]) -> list[dict]:
+    summaries = []
+    for room_id, room_state in sorted(rooms.items()):
+        players = room_state.get("players", [])
+        started = bool(room_state.get("started"))
+        summaries.append(
+            {
+                "room": room_id,
+                "playerCount": len(players),
+                "maxPlayers": MAX_PLAYERS,
+                "started": started,
+                "phase": room_state.get("phase", "waiting"),
+                "status": "started" if started or len(players) >= MAX_PLAYERS else "waiting",
+                "players": [p.get("name", "Ukjent") for p in players],
+            }
+        )
+    return summaries

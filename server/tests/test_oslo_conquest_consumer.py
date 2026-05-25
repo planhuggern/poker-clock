@@ -209,3 +209,71 @@ def test_game_action_cannot_overwrite_mvp_state():
 
     assert responses[1] == {"type": "error", "message": "Serveren styrer MVP-state"}
     assert _rooms["oslo-1"]["activePlayer"] == "red"
+
+
+def test_list_rooms_returns_empty_list_when_no_rooms_exist():
+    responses = ws_roundtrip([{"type": "list_rooms"}])
+
+    assert responses[0] == {"type": "room_list", "rooms": []}
+
+
+def test_list_rooms_includes_waiting_room_summary():
+    ws_roundtrip(
+        [
+            {
+                "type": "create_game",
+                "room": "oslo-1",
+                "player": {"id": "p1", "name": "Ola"},
+            }
+        ]
+    )
+
+    responses = ws_roundtrip([{"type": "list_rooms"}])
+
+    assert responses[0] == {
+        "type": "room_list",
+        "rooms": [
+            {
+                "room": "oslo-1",
+                "playerCount": 1,
+                "maxPlayers": 2,
+                "started": False,
+                "phase": "waiting",
+                "status": "waiting",
+                "players": ["Ola"],
+            }
+        ],
+    }
+
+
+def test_list_rooms_marks_started_room_unavailable():
+    ws_roundtrip(
+        [
+            {
+                "type": "create_game",
+                "room": "oslo-1",
+                "player": {"id": "p1", "name": "Ola"},
+            }
+        ]
+    )
+    ws_roundtrip(
+        [
+            {
+                "type": "join_game",
+                "room": "oslo-1",
+                "player": {"id": "p2", "name": "Kari"},
+            }
+        ]
+    )
+
+    responses = ws_roundtrip([{"type": "list_rooms"}])
+    room = responses[0]["rooms"][0]
+
+    assert room["room"] == "oslo-1"
+    assert room["playerCount"] == 2
+    assert room["maxPlayers"] == 2
+    assert room["started"] is True
+    assert room["phase"] == "playing"
+    assert room["status"] == "started"
+    assert room["players"] == ["Ola", "Kari"]
+    assert "territories" not in room

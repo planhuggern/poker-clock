@@ -3,7 +3,7 @@
 //   2. Kobler til klikk-lytteren på oppdragskortet.
 //   3. Passer på at kartet skaleres riktig når vinduet endrer størrelse.
 
-import { connectWS, createGame, joinGame, startLocalGame } from './websocket.js';
+import { connectWS, createGame, joinGame, refreshRooms, selectRoom, startLocalGame } from './websocket.js';
 import { rollDice, buyTerritory, invadeTerritory, reinforceTerritory, moveToTerritory, payRent, endTurn } from './actions.js';
 import { closeDice } from './dice.js';
 import { fitMapToContainer } from './map.js';
@@ -14,6 +14,7 @@ import { MISSIONS } from './game-data.js';
 // ville feilet uten dette. Vi putter de nødvendige funksjonene på window manuelt.
 Object.assign(window, {
   connectWS, createGame, joinGame, startLocalGame,
+  refreshRooms, selectRoom,
   rollDice, buyTerritory, invadeTerritory, reinforceTerritory, moveToTerritory, payRent, endTurn,
   closeDice,
 });

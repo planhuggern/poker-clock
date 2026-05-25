@@ -44,6 +44,16 @@
 
     <hr class="divider">
 
+    <div class="room-list-header">
+      <label>Aktive rom</label>
+      <button class="text-btn" onclick="refreshRooms()">Oppdater</button>
+    </div>
+    <div class="room-list" id="room-list">
+      <div class="room-empty">Ingen rom lastet inn</div>
+    </div>
+
+    <hr class="divider">
+
     <button class="btn" onclick="startLocalGame()" style="border-color: #556; color: #aaa;">
       Spill lokalt (testing)
     </button>

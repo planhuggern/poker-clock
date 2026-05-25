@@ -135,6 +135,92 @@ input:focus, select:focus { border-color: var(--gold); }
   color: #e87070;
 }
 
+.room-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.room-list-header label {
+  margin-bottom: 0;
+}
+
+.text-btn {
+  background: transparent;
+  border: 0;
+  color: var(--gold);
+  cursor: pointer;
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.95rem;
+  padding: 2px 0;
+}
+
+.text-btn:hover {
+  color: var(--gold-light);
+}
+
+.room-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.room-card {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  font-family: 'Crimson Pro', serif;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.room-card:hover:not(:disabled) {
+  border-color: var(--gold);
+}
+
+.room-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.room-card.selected {
+  border-color: var(--gold);
+  background: rgba(201, 168, 76, 0.08);
+}
+
+.room-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.room-name {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.room-status {
+  color: var(--gold-light);
+  font-size: 0.85rem;
+}
+
+.room-status.unavailable {
+  color: var(--text-muted);
+}
+
+.room-players,
+.room-empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
 #game-container {
   position: fixed; inset: 0;
   display: none;

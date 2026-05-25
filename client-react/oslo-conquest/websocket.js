@@ -33,6 +33,8 @@ export function connectWS() {
     if (pendingMessage) {
       sendWS(pendingMessage);
       pendingMessage = null;
+    } else {
+      refreshRooms();
     }
   };
 
@@ -59,6 +61,8 @@ export function connectWS() {
       state.gameState = msg.state;
       renderGame();
       if (msg.dice) showDiceResult(msg.dice);
+    } else if (msg.type === 'room_list') {
+      renderRoomList(msg.rooms || []);
     } else if (msg.type === 'error') {
       setLobbyStatus(msg.message || 'Ugyldig handling', true);
       alert(msg.message || 'Ugyldig handling');
@@ -83,6 +87,42 @@ export function sendGameState() {
 
 export function sendEndTurn() {
   sendWS({ type: 'end_turn', playerId: state.myPlayerId });
+}
+
+export function refreshRooms() {
+  sendWS({ type: 'list_rooms' });
+}
+
+function renderRoomList(rooms) {
+  const container = document.getElementById('room-list');
+  if (!container) return;
+
+  if (rooms.length === 0) {
+    container.innerHTML = '<div class="room-empty">Ingen aktive rom</div>';
+    return;
+  }
+
+  const selectedRoom = document.getElementById('room-id').value.trim();
+  container.innerHTML = rooms.map(room => {
+    const unavailable = room.started || room.playerCount >= room.maxPlayers;
+    const status = unavailable ? 'I gang' : 'Venter på spiller';
+    const selected = room.room === selectedRoom ? ' selected' : '';
+    const encodedRoom = encodeURIComponent(room.room);
+    return `
+      <button class="room-card${selected}" onclick="selectRoom(decodeURIComponent('${encodedRoom}'))" ${unavailable ? 'disabled' : ''}>
+        <div class="room-main">
+          <span class="room-name">${escapeHtml(room.room)}</span>
+          <span class="room-status ${unavailable ? 'unavailable' : ''}">${status} · ${room.playerCount}/${room.maxPlayers}</span>
+        </div>
+        <div class="room-players">${escapeHtml(room.players.join(', ') || 'Ingen spillere')}</div>
+      </button>
+    `;
+  }).join('');
+}
+
+export function selectRoom(room) {
+  document.getElementById('room-id').value = room;
+  setLobbyStatus(`Valgt rom "${room}". Trykk "Bli med i spill".`);
 }
 
 export function createGame() {
@@ -115,4 +155,14 @@ export function startLocalGame() {
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('game-container').style.display = 'block';
   initMap();
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[char]));
 }

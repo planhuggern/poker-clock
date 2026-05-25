@@ -16,7 +16,7 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from .mvp import add_player, create_waiting_room, end_turn
+from .mvp import add_player, create_waiting_room, end_turn, summarize_rooms
 
 # In-memory room storage: { room_id: latest_game_state }
 _rooms: dict[str, dict] = {}
@@ -47,6 +47,8 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
             await self._handle_join(data)
         elif msg_type == "end_turn":
             await self._handle_end_turn(data)
+        elif msg_type == "list_rooms":
+            await self._handle_list_rooms()
         elif msg_type == "game_action":
             await self._handle_action(data)
 
@@ -98,6 +100,9 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
             return
         await self._broadcast(self.room, {"type": "game_state", "state": _rooms[self.room]})
 
+    async def _handle_list_rooms(self) -> None:
+        await self._send_room_list()
+
     # ── Channel-layer receiver ────────────────────────────────────────────────
 
     async def oslo_broadcast(self, event: dict) -> None:
@@ -120,4 +125,11 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send(
             self._group_name(room),
             {"type": "oslo.broadcast", "message": message},
+        )
+
+    async def _send_room_list(self) -> None:
+        await self.send(
+            text_data=json.dumps(
+                {"type": "room_list", "rooms": summarize_rooms(_rooms)}
+            )
         )
