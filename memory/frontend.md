@@ -19,7 +19,7 @@
 
 **Desired architecture:** Preact + SVG.js, JSX, CSS — still built with Vite as its own entry point.
 
-**Migration scaffold:** Preact, `@preact/preset-vite`, and SVG.js are installed. `main.jsx`/`App.jsx` exist as an unused scaffold; the active Oslo Conquest entrypoint is still `index.html` loading `main.js`.
+**Migration status:** Preact, `@preact/preset-vite`, and SVG.js are installed. `index.html` now loads `main.jsx`; the lobby is rendered by Preact in `App.jsx`, while the active game view still uses the existing imperative DOM/native SVG modules.
 
 The desired direction is to migrate Oslo Conquest from imperative DOM rendering to a small Preact app:
 - Preact owns application shell, lobby, HUD, panels, modals, and render state.
@@ -31,8 +31,9 @@ The desired direction is to migrate Oslo Conquest from imperative DOM rendering 
 
 | Fil | Ansvar |
 |---|---|
-| `index.html` | Entry point |
-| `main.js` | Current bootstrap; desired replacement is `main.jsx` mounting the Preact app |
+| `index.html` | Entry point; mounts Preact lobby and keeps the existing game container |
+| `main.jsx` | Active bootstrap: mounts Preact lobby and exposes temporary globals for existing game controls |
+| `main.js` | Legacy bootstrap kept temporarily for reference until game controls are migrated |
 | `state.js` | Current global mutable object; desired replacement is Preact state/context plus small pure state helpers |
 | `game-data.js` | Konstanter: 16 bydeler, 35 territorier, 11 oppdrag, 6 spillerfarger, adjacency-graf, checkpoints |
 | `game-state.js` | Spillinitialisering, tur-/spillerqueries |
@@ -40,10 +41,10 @@ The desired direction is to migrate Oslo Conquest from imperative DOM rendering 
 | `missions.js` | Seiersvilkår — kalles etter hver handling |
 | `map.js` | Current native SVG render; desired replacement is SVG.js map adapter/component |
 | `map.json` | Forhåndsberegnet polygon-data for territorier og bydelsgrenser |
-| `ui.js` | Current imperative HUD rendering; desired replacement is Preact components |
+| `ui.js` | Current imperative game HUD rendering; desired replacement is Preact components |
 | `dice.js` | Kamptærning-modal |
 | `modals.js` | Leie-modal, seiersskjerm-modal |
-| `websocket.js` | WebSocket tilkobling/frakobling, lobby (opprett/bli med/lokal) |
+| `websocket.js` | WebSocket client; lobby reports status/rooms through callbacks to Preact |
 | `style.css` | Mørkt tema (`#0d0d0f` bakgrunn, `#c9a84c` gull-aksenter), Cinzel Decorative + Crimson Pro |
 | `map-editor.html` | Dev-verktøy for å tegne territoriepolygoner |
 

@@ -9,56 +9,7 @@
 </head>
 <body>
 
-<!-- LOBBY -->
-<div id="lobby">
-  <div class="lobby-card">
-    <h1 class="title">Oslo Conquest</h1>
-    <p class="subtitle">Krig, handel og makt i Norges hjerte</p>
-
-    <div class="ws-status">
-      <div class="ws-dot" id="ws-dot"></div>
-      <span id="ws-status-text">Ikke tilkoblet</span>
-    </div>
-    <div class="lobby-status" id="lobby-status"></div>
-
-    <div class="form-group">
-      <label>WebSocket server</label>
-      <input type="text" id="ws-url" value="ws://localhost:8000/ws/oslo-conquest/" placeholder="ws://...">
-    </div>
-    <button class="btn" onclick="connectWS()">Koble til server</button>
-
-    <hr class="divider">
-
-    <div class="form-group">
-      <label>Ditt navn</label>
-      <input type="text" id="player-name" placeholder="Ola Nordmann" maxlength="20">
-    </div>
-
-    <div class="form-group">
-      <label>Rom-ID</label>
-      <input type="text" id="room-id" placeholder="oslo-1" maxlength="20">
-    </div>
-
-    <button class="btn primary" onclick="createGame()">Opprett spill</button>
-    <button class="btn" onclick="joinGame()">Bli med i spill</button>
-
-    <hr class="divider">
-
-    <div class="room-list-header">
-      <label>Aktive rom</label>
-      <button class="text-btn" onclick="refreshRooms()">Oppdater</button>
-    </div>
-    <div class="room-list" id="room-list">
-      <div class="room-empty">Ingen rom lastet inn</div>
-    </div>
-
-    <hr class="divider">
-
-    <button class="btn" onclick="startLocalGame()" style="border-color: #556; color: #aaa;">
-      Spill lokalt (testing)
-    </button>
-  </div>
-</div>
+<div id="oslo-conquest-root"></div>
 
 <!-- GAME -->
 <div id="game-container">
@@ -118,6 +69,6 @@
   <div id="map-tooltip"></div>
 </div>
 
-<script type="module" src="./main.js"></script>
+<script type="module" src="./main.jsx"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
-// Alt som har med nettverkskommunikasjon å gjøre: koble til server, sende og motta meldinger.
-// Håndterer også lobby-knappene (opprett/bli med/lokal) fordi de trigger WS-meldinger.
+// Nettverkslaget for Oslo Conquest.
+// Lobby-UI eies av Preact; denne modulen sender/mottar meldinger og rapporterer
+// status tilbake via callbacks.
 
 import { state } from './state.js';
 import { createInitialGameState } from './game-state.js';
@@ -8,66 +9,86 @@ import { showDiceResult } from './dice.js';
 import { initMap } from './map.js';
 
 let pendingMessage = null;
+let activeUrl = '';
+let handlers = {};
 
-function setLobbyStatus(message, isError = false) {
-  const el = document.getElementById('lobby-status');
-  if (!el) return;
-  el.textContent = message;
-  el.classList.toggle('error', isError);
+function setHandlers(nextHandlers = {}) {
+  handlers = { ...handlers, ...nextHandlers };
 }
 
-export function connectWS() {
-  const url = document.getElementById('ws-url').value.trim();
-  if (!url) return;
+function emit(name, ...args) {
+  handlers[name]?.(...args);
+}
 
-  if (state.ws?.readyState === WebSocket.OPEN) return;
-  if (state.ws?.readyState === WebSocket.CONNECTING) return;
+function showGameContainer() {
+  const gameContainer = document.getElementById('game-container');
+  if (gameContainer) gameContainer.style.display = 'block';
+}
 
-  state.ws = new WebSocket(url);
-  setLobbyStatus('Kobler til server...');
+function handleGameState(nextState) {
+  state.gameState = nextState;
+
+  if (nextState.started) {
+    showGameContainer();
+    emit('onGameStarted', nextState);
+    if (!state.svgEl) initMap();
+  } else if (nextState.phase === 'waiting') {
+    emit('onLobbyStatus', `Rom "${nextState.room || ''}" er opprettet. Venter på spiller 2.`, false);
+  }
+
+  renderGame();
+}
+
+function handleMessage(rawMessage) {
+  const msg = JSON.parse(rawMessage);
+
+  if (msg.type === 'game_state') {
+    handleGameState(msg.state);
+  } else if (msg.type === 'action_result') {
+    state.gameState = msg.state;
+    renderGame();
+    if (msg.dice) showDiceResult(msg.dice);
+  } else if (msg.type === 'room_list') {
+    emit('onRooms', msg.rooms || []);
+  } else if (msg.type === 'error') {
+    const message = msg.message || 'Ugyldig handling';
+    emit('onLobbyStatus', message, true);
+    emit('onError', message);
+  }
+}
+
+export function connectWS({ url, handlers: nextHandlers } = {}) {
+  setHandlers(nextHandlers);
+  if (url) activeUrl = url.trim();
+  if (!activeUrl) return false;
+
+  if (state.ws?.readyState === WebSocket.OPEN) return true;
+  if (state.ws?.readyState === WebSocket.CONNECTING) return false;
+
+  state.ws = new WebSocket(activeUrl);
+  emit('onConnectionChange', 'connecting');
+  emit('onLobbyStatus', 'Kobler til server...', false);
 
   state.ws.onopen = () => {
-    document.getElementById('ws-dot').classList.add('connected');
-    document.getElementById('ws-status-text').textContent = 'Tilkoblet';
-    setLobbyStatus('');
+    emit('onConnectionChange', 'connected');
+    emit('onLobbyStatus', '', false);
     if (pendingMessage) {
-      sendWS(pendingMessage);
+      const msg = pendingMessage;
       pendingMessage = null;
+      sendWS(msg);
     } else {
       refreshRooms();
     }
   };
 
   state.ws.onclose = () => {
-    document.getElementById('ws-dot').classList.remove('connected');
-    document.getElementById('ws-status-text').textContent = 'Frakoblet';
-    setLobbyStatus('Mistet tilkoblingen til serveren.', true);
+    emit('onConnectionChange', 'disconnected');
+    emit('onLobbyStatus', 'Mistet tilkoblingen til serveren.', true);
   };
 
-  state.ws.onmessage = (e) => {
-    const msg = JSON.parse(e.data);
-    if (msg.type === 'game_state') {
-      state.gameState = msg.state;
-      if (msg.state.started) {
-        document.getElementById('lobby').style.display = 'none';
-        document.getElementById('game-container').style.display = 'block';
-        if (!state.svgEl) initMap();
-      } else if (msg.state.phase === 'waiting') {
-        const room = msg.state.room || document.getElementById('room-id').value.trim();
-        setLobbyStatus(`Rom "${room}" er opprettet. Venter på spiller 2.`);
-      }
-      renderGame();
-    } else if (msg.type === 'action_result') {
-      state.gameState = msg.state;
-      renderGame();
-      if (msg.dice) showDiceResult(msg.dice);
-    } else if (msg.type === 'room_list') {
-      renderRoomList(msg.rooms || []);
-    } else if (msg.type === 'error') {
-      setLobbyStatus(msg.message || 'Ugyldig handling', true);
-      alert(msg.message || 'Ugyldig handling');
-    }
-  };
+  state.ws.onmessage = (event) => handleMessage(event.data);
+
+  return false;
 }
 
 export function sendWS(msg) {
@@ -75,6 +96,7 @@ export function sendWS(msg) {
     state.ws.send(JSON.stringify(msg));
     return true;
   }
+
   pendingMessage = msg;
   connectWS();
   return false;
@@ -89,80 +111,59 @@ export function sendEndTurn() {
   sendWS({ type: 'end_turn', playerId: state.myPlayerId });
 }
 
-export function refreshRooms() {
+export function refreshRooms(nextHandlers) {
+  setHandlers(nextHandlers);
   sendWS({ type: 'list_rooms' });
 }
 
-function renderRoomList(rooms) {
-  const container = document.getElementById('room-list');
-  if (!container) return;
+function nextPlayerId() {
+  return 'p_' + Math.random().toString(36).slice(2, 10);
+}
 
-  if (rooms.length === 0) {
-    container.innerHTML = '<div class="room-empty">Ingen aktive rom</div>';
-    return;
+export function createGame({ url, name, room, handlers: nextHandlers } = {}) {
+  setHandlers(nextHandlers);
+  if (url) activeUrl = url.trim();
+  const cleanName = name?.trim();
+  const cleanRoom = room?.trim();
+  if (!cleanName || !cleanRoom) {
+    emit('onError', 'Fyll inn navn og rom-ID');
+    return false;
   }
 
-  const selectedRoom = document.getElementById('room-id').value.trim();
-  container.innerHTML = rooms.map(room => {
-    const unavailable = room.started || room.playerCount >= room.maxPlayers;
-    const status = unavailable ? 'I gang' : 'Venter på spiller';
-    const selected = room.room === selectedRoom ? ' selected' : '';
-    const encodedRoom = encodeURIComponent(room.room);
-    return `
-      <button class="room-card${selected}" onclick="selectRoom(decodeURIComponent('${encodedRoom}'))" ${unavailable ? 'disabled' : ''}>
-        <div class="room-main">
-          <span class="room-name">${escapeHtml(room.room)}</span>
-          <span class="room-status ${unavailable ? 'unavailable' : ''}">${status} · ${room.playerCount}/${room.maxPlayers}</span>
-        </div>
-        <div class="room-players">${escapeHtml(room.players.join(', ') || 'Ingen spillere')}</div>
-      </button>
-    `;
-  }).join('');
+  state.myPlayerId = nextPlayerId();
+  emit('onLobbyStatus', `Oppretter rom "${cleanRoom}"...`, false);
+  sendWS({ type: 'create_game', room: cleanRoom, player: { id: state.myPlayerId, name: cleanName } });
+  return true;
 }
 
-export function selectRoom(room) {
-  document.getElementById('room-id').value = room;
-  setLobbyStatus(`Valgt rom "${room}". Trykk "Bli med i spill".`);
+export function joinGame({ url, name, room, handlers: nextHandlers } = {}) {
+  setHandlers(nextHandlers);
+  if (url) activeUrl = url.trim();
+  const cleanName = name?.trim();
+  const cleanRoom = room?.trim();
+  if (!cleanName || !cleanRoom) {
+    emit('onError', 'Fyll inn navn og rom-ID');
+    return false;
+  }
+
+  state.myPlayerId = nextPlayerId();
+  emit('onLobbyStatus', `Blir med i rom "${cleanRoom}"...`, false);
+  sendWS({ type: 'join_game', room: cleanRoom, player: { id: state.myPlayerId, name: cleanName } });
+  return true;
 }
 
-export function createGame() {
-  const name = document.getElementById('player-name').value.trim();
-  const room = document.getElementById('room-id').value.trim();
-  if (!name || !room) return alert('Fyll inn navn og rom-ID');
-  state.myPlayerId = 'p_' + Math.random().toString(36).substr(2, 8);
-  setLobbyStatus(`Oppretter rom "${room}"...`);
-  sendWS({ type: 'create_game', room, player: { id: state.myPlayerId, name } });
-}
-
-export function joinGame() {
-  const name = document.getElementById('player-name').value.trim();
-  const room = document.getElementById('room-id').value.trim();
-  if (!name || !room) return alert('Fyll inn navn og rom-ID');
-  state.myPlayerId = 'p_' + Math.random().toString(36).substr(2, 8);
-  setLobbyStatus(`Blir med i rom "${room}"...`);
-  sendWS({ type: 'join_game', room, player: { id: state.myPlayerId, name } });
-}
-
-export function startLocalGame() {
-  const name = document.getElementById('player-name').value.trim() || 'Spiller 1';
+export function startLocalGame({ name, handlers: nextHandlers } = {}) {
+  setHandlers(nextHandlers);
+  const playerName = name?.trim() || 'Spiller 1';
   state.myPlayerId = 'p1';
   const players = [
-    { id: 'p1', name },
+    { id: 'p1', name: playerName },
     { id: 'p2', name: 'Spiller 2' },
     { id: 'p3', name: 'Spiller 3' },
   ];
   state.gameState = createInitialGameState(players);
-  document.getElementById('lobby').style.display = 'none';
-  document.getElementById('game-container').style.display = 'block';
+  showGameContainer();
+  emit('onGameStarted', state.gameState);
   initMap();
-}
-
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, char => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  }[char]));
+  return true;
 }
