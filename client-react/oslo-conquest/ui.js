@@ -3,7 +3,7 @@
 
 import { TERRITORIES, DISTRICTS, ADJACENCY } from './game-data.js';
 import { state } from './state.js';
-import { getCurrentPlayer, isMyTurn } from './game-state.js';
+import { findPlayerByOwner, getCurrentPlayer, isMyTurn, isMvpGame } from './game-state.js';
 
 export function renderHUD() {
   if (!state.gameState) return;
@@ -14,11 +14,13 @@ export function renderHUD() {
     const chip = document.createElement('div');
     chip.className = 'player-chip' + (p.id === getCurrentPlayer()?.id ? ' active' : '');
     if (p.eliminated) chip.style.opacity = '0.3';
+    const details = isMvpGame()
+      ? `<span class="chip-units">${p.colorName || p.side}</span>`
+      : `<span class="chip-money">💰 ${p.money}</span><span class="chip-units">⚔ ${p.units}</span>`;
     chip.innerHTML = `
       <div class="chip-dot" style="background:${p.color}"></div>
       <span>${p.name}</span>
-      <span class="chip-money">💰 ${p.money}</span>
-      <span class="chip-units">⚔ ${p.units}</span>
+      ${details}
     `;
     container.appendChild(chip);
   }
@@ -26,8 +28,9 @@ export function renderHUD() {
   const ind = document.getElementById('turn-indicator');
   const cp = getCurrentPlayer();
   if (cp) {
-    ind.innerHTML = `<span style="color:${cp.color}">●</span> ${cp.name}s tur – Runde ${state.gameState.round}`;
-    if (cp.diceRoll !== null) {
+    const round = state.gameState.round ? ` – Runde ${state.gameState.round}` : '';
+    ind.innerHTML = `<span style="color:${cp.color}">●</span> ${cp.name}s tur${round}`;
+    if (!isMvpGame() && cp.diceRoll !== null) {
       ind.innerHTML += ` | Terning: ${cp.diceRoll} (brukt: ${cp.diceUsed})`;
     }
   }
@@ -39,6 +42,15 @@ export function renderActionPanel() {
   const panel = document.getElementById('action-content');
   if (!state.selectedTerritory) {
     panel.innerHTML = '<p style="color:var(--text-muted);font-style:italic;font-size:0.9rem;">Velg et område på kartet</p>';
+    if (isMvpGame()) {
+      panel.innerHTML += `
+        <div style="margin-top:12px;">
+          <button class="action-btn" onclick="endTurn()" ${!isMyTurn() ? 'disabled' : ''}>
+            Avslutt tur
+          </button>
+        </div>`;
+      return;
+    }
     if (isMyTurn()) {
       const cp = getCurrentPlayer();
       panel.innerHTML += `
@@ -54,9 +66,28 @@ export function renderActionPanel() {
 
   const t = TERRITORIES.find(x => x.id === state.selectedTerritory);
   const ts = state.gameState.territories[state.selectedTerritory];
-  const owner = ts.owner ? state.gameState.players.find(x => x.id === ts.owner) : null;
+  const owner = findPlayerByOwner(ts.owner);
   const cp = getCurrentPlayer();
   const district = DISTRICTS[t.district];
+
+  if (isMvpGame()) {
+    panel.innerHTML = `
+      <div class="territory-info">
+        <div class="territory-name">${t.name}</div>
+        <div class="territory-district">${district.name}</div>
+        <div class="territory-stats">
+          <div class="stat"><span class="stat-label">Eier</span><span style="color:${owner?.color || '#888'}">${owner?.name || 'Nøytral'}</span></div>
+          <div class="stat"><span class="stat-label">Units</span><span>${ts.units}</span></div>
+        </div>
+      </div>
+      <div class="action-buttons">
+        <button class="action-btn" onclick="endTurn()" ${!isMyTurn() ? 'disabled' : ''}>
+          Avslutt tur
+        </button>
+      </div>
+    `;
+    return;
+  }
 
   panel.innerHTML = `
     <div class="territory-info">
@@ -104,6 +135,11 @@ export function renderActionPanel() {
 
 export function renderCheckpointBar() {
   if (!state.gameState) return;
+  document.getElementById('checkpoint-bar').style.display = 'flex';
+  if (isMvpGame()) {
+    document.getElementById('checkpoint-bar').style.display = 'none';
+    return;
+  }
   const cp = getCurrentPlayer();
   if (!cp) return;
 
@@ -132,6 +168,10 @@ export function addLog(msg, type = '') {
 
 // Oppdaterer all UI på en gang — brukes når spilltilstanden kommer fra serveren.
 export function renderGame() {
+  const missionCard = document.getElementById('mission-card');
+  const diceDisplay = document.getElementById('dice-display');
+  if (missionCard) missionCard.style.display = isMvpGame() ? 'none' : 'block';
+  if (diceDisplay && isMvpGame()) diceDisplay.style.display = 'none';
   renderHUD();
   renderActionPanel();
   renderCheckpointBar();

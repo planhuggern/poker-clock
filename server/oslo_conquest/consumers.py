@@ -16,6 +16,8 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+from .mvp import add_player, create_waiting_room, end_turn
+
 # In-memory room storage: { room_id: latest_game_state }
 _rooms: dict[str, dict] = {}
 
@@ -24,6 +26,7 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
 
     async def connect(self) -> None:
         self.room: str | None = None
+        self.player_id: str | None = None
         await self.accept()
 
     async def disconnect(self, close_code: int) -> None:
@@ -42,6 +45,8 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
             await self._handle_create(data)
         elif msg_type == "join_game":
             await self._handle_join(data)
+        elif msg_type == "end_turn":
+            await self._handle_end_turn(data)
         elif msg_type == "game_action":
             await self._handle_action(data)
 
@@ -50,27 +55,48 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
     async def _handle_create(self, data: dict) -> None:
         room = str(data.get("room") or "default")
         player = data.get("player") or {}
+        self.player_id = str(player.get("id") or "")
         await self._join_group(room)
-        _rooms[room] = {"room": room, "players": [player], "started": False}
+        _rooms[room] = create_waiting_room(room, player)
         await self._broadcast(room, {"type": "game_state", "state": _rooms[room]})
 
     async def _handle_join(self, data: dict) -> None:
         room = str(data.get("room") or "default")
         player = data.get("player") or {}
+        self.player_id = str(player.get("id") or "")
         await self._join_group(room)
         if room not in _rooms:
-            _rooms[room] = {"room": room, "players": [], "started": False}
-        existing_ids = {p.get("id") for p in _rooms[room].get("players", [])}
-        if player.get("id") not in existing_ids:
-            _rooms[room]["players"].append(player)
+            _rooms[room] = create_waiting_room(room, player)
+        else:
+            _rooms[room], error = add_player(_rooms[room], player)
+            if error:
+                await self.send(text_data=json.dumps({"type": "error", "message": error}))
+                return
         await self._broadcast(room, {"type": "game_state", "state": _rooms[room]})
 
     async def _handle_action(self, data: dict) -> None:
         if not self.room:
             return
+        if _rooms.get(self.room, {}).get("activePlayer"):
+            await self.send(
+                text_data=json.dumps(
+                    {"type": "error", "message": "Serveren styrer MVP-state"}
+                )
+            )
+            return
         state = data.get("state") or {}
         _rooms[self.room] = state
         await self._broadcast(self.room, {"type": "game_state", "state": state})
+
+    async def _handle_end_turn(self, data: dict) -> None:
+        if not self.room or self.room not in _rooms:
+            return
+        player_id = str(data.get("playerId") or self.player_id or "")
+        _rooms[self.room], error = end_turn(_rooms[self.room], player_id)
+        if error:
+            await self.send(text_data=json.dumps({"type": "error", "message": error}))
+            return
+        await self._broadcast(self.room, {"type": "game_state", "state": _rooms[self.room]})
 
     # ── Channel-layer receiver ────────────────────────────────────────────────
 

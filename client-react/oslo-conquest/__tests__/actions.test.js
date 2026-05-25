@@ -11,6 +11,7 @@ import { state } from '../state.js';
 import { createInitialGameState } from '../game-state.js';
 import { buyTerritory, invadeTerritory, endTurn } from '../actions.js';
 import { TERRITORIES, DISTRICTS } from '../game-data.js';
+import { sendEndTurn } from '../websocket.js';
 
 function freshState(playerDefs = [{ id: 'p1', name: 'Spiller 1' }, { id: 'p2', name: 'Spiller 2' }]) {
   state.gameState = createInitialGameState(playerDefs);
@@ -135,5 +136,24 @@ describe('endTurn', () => {
 
     expect(cp.money).toBe(moneyBefore + bonusMoney);
     expect(cp.units).toBe(unitsBefore + bonusUnits);
+  });
+
+  it('sender end_turn til serveren i MVP-spill', () => {
+    state.myPlayerId = 'p1';
+    state.gameState = {
+      phase: 'playing',
+      started: true,
+      activePlayer: 'red',
+      players: [
+        { id: 'p1', name: 'Spiller 1', side: 'red', color: '#c0392b' },
+        { id: 'p2', name: 'Spiller 2', side: 'blue', color: '#1a6b9a' },
+      ],
+      territories: {},
+      log: [],
+    };
+
+    endTurn();
+
+    expect(sendEndTurn).toHaveBeenCalledOnce();
   });
 });

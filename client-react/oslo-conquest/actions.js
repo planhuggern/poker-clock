@@ -3,13 +3,13 @@
 
 import { TERRITORIES, DISTRICTS, ADJACENCY } from './game-data.js';
 import { state } from './state.js';
-import { getCurrentPlayer, isMyTurn } from './game-state.js';
+import { getCurrentPlayer, isMyTurn, isMvpGame } from './game-state.js';
 import { renderHUD, renderActionPanel, renderCheckpointBar, addLog } from './ui.js';
 import { updateTerritoryVisuals } from './map.js';
 import { checkMissionComplete, checkGameEnd } from './missions.js';
 import { showDiceResult } from './dice.js';
 import { showRentModal } from './modals.js';
-import { sendGameState } from './websocket.js';
+import { sendEndTurn, sendGameState } from './websocket.js';
 
 export function rollDice() {
   if (!isMyTurn()) return;
@@ -201,6 +201,12 @@ export function payRent(tid) {
 // Avslutter spillerens tur: deler ut bydels- og sjekkpunktbonuser, nullstiller terningen,
 // og gir turen til neste spiller som ikke er eliminert.
 export function endTurn() {
+  if (isMvpGame()) {
+    if (!isMyTurn()) { addLog('Det er ikke din tur'); return; }
+    sendEndTurn();
+    return;
+  }
+
   if (!isMyTurn()) { addLog('Det er ikke din tur'); return; }
 
   const cp = getCurrentPlayer();

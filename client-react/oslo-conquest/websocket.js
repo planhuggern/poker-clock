@@ -7,31 +7,61 @@ import { renderGame } from './ui.js';
 import { showDiceResult } from './dice.js';
 import { initMap } from './map.js';
 
+let pendingMessage = null;
+
+function setLobbyStatus(message, isError = false) {
+  const el = document.getElementById('lobby-status');
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle('error', isError);
+}
+
 export function connectWS() {
   const url = document.getElementById('ws-url').value.trim();
   if (!url) return;
 
+  if (state.ws?.readyState === WebSocket.OPEN) return;
+  if (state.ws?.readyState === WebSocket.CONNECTING) return;
+
   state.ws = new WebSocket(url);
+  setLobbyStatus('Kobler til server...');
 
   state.ws.onopen = () => {
     document.getElementById('ws-dot').classList.add('connected');
     document.getElementById('ws-status-text').textContent = 'Tilkoblet';
+    setLobbyStatus('');
+    if (pendingMessage) {
+      sendWS(pendingMessage);
+      pendingMessage = null;
+    }
   };
 
   state.ws.onclose = () => {
     document.getElementById('ws-dot').classList.remove('connected');
     document.getElementById('ws-status-text').textContent = 'Frakoblet';
+    setLobbyStatus('Mistet tilkoblingen til serveren.', true);
   };
 
   state.ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
     if (msg.type === 'game_state') {
       state.gameState = msg.state;
+      if (msg.state.started) {
+        document.getElementById('lobby').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        if (!state.svgEl) initMap();
+      } else if (msg.state.phase === 'waiting') {
+        const room = msg.state.room || document.getElementById('room-id').value.trim();
+        setLobbyStatus(`Rom "${room}" er opprettet. Venter på spiller 2.`);
+      }
       renderGame();
     } else if (msg.type === 'action_result') {
       state.gameState = msg.state;
       renderGame();
       if (msg.dice) showDiceResult(msg.dice);
+    } else if (msg.type === 'error') {
+      setLobbyStatus(msg.message || 'Ugyldig handling', true);
+      alert(msg.message || 'Ugyldig handling');
     }
   };
 }
@@ -39,7 +69,11 @@ export function connectWS() {
 export function sendWS(msg) {
   if (state.ws && state.ws.readyState === WebSocket.OPEN) {
     state.ws.send(JSON.stringify(msg));
+    return true;
   }
+  pendingMessage = msg;
+  connectWS();
+  return false;
 }
 
 // Sender hele spilltilstanden til serveren, som videresender den til de andre spillerne.
@@ -47,11 +81,16 @@ export function sendGameState() {
   sendWS({ type: 'game_action', state: state.gameState });
 }
 
+export function sendEndTurn() {
+  sendWS({ type: 'end_turn', playerId: state.myPlayerId });
+}
+
 export function createGame() {
   const name = document.getElementById('player-name').value.trim();
   const room = document.getElementById('room-id').value.trim();
   if (!name || !room) return alert('Fyll inn navn og rom-ID');
   state.myPlayerId = 'p_' + Math.random().toString(36).substr(2, 8);
+  setLobbyStatus(`Oppretter rom "${room}"...`);
   sendWS({ type: 'create_game', room, player: { id: state.myPlayerId, name } });
 }
 
@@ -60,6 +99,7 @@ export function joinGame() {
   const room = document.getElementById('room-id').value.trim();
   if (!name || !room) return alert('Fyll inn navn og rom-ID');
   state.myPlayerId = 'p_' + Math.random().toString(36).substr(2, 8);
+  setLobbyStatus(`Blir med i rom "${room}"...`);
   sendWS({ type: 'join_game', room, player: { id: state.myPlayerId, name } });
 }
 

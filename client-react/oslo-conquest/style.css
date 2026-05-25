@@ -123,6 +123,18 @@ input:focus, select:focus { border-color: var(--gold); }
 }
 .ws-dot.connected { background: #2ecc71; }
 
+.lobby-status {
+  min-height: 20px;
+  margin-bottom: 16px;
+  color: var(--gold-light);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.lobby-status.error {
+  color: #e87070;
+}
+
 #game-container {
   position: fixed; inset: 0;
   display: none;

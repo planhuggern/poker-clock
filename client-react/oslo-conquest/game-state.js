@@ -33,9 +33,22 @@ export function createInitialGameState(players) {
 }
 
 export function getCurrentPlayer() {
-  return state.gameState?.players[state.gameState.currentPlayerIdx];
+  if (!state.gameState) return null;
+  if (state.gameState.activePlayer) {
+    return state.gameState.players.find(p => p.side === state.gameState.activePlayer);
+  }
+  return state.gameState.players[state.gameState.currentPlayerIdx];
 }
 
 export function isMyTurn() {
   return getCurrentPlayer()?.id === state.myPlayerId;
+}
+
+export function isMvpGame() {
+  return Boolean(state.gameState?.activePlayer);
+}
+
+export function findPlayerByOwner(owner) {
+  if (!owner || !state.gameState) return null;
+  return state.gameState.players.find(p => p.id === owner || p.side === owner) || null;
 }

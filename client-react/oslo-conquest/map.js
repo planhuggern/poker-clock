@@ -3,6 +3,7 @@
 
 import { TERRITORIES, DISTRICTS, CHECKPOINTS } from './game-data.js';
 import { state } from './state.js';
+import { findPlayerByOwner } from './game-state.js';
 import { renderHUD, renderActionPanel, renderCheckpointBar } from './ui.js';
 import mapData from './map.json';
 
@@ -217,7 +218,7 @@ export function initMap() {
   const distBorderLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   distBorderLayer.setAttribute('id', 'district-border-layer');
   distBorderLayer.setAttribute('pointer-events', 'none');
-  for (const [did, pathD] of Object.entries(mapData.districtShapes)) {
+  for (const pathD of Object.values(mapData.districtShapes)) {
     const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     p.setAttribute('d', pathD);
     p.setAttribute('fill', 'none');
@@ -313,13 +314,12 @@ function setupMapInteraction(container) {
 
 function showMapTooltip(territory, e) {
   const ts = state.gameState?.territories[territory.id];
-  const owner = ts?.owner ? state.gameState.players.find(x => x.id === ts.owner) : null;
+  const owner = findPlayerByOwner(ts?.owner);
   const district = DISTRICTS[territory.district];
   const tt = document.getElementById('map-tooltip');
   tt.innerHTML = `<strong style="color:#e8c97a">${territory.name}</strong><br>
     <span style="color:#888;font-style:italic">${district?.name}</span><br>
-    <span style="color:${owner?.color || '#888'}">${owner?.name || 'Nøytral'}</span> · ${ts?.units || 0} bat.<br>
-    <span style="color:#c9a84c">💰 ${territory.price} kr</span>`;
+    <span style="color:${owner?.color || '#888'}">${owner?.name || 'Nøytral'}</span> · ${ts?.units || 0} units`;
   tt.style.display = 'block';
   moveMapTooltip(e);
 }
@@ -342,7 +342,7 @@ export function updateTerritoryVisuals() {
     const g = document.getElementById('terr-' + t.id);
     if (!g) continue;
     const ts = state.gameState.territories[t.id];
-    const owner = ts?.owner ? state.gameState.players.find(x => x.id === ts.owner) : null;
+    const owner = findPlayerByOwner(ts?.owner);
     const poly = g.querySelector('.terr-poly');
 
     if (owner) {
@@ -379,7 +379,7 @@ export function updateTerritoryVisuals() {
     if (!distEl) continue;
     const ownerIds = [...new Set(terrs.map(t => state.gameState.territories[t.id]?.owner).filter(Boolean))];
     if (ownerIds.length === 1 && terrs.every(t => state.gameState.territories[t.id]?.owner === ownerIds[0])) {
-      const owner = state.gameState.players.find(p => p.id === ownerIds[0]);
+      const owner = findPlayerByOwner(ownerIds[0]);
       distEl.setAttribute('fill', owner?.color || '#1a1a2a');
       distEl.setAttribute('fill-opacity', '0.4');
     } else {
