@@ -19,7 +19,7 @@
 
 **Desired architecture:** Preact + SVG.js, JSX, CSS — still built with Vite as its own entry point.
 
-**Migration status:** Preact, `@preact/preset-vite`, and SVG.js are installed. `index.html` now loads `main.jsx`; lobby and game UI are rendered by Preact, while the map still uses the existing imperative native SVG module.
+**Migration status:** Preact, `@preact/preset-vite`, SVG.js, and Immer are installed. `index.html` now loads `main.jsx`; lobby and game UI are rendered by Preact, game actions use an Immer reducer that returns `{ state, events }`, while the map still uses the existing imperative native SVG module.
 
 The desired direction is to migrate Oslo Conquest from imperative DOM rendering to a small Preact app:
 - Preact owns application shell, lobby, HUD, panels, modals, and render state.
@@ -34,10 +34,11 @@ The desired direction is to migrate Oslo Conquest from imperative DOM rendering 
 | `index.html` | Entry point; mounts Preact lobby and keeps the existing game container |
 | `main.jsx` | Active bootstrap: mounts the Preact app and keeps map resize handling |
 | `main.js` | Legacy bootstrap kept temporarily for reference |
-| `state.js` | Shared mutable game state plus subscription/modal notifications for Preact |
+| `state.js` | Compatibility mirror for map/WebSocket refs plus subscription notifications; Preact owns canonical game state |
 | `game-data.js` | Konstanter: 16 bydeler, 35 territorier, 11 oppdrag, 6 spillerfarger, adjacency-graf, checkpoints |
 | `game-state.js` | Spillinitialisering, tur-/spillerqueries |
-| `actions.js` | Spillmutasjoner; still mutates shared state and notifies Preact through adapters |
+| `game-reducer.js` | Pure Immer reducer: `reduceGameAction(gameState, context, action)` returns `{ state, events }` |
+| `actions.js` | Action creator/reducer exports; no active imperative mutation logic |
 | `missions.js` | Seiersvilkår — kalles etter hver handling |
 | `map.js` | Current native SVG render; desired replacement is SVG.js map adapter/component |
 | `map.json` | Forhåndsberegnet polygon-data for territorier og bydelsgrenser |

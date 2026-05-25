@@ -13,6 +13,7 @@
   "dependencies": {
     "@svgdotjs/svg.js": "^3.2.5",
     "daisyui": "^5.5.19",
+    "immer": "^11.1.8",
     "preact": "^10.29.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

@@ -1,12 +1,16 @@
-import { useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import {
   connectWS,
   createGame,
   joinGame,
   refreshRooms,
+  sendEndTurn,
+  sendGameState,
   startLocalGame,
 } from "./websocket.js";
 import { GameUI } from "./GameUI.jsx";
+import { reduceGameAction } from "./game-reducer.js";
+import { notifyGameChanged, state, subscribe } from "./state.js";
 
 const DEFAULT_WS_URL = "ws://localhost:8000/ws/oslo-conquest/";
 
@@ -18,14 +22,59 @@ export function App() {
   const [lobbyStatus, setLobbyStatus] = useState({ message: "", isError: false });
   const [rooms, setRooms] = useState([]);
   const [inGame, setInGame] = useState(false);
+  const [gameState, setGameState] = useState(null);
+  const [myPlayerId, setMyPlayerId] = useState(null);
+  const [selectedTerritory, setSelectedTerritory] = useState(null);
+  const [modal, setModal] = useState(null);
+  const [missionRevealed, setMissionRevealed] = useState(false);
+
+  useEffect(() => {
+    state.gameState = gameState;
+    state.myPlayerId = myPlayerId;
+    state.selectedTerritory = selectedTerritory;
+    state.modal = modal;
+    state.missionRevealed = missionRevealed;
+    notifyGameChanged();
+  }, [gameState, myPlayerId, selectedTerritory, modal, missionRevealed]);
+
+  useEffect(() => {
+    return subscribe(() => setSelectedTerritory(state.selectedTerritory));
+  }, []);
 
   const handlers = useMemo(() => ({
     onConnectionChange: setConnectionStatus,
     onLobbyStatus: (message, isError = false) => setLobbyStatus({ message, isError }),
     onRooms: setRooms,
     onGameStarted: () => setInGame(true),
+    onGameState: (nextGameState) => {
+      state.gameState = nextGameState;
+      setGameState(nextGameState);
+    },
     onError: (message) => setLobbyStatus({ message, isError: true }),
   }), []);
+
+  function handleReducerEvents(result) {
+    for (const event of result.events) {
+      if (event.type === "modal") setModal(event.modal);
+      if (event.type === "send_state") sendGameState(result.state);
+      if (event.type === "send_end_turn") sendEndTurn(event.playerId);
+      if (event.type === "map_update") {
+        import("./map.js").then(({ updateTerritoryVisuals }) => updateTerritoryVisuals());
+      }
+    }
+  }
+
+  function dispatchGameAction(action) {
+    if (!gameState) return;
+    const result = reduceGameAction(gameState, {
+      playerId: myPlayerId,
+      random: Math.random,
+      now: () => new Date().toLocaleTimeString("no", { hour: "2-digit", minute: "2-digit" }),
+    }, action);
+    state.gameState = result.state;
+    setGameState(result.state);
+    handleReducerEvents(result);
+  }
 
   function requireLobbyFields() {
     if (!playerName.trim() || !roomId.trim()) {
@@ -42,11 +91,13 @@ export function App() {
   function handleCreateGame() {
     if (!requireLobbyFields()) return;
     createGame({ url: wsUrl, name: playerName, room: roomId, handlers });
+    setMyPlayerId(state.myPlayerId);
   }
 
   function handleJoinGame() {
     if (!requireLobbyFields()) return;
     joinGame({ url: wsUrl, name: playerName, room: roomId, handlers });
+    setMyPlayerId(state.myPlayerId);
   }
 
   function handleRefreshRooms() {
@@ -61,9 +112,23 @@ export function App() {
 
   function handleStartLocalGame() {
     startLocalGame({ name: playerName, handlers });
+    setMyPlayerId(state.myPlayerId);
   }
 
-  if (inGame) return <GameUI />;
+  if (inGame) {
+    return (
+      <GameUI
+        gameState={gameState}
+        myPlayerId={myPlayerId}
+        selectedTerritory={selectedTerritory}
+        modal={modal}
+        missionRevealed={missionRevealed}
+        dispatchGameAction={dispatchGameAction}
+        setMissionRevealed={setMissionRevealed}
+        clearModal={() => setModal(null)}
+      />
+    );
+  }
 
   return (
     <div id="lobby">

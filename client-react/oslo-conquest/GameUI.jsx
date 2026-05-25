@@ -1,38 +1,47 @@
 import { useEffect, useState } from "preact/hooks";
 import { ADJACENCY, CHECKPOINTS, DISTRICTS, MISSIONS, TERRITORIES } from "./game-data.js";
 import { findPlayerByOwner, getCurrentPlayer, isMvpGame, isMyTurn } from "./game-state.js";
-import { state, clearModal, notifyGameChanged, subscribe } from "./state.js";
-import {
-  buyTerritory,
-  endTurn,
-  invadeTerritory,
-  moveToTerritory,
-  reinforceTerritory,
-  rollDice,
-} from "./actions.js";
+import { state, notifyGameChanged, subscribe } from "./state.js";
 import { DICE_FACES } from "./dice.js";
 
-export function GameUI() {
+export function GameUI({
+  gameState,
+  myPlayerId,
+  selectedTerritory,
+  modal,
+  missionRevealed,
+  dispatchGameAction,
+  setMissionRevealed,
+  clearModal,
+}) {
   const [, setVersion] = useState(0);
+
+  useEffect(() => {
+    state.gameState = gameState;
+    state.myPlayerId = myPlayerId;
+    state.selectedTerritory = selectedTerritory;
+    state.modal = modal;
+    state.missionRevealed = missionRevealed;
+  }, [gameState, myPlayerId, selectedTerritory, modal, missionRevealed]);
 
   useEffect(() => subscribe(() => setVersion((version) => version + 1)), []);
 
-  if (!state.gameState) return null;
+  if (!gameState) return null;
 
   return (
     <>
-      <HUD />
+      <HUD dispatchGameAction={dispatchGameAction} />
       <TurnIndicator />
       <CheckpointBar />
       <LogPanel />
-      <ActionPanel />
-      <MissionCard />
-      <GameModal />
+      <ActionPanel dispatchGameAction={dispatchGameAction} />
+      <MissionCard setMissionRevealed={setMissionRevealed} />
+      <GameModal clearModal={clearModal} dispatchGameAction={dispatchGameAction} />
     </>
   );
 }
 
-function HUD() {
+function HUD({ dispatchGameAction }) {
   const currentPlayer = getCurrentPlayer();
 
   return (
@@ -62,7 +71,7 @@ function HUD() {
         className="btn"
         style={{ width: "auto", padding: "6px 16px", fontSize: "0.75rem" }}
         type="button"
-        onClick={endTurn}
+        onClick={() => dispatchGameAction({ type: "end_turn" })}
       >
         Avslutt tur →
       </button>
@@ -119,27 +128,27 @@ function LogPanel() {
   );
 }
 
-function ActionPanel() {
+function ActionPanel({ dispatchGameAction }) {
   return (
     <div id="action-panel">
       <div className="panel-title">Handlinger</div>
-      <ActionContent />
+      <ActionContent dispatchGameAction={dispatchGameAction} />
     </div>
   );
 }
 
-function ActionContent() {
+function ActionContent({ dispatchGameAction }) {
   if (!state.selectedTerritory) {
     return (
       <div id="action-content">
         <p style={{ color: "var(--text-muted)", fontStyle: "italic", fontSize: "0.9rem" }}>Velg et område på kartet</p>
         {isMvpGame() ? (
           <div style={{ marginTop: "12px" }}>
-            <button className="action-btn" type="button" onClick={endTurn} disabled={!isMyTurn()}>
+            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: "end_turn" })} disabled={!isMyTurn()}>
               Avslutt tur
             </button>
           </div>
-        ) : <RollDicePrompt />}
+        ) : <RollDicePrompt dispatchGameAction={dispatchGameAction} />}
       </div>
     );
   }
@@ -177,7 +186,7 @@ function ActionContent() {
 
       <div className="action-buttons">
         {isMvpGame() ? (
-          <button className="action-btn" type="button" onClick={endTurn} disabled={!isMyTurn()}>
+          <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: "end_turn" })} disabled={!isMyTurn()}>
             Avslutt tur
           </button>
         ) : (
@@ -185,6 +194,7 @@ function ActionContent() {
             territory={territory}
             territoryState={territoryState}
             currentPlayer={currentPlayer}
+            dispatchGameAction={dispatchGameAction}
           />
         )}
       </div>
@@ -192,14 +202,14 @@ function ActionContent() {
   );
 }
 
-function RollDicePrompt() {
+function RollDicePrompt({ dispatchGameAction }) {
   if (!isMyTurn()) return null;
   const currentPlayer = getCurrentPlayer();
 
   return (
     <div style={{ marginTop: "12px" }}>
       {currentPlayer.diceRoll === null ? (
-        <button className="action-btn" type="button" onClick={rollDice}>🎲 Kast terning</button>
+        <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: "roll_dice" })}>🎲 Kast terning</button>
       ) : (
         <div style={{ color: "var(--gold)", marginBottom: "8px" }}>
           Terning: {currentPlayer.diceRoll} ({currentPlayer.diceUsed} brukt)
@@ -209,7 +219,7 @@ function RollDicePrompt() {
   );
 }
 
-function TerritoryActions({ territory, territoryState, currentPlayer }) {
+function TerritoryActions({ territory, territoryState, currentPlayer, dispatchGameAction }) {
   if (!isMyTurn() || !currentPlayer) return null;
 
   const myTerritory = territoryState.owner === currentPlayer.id;
@@ -224,7 +234,7 @@ function TerritoryActions({ territory, territoryState, currentPlayer }) {
           <button
             className="action-btn"
             type="button"
-            onClick={() => buyTerritory(territory.id)}
+            onClick={() => dispatchGameAction({ type: "buy_territory", territoryId: territory.id })}
             disabled={!neutral || currentPlayer.money < territory.price}
           >
             Kjøp av bank <span className="price">{territory.price} kr</span>
@@ -232,7 +242,7 @@ function TerritoryActions({ territory, territoryState, currentPlayer }) {
           <button
             className="action-btn"
             type="button"
-            onClick={() => invadeTerritory(territory.id)}
+            onClick={() => dispatchGameAction({ type: "invade_territory", territoryId: territory.id })}
             disabled={!adjacent && currentPlayer.position !== territory.id}
           >
             ⚔ Invader {enemy ? `(${territoryState.units} bat.)` : `(nøytral: ${territoryState.units} bat.)`}
@@ -242,7 +252,7 @@ function TerritoryActions({ territory, territoryState, currentPlayer }) {
         <button
           className="action-btn"
           type="button"
-          onClick={() => reinforceTerritory(territory.id)}
+          onClick={() => dispatchGameAction({ type: "reinforce_territory", territoryId: territory.id })}
           disabled={currentPlayer.units < 1}
         >
           + Forsterke <span className="price">{currentPlayer.units} tilgjengelig</span>
@@ -250,7 +260,7 @@ function TerritoryActions({ territory, territoryState, currentPlayer }) {
       )}
 
       {currentPlayer.diceRoll !== null && currentPlayer.diceUsed < currentPlayer.diceRoll && (
-        <button className="action-btn" type="button" onClick={() => moveToTerritory(territory.id)}>
+        <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: "move_to_territory", territoryId: territory.id })}>
           🚶 Beveg hit ({currentPlayer.diceUsed + 1}/{currentPlayer.diceRoll})
         </button>
       )}
@@ -258,7 +268,7 @@ function TerritoryActions({ territory, territoryState, currentPlayer }) {
   );
 }
 
-function MissionCard() {
+function MissionCard({ setMissionRevealed }) {
   if (isMvpGame()) return null;
   const myPlayer = state.gameState.players.find((player) => player.id === state.myPlayerId);
   if (!myPlayer) return null;
@@ -270,7 +280,7 @@ function MissionCard() {
     : "Klikk for å se";
 
   function toggleMission() {
-    state.missionRevealed = !state.missionRevealed;
+    setMissionRevealed(!state.missionRevealed);
     notifyGameChanged();
   }
 
@@ -282,16 +292,16 @@ function MissionCard() {
   );
 }
 
-function GameModal() {
+function GameModal({ clearModal, dispatchGameAction }) {
   if (!state.modal) return null;
 
-  if (state.modal.type === "dice") return <DiceModal result={state.modal.result} />;
-  if (state.modal.type === "rent") return <RentModal modal={state.modal} />;
+  if (state.modal.type === "dice") return <DiceModal result={state.modal.result} clearModal={clearModal} />;
+  if (state.modal.type === "rent") return <RentModal modal={state.modal} clearModal={clearModal} dispatchGameAction={dispatchGameAction} />;
   if (state.modal.type === "win") return <WinModal modal={state.modal} />;
   return null;
 }
 
-function DiceModal({ result }) {
+function DiceModal({ result, clearModal }) {
   return (
     <div id="dice-display" style={{ display: "block" }}>
       <div className="dice-title">Kampoppgjør</div>
@@ -316,10 +326,10 @@ function DiceModal({ result }) {
   );
 }
 
-function RentModal({ modal }) {
+function RentModal({ modal, clearModal, dispatchGameAction }) {
   function confirmRent() {
     clearModal();
-    modal.onConfirm?.();
+    dispatchGameAction({ type: "pay_rent", territoryId: modal.territoryId });
   }
 
   return (

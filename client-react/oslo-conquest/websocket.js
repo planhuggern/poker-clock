@@ -31,9 +31,11 @@ function handleGameState(nextState) {
   if (nextState.started) {
     showGameContainer();
     emit('onGameStarted', nextState);
+    emit('onGameState', nextState);
     if (!state.svgEl) initMap();
   } else if (nextState.phase === 'waiting') {
     emit('onLobbyStatus', `Rom "${nextState.room || ''}" er opprettet. Venter på spiller 2.`, false);
+    emit('onGameState', nextState);
   }
 
   renderGame();
@@ -47,6 +49,7 @@ function handleMessage(rawMessage) {
     handleGameState(msg.state);
   } else if (msg.type === 'action_result') {
     state.gameState = msg.state;
+    emit('onGameState', msg.state);
     renderGame();
     notifyGameChanged();
     if (msg.dice) showDiceResult(msg.dice);
@@ -105,8 +108,8 @@ export function sendWS(msg) {
 }
 
 // Sender hele spilltilstanden til serveren, som videresender den til de andre spillerne.
-export function sendGameState() {
-  sendWS({ type: 'game_action', state: state.gameState });
+export function sendGameState(nextState = state.gameState) {
+  sendWS({ type: 'game_action', state: nextState });
 }
 
 export function sendEndTurn() {
@@ -166,6 +169,7 @@ export function startLocalGame({ name, handlers: nextHandlers } = {}) {
   state.gameState = createInitialGameState(players);
   showGameContainer();
   emit('onGameStarted', state.gameState);
+  emit('onGameState', state.gameState);
   initMap();
   notifyGameChanged();
   return true;
