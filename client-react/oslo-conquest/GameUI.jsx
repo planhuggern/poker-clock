@@ -1,0 +1,356 @@
+import { useEffect, useState } from "preact/hooks";
+import { ADJACENCY, CHECKPOINTS, DISTRICTS, MISSIONS, TERRITORIES } from "./game-data.js";
+import { findPlayerByOwner, getCurrentPlayer, isMvpGame, isMyTurn } from "./game-state.js";
+import { state, clearModal, notifyGameChanged, subscribe } from "./state.js";
+import {
+  buyTerritory,
+  endTurn,
+  invadeTerritory,
+  moveToTerritory,
+  reinforceTerritory,
+  rollDice,
+} from "./actions.js";
+import { DICE_FACES } from "./dice.js";
+
+export function GameUI() {
+  const [, setVersion] = useState(0);
+
+  useEffect(() => subscribe(() => setVersion((version) => version + 1)), []);
+
+  if (!state.gameState) return null;
+
+  return (
+    <>
+      <HUD />
+      <TurnIndicator />
+      <CheckpointBar />
+      <LogPanel />
+      <ActionPanel />
+      <MissionCard />
+      <GameModal />
+    </>
+  );
+}
+
+function HUD() {
+  const currentPlayer = getCurrentPlayer();
+
+  return (
+    <div id="hud">
+      <span className="hud-title">Oslo Conquest</span>
+      <div className="player-chips">
+        {state.gameState.players.map((player) => (
+          <div
+            className={`player-chip${player.id === currentPlayer?.id ? " active" : ""}`}
+            style={{ opacity: player.eliminated ? 0.3 : 1 }}
+            key={player.id}
+          >
+            <div className="chip-dot" style={{ background: player.color }} />
+            <span>{player.name}</span>
+            {isMvpGame() ? (
+              <span className="chip-units">{player.colorName || player.side}</span>
+            ) : (
+              <>
+                <span className="chip-money">💰 {player.money}</span>
+                <span className="chip-units">⚔ {player.units}</span>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+      <button
+        className="btn"
+        style={{ width: "auto", padding: "6px 16px", fontSize: "0.75rem" }}
+        type="button"
+        onClick={endTurn}
+      >
+        Avslutt tur →
+      </button>
+    </div>
+  );
+}
+
+function TurnIndicator() {
+  const currentPlayer = getCurrentPlayer();
+  if (!currentPlayer) return null;
+
+  const round = state.gameState.round ? ` – Runde ${state.gameState.round}` : "";
+  const diceText = !isMvpGame() && currentPlayer.diceRoll !== null
+    ? ` | Terning: ${currentPlayer.diceRoll} (brukt: ${currentPlayer.diceUsed})`
+    : "";
+
+  return (
+    <div id="turn-indicator">
+      <span style={{ color: currentPlayer.color }}>●</span> {currentPlayer.name}s tur{round}{diceText}
+    </div>
+  );
+}
+
+function CheckpointBar() {
+  if (isMvpGame()) return null;
+  const currentPlayer = getCurrentPlayer();
+  if (!currentPlayer) return null;
+
+  return (
+    <div id="checkpoint-bar">
+      {Object.entries(CHECKPOINTS).map(([id, checkpoint]) => (
+        <div className={`checkpoint${currentPlayer.checkpoints?.[id] ? " reached" : ""}`} id={`cp-${id}`} key={id}>
+          <div className="checkpoint-dot" /> {checkpoint.name}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LogPanel() {
+  const entries = state.gameState.log || [];
+
+  return (
+    <div id="log-panel">
+      <div className="panel-title">Hendelseslogg</div>
+      <div className="log-entries">
+        {entries.slice(0, 30).map((entry, index) => (
+          <div className={`log-entry ${entry.type || ""}`} key={`${entry.msg}-${index}`}>
+            {entry.msg}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ActionPanel() {
+  return (
+    <div id="action-panel">
+      <div className="panel-title">Handlinger</div>
+      <ActionContent />
+    </div>
+  );
+}
+
+function ActionContent() {
+  if (!state.selectedTerritory) {
+    return (
+      <div id="action-content">
+        <p style={{ color: "var(--text-muted)", fontStyle: "italic", fontSize: "0.9rem" }}>Velg et område på kartet</p>
+        {isMvpGame() ? (
+          <div style={{ marginTop: "12px" }}>
+            <button className="action-btn" type="button" onClick={endTurn} disabled={!isMyTurn()}>
+              Avslutt tur
+            </button>
+          </div>
+        ) : <RollDicePrompt />}
+      </div>
+    );
+  }
+
+  const territory = TERRITORIES.find((item) => item.id === state.selectedTerritory);
+  const territoryState = state.gameState.territories[state.selectedTerritory];
+  if (!territory || !territoryState) return null;
+
+  const owner = findPlayerByOwner(territoryState.owner);
+  const currentPlayer = getCurrentPlayer();
+  const district = DISTRICTS[territory.district];
+
+  return (
+    <div id="action-content">
+      <div className="territory-info">
+        <div className="territory-name">{territory.name}</div>
+        <div className="territory-district">{district.name}</div>
+        <div className="territory-stats">
+          <div className="stat">
+            <span className="stat-label">Eier</span>
+            <span style={{ color: owner?.color || "#888" }}>{owner?.name || "Nøytral"}</span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">{isMvpGame() ? "Units" : "Bataljoner"}</span>
+            <span>{territoryState.units}</span>
+          </div>
+          {!isMvpGame() && (
+            <div className="stat">
+              <span className="stat-label">Pris</span>
+              <span style={{ color: "var(--gold)" }}>{territory.price} kr</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="action-buttons">
+        {isMvpGame() ? (
+          <button className="action-btn" type="button" onClick={endTurn} disabled={!isMyTurn()}>
+            Avslutt tur
+          </button>
+        ) : (
+          <TerritoryActions
+            territory={territory}
+            territoryState={territoryState}
+            currentPlayer={currentPlayer}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RollDicePrompt() {
+  if (!isMyTurn()) return null;
+  const currentPlayer = getCurrentPlayer();
+
+  return (
+    <div style={{ marginTop: "12px" }}>
+      {currentPlayer.diceRoll === null ? (
+        <button className="action-btn" type="button" onClick={rollDice}>🎲 Kast terning</button>
+      ) : (
+        <div style={{ color: "var(--gold)", marginBottom: "8px" }}>
+          Terning: {currentPlayer.diceRoll} ({currentPlayer.diceUsed} brukt)
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TerritoryActions({ territory, territoryState, currentPlayer }) {
+  if (!isMyTurn() || !currentPlayer) return null;
+
+  const myTerritory = territoryState.owner === currentPlayer.id;
+  const neutral = !territoryState.owner;
+  const enemy = territoryState.owner && territoryState.owner !== currentPlayer.id;
+  const adjacent = ADJACENCY[territory.id]?.some((id) => state.gameState.territories[id]?.owner === currentPlayer.id);
+
+  return (
+    <>
+      {!myTerritory ? (
+        <>
+          <button
+            className="action-btn"
+            type="button"
+            onClick={() => buyTerritory(territory.id)}
+            disabled={!neutral || currentPlayer.money < territory.price}
+          >
+            Kjøp av bank <span className="price">{territory.price} kr</span>
+          </button>
+          <button
+            className="action-btn"
+            type="button"
+            onClick={() => invadeTerritory(territory.id)}
+            disabled={!adjacent && currentPlayer.position !== territory.id}
+          >
+            ⚔ Invader {enemy ? `(${territoryState.units} bat.)` : `(nøytral: ${territoryState.units} bat.)`}
+          </button>
+        </>
+      ) : (
+        <button
+          className="action-btn"
+          type="button"
+          onClick={() => reinforceTerritory(territory.id)}
+          disabled={currentPlayer.units < 1}
+        >
+          + Forsterke <span className="price">{currentPlayer.units} tilgjengelig</span>
+        </button>
+      )}
+
+      {currentPlayer.diceRoll !== null && currentPlayer.diceUsed < currentPlayer.diceRoll && (
+        <button className="action-btn" type="button" onClick={() => moveToTerritory(territory.id)}>
+          🚶 Beveg hit ({currentPlayer.diceUsed + 1}/{currentPlayer.diceRoll})
+        </button>
+      )}
+    </>
+  );
+}
+
+function MissionCard() {
+  if (isMvpGame()) return null;
+  const myPlayer = state.gameState.players.find((player) => player.id === state.myPlayerId);
+  if (!myPlayer) return null;
+
+  const mission = MISSIONS.find((item) => item.id === myPlayer.mission);
+  const target = myPlayer.target ? state.gameState.players.find((player) => player.id === myPlayer.target) : null;
+  const text = state.missionRevealed
+    ? `${mission?.emoji} ${mission?.title}: ${mission?.desc}${mission?.id === "m8" && target ? ` (Mål: ${target.name})` : ""}`
+    : "Klikk for å se";
+
+  function toggleMission() {
+    state.missionRevealed = !state.missionRevealed;
+    notifyGameChanged();
+  }
+
+  return (
+    <div id="mission-card" onClick={toggleMission}>
+      <div className="mission-title">🎯 Ditt oppdrag</div>
+      <div className={`mission-text${state.missionRevealed ? "" : " mission-hidden"}`}>{text}</div>
+    </div>
+  );
+}
+
+function GameModal() {
+  if (!state.modal) return null;
+
+  if (state.modal.type === "dice") return <DiceModal result={state.modal.result} />;
+  if (state.modal.type === "rent") return <RentModal modal={state.modal} />;
+  if (state.modal.type === "win") return <WinModal modal={state.modal} />;
+  return null;
+}
+
+function DiceModal({ result }) {
+  return (
+    <div id="dice-display" style={{ display: "block" }}>
+      <div className="dice-title">Kampoppgjør</div>
+      <div style={{ marginBottom: "8px", fontSize: "0.85rem", color: "var(--text-muted)" }}>
+        <span>{result.attackerName || "Angriper"}</span> vs <span>{result.defenderName || "Forsvarer"}</span>
+      </div>
+      <div className="dice-row">
+        {(result.attackerDice || []).map((die, index) => <div className="die attacker" key={`a-${index}`}>{DICE_FACES[die]}</div>)}
+      </div>
+      <div style={{ fontSize: "0.75rem", color: "var(--red)", marginBottom: "4px" }}>↑ Angriper</div>
+      <div className="dice-row">
+        {(result.defenderDice || []).map((die, index) => <div className="die defender" key={`d-${index}`}>{DICE_FACES[die]}</div>)}
+      </div>
+      <div style={{ fontSize: "0.75rem", color: "var(--blue)", marginBottom: "12px" }}>↑ Forsvarer</div>
+      <div className="dice-result">
+        {result.attackerWins
+          ? `✅ Angriperen vinner! Forsvarer tapte ${result.defenderLost} bat.`
+          : `❌ Angrepet mislyktes. Angriper tapte ${result.attackerLost} bat.`}
+      </div>
+      <button className="btn" style={{ marginTop: "12px" }} type="button" onClick={clearModal}>Fortsett</button>
+    </div>
+  );
+}
+
+function RentModal({ modal }) {
+  function confirmRent() {
+    clearModal();
+    modal.onConfirm?.();
+  }
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal">
+        <h2>Leie</h2>
+        <p>
+          Du landet på <strong>{modal.territoryName}</strong>.<br />
+          Leie: <span style={{ color: "var(--gold)" }}>{modal.rent} kr</span>
+        </p>
+        {!modal.canPay && <p style={{ color: "#e87070" }}>Du har ikke råd! Tvangsangrep igangsettes.</p>}
+        <button className="btn primary" type="button" onClick={confirmRent}>
+          {modal.canPay ? `Betal ${modal.rent} kr` : "Angrip i stedet"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function WinModal({ modal }) {
+  return (
+    <div className="modal-overlay">
+      <div className="modal end-game-modal">
+        <h2>🏆 Spillet er over!</h2>
+        <div className="winner" style={{ color: modal.player.color }}>{modal.player.name} vinner!</div>
+        <p>
+          {modal.mission.emoji || ""} <strong>{modal.mission.title}</strong><br />
+          {modal.mission.desc || ""}
+        </p>
+        <button className="btn primary" type="button" onClick={() => location.reload()}>Nytt spill</button>
+      </div>
+    </div>
+  );
+}

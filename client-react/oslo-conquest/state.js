@@ -5,6 +5,7 @@ export const state = {
   myPlayerId: null,
   selectedTerritory: null,
   missionRevealed: false,
+  modal: null,
   ws: null,
   svgEl: null,
   mapTransform: { x: 0, y: 0, scale: 1 },
@@ -14,3 +15,31 @@ export const state = {
     startTx: 0, startTy: 0,
   },
 };
+
+const listeners = new Set();
+
+export function subscribe(listener) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+export function notifyGameChanged() {
+  for (const listener of listeners) listener(state);
+}
+
+export function notifySelectionChanged() {
+  notifyGameChanged();
+}
+
+export function notifyModalChanged() {
+  notifyGameChanged();
+}
+
+export function setModal(modal) {
+  state.modal = modal;
+  notifyModalChanged();
+}
+
+export function clearModal() {
+  setModal(null);
+}

@@ -2,7 +2,7 @@
 // Lobby-UI eies av Preact; denne modulen sender/mottar meldinger og rapporterer
 // status tilbake via callbacks.
 
-import { state } from './state.js';
+import { notifyGameChanged, state } from './state.js';
 import { createInitialGameState } from './game-state.js';
 import { renderGame } from './ui.js';
 import { showDiceResult } from './dice.js';
@@ -37,6 +37,7 @@ function handleGameState(nextState) {
   }
 
   renderGame();
+  notifyGameChanged();
 }
 
 function handleMessage(rawMessage) {
@@ -47,6 +48,7 @@ function handleMessage(rawMessage) {
   } else if (msg.type === 'action_result') {
     state.gameState = msg.state;
     renderGame();
+    notifyGameChanged();
     if (msg.dice) showDiceResult(msg.dice);
   } else if (msg.type === 'room_list') {
     emit('onRooms', msg.rooms || []);
@@ -165,5 +167,6 @@ export function startLocalGame({ name, handlers: nextHandlers } = {}) {
   showGameContainer();
   emit('onGameStarted', state.gameState);
   initMap();
+  notifyGameChanged();
   return true;
 }

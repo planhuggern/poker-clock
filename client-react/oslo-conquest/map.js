@@ -2,9 +2,8 @@
 // Håndterer også pan (dra kartet rundt) og zoom (scroll), og tooltip når du holder over et område.
 
 import { TERRITORIES, DISTRICTS, CHECKPOINTS } from './game-data.js';
-import { state } from './state.js';
+import { notifySelectionChanged, state } from './state.js';
 import { findPlayerByOwner } from './game-state.js';
-import { renderHUD, renderActionPanel, renderCheckpointBar } from './ui.js';
 import mapData from './map.json';
 
 export const MAP_W = 900;
@@ -248,8 +247,6 @@ export function initMap() {
     fitMapToContainer();
     setupMapInteraction(container, svg);
     updateTerritoryVisuals();
-    renderHUD();
-    renderCheckpointBar();
   });
 }
 
@@ -393,5 +390,5 @@ export function updateTerritoryVisuals() {
 export function selectTerritory(tid) {
   state.selectedTerritory = tid;
   updateTerritoryVisuals();
-  renderActionPanel();
+  notifySelectionChanged();
 }

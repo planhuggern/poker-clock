@@ -19,7 +19,7 @@
 
 **Desired architecture:** Preact + SVG.js, JSX, CSS — still built with Vite as its own entry point.
 
-**Migration status:** Preact, `@preact/preset-vite`, and SVG.js are installed. `index.html` now loads `main.jsx`; the lobby is rendered by Preact in `App.jsx`, while the active game view still uses the existing imperative DOM/native SVG modules.
+**Migration status:** Preact, `@preact/preset-vite`, and SVG.js are installed. `index.html` now loads `main.jsx`; lobby and game UI are rendered by Preact, while the map still uses the existing imperative native SVG module.
 
 The desired direction is to migrate Oslo Conquest from imperative DOM rendering to a small Preact app:
 - Preact owns application shell, lobby, HUD, panels, modals, and render state.
@@ -32,18 +32,19 @@ The desired direction is to migrate Oslo Conquest from imperative DOM rendering 
 | Fil | Ansvar |
 |---|---|
 | `index.html` | Entry point; mounts Preact lobby and keeps the existing game container |
-| `main.jsx` | Active bootstrap: mounts Preact lobby and exposes temporary globals for existing game controls |
-| `main.js` | Legacy bootstrap kept temporarily for reference until game controls are migrated |
-| `state.js` | Current global mutable object; desired replacement is Preact state/context plus small pure state helpers |
+| `main.jsx` | Active bootstrap: mounts the Preact app and keeps map resize handling |
+| `main.js` | Legacy bootstrap kept temporarily for reference |
+| `state.js` | Shared mutable game state plus subscription/modal notifications for Preact |
 | `game-data.js` | Konstanter: 16 bydeler, 35 territorier, 11 oppdrag, 6 spillerfarger, adjacency-graf, checkpoints |
 | `game-state.js` | Spillinitialisering, tur-/spillerqueries |
-| `actions.js` | Spillmutasjoner; should remain UI-independent and easy to test |
+| `actions.js` | Spillmutasjoner; still mutates shared state and notifies Preact through adapters |
 | `missions.js` | Seiersvilkår — kalles etter hver handling |
 | `map.js` | Current native SVG render; desired replacement is SVG.js map adapter/component |
 | `map.json` | Forhåndsberegnet polygon-data for territorier og bydelsgrenser |
-| `ui.js` | Current imperative game HUD rendering; desired replacement is Preact components |
-| `dice.js` | Kamptærning-modal |
-| `modals.js` | Leie-modal, seiersskjerm-modal |
+| `GameUI.jsx` | Preact-rendered HUD, action panel, log, mission card, checkpoints, and modal host |
+| `ui.js` | Transitional adapter for logging and notifying Preact; no active HUD DOM rendering |
+| `dice.js` | Dice modal state adapter |
+| `modals.js` | Rent/win modal state adapters |
 | `websocket.js` | WebSocket client; lobby reports status/rooms through callbacks to Preact |
 | `style.css` | Mørkt tema (`#0d0d0f` bakgrunn, `#c9a84c` gull-aksenter), Cinzel Decorative + Crimson Pro |
 | `map-editor.html` | Dev-verktøy for å tegne territoriepolygoner |

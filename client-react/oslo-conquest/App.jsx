@@ -6,6 +6,7 @@ import {
   refreshRooms,
   startLocalGame,
 } from "./websocket.js";
+import { GameUI } from "./GameUI.jsx";
 
 const DEFAULT_WS_URL = "ws://localhost:8000/ws/oslo-conquest/";
 
@@ -62,7 +63,7 @@ export function App() {
     startLocalGame({ name: playerName, handlers });
   }
 
-  if (inGame) return null;
+  if (inGame) return <GameUI />;
 
   return (
     <div id="lobby">

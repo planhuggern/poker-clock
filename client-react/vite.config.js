@@ -7,7 +7,7 @@ import { resolve } from "path";
 const osloConquestJsx = /oslo-conquest[\\/].*\.jsx$/;
 
 export default defineConfig({
-  base: "/",
+  base: "./",
   plugins: [
     react({ exclude: osloConquestJsx }),
     ...preact({

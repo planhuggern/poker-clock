@@ -12,6 +12,7 @@ register_spa(base, api_module) gir:
   - /  <base>/*         →  React SPA (server/public/<base>/index.html)
 """
 from pathlib import Path
+import mimetypes
 
 from django.conf import settings
 from django.http import FileResponse, HttpRequest, HttpResponse
@@ -48,6 +49,17 @@ def _spa_view(app_name: str):
     return view
 
 
+def _public_asset_view(request: HttpRequest, asset_path: str) -> HttpResponse:
+    """Serve Vite-built shared assets from server/public/assets/."""
+    asset_root = (Path(settings.BASE_DIR) / "public" / "assets").resolve()
+    asset = (asset_root / asset_path).resolve()
+    if not asset.is_file() or asset_root not in asset.parents:
+        return HttpResponse("Asset not found", status=404)
+
+    content_type, _ = mimetypes.guess_type(asset.name)
+    return FileResponse(open(asset, "rb"), content_type=content_type or "application/octet-stream")
+
+
 def register_spa(base: str, api_module: str) -> list:
     """
     Registrer en fullstack-app under /<base>/.
@@ -76,6 +88,7 @@ if _base:
     # Prod / sub-path hosting: poker-clock montert under /<base>/
     urlpatterns = [
         path("", _home_view),
+        re_path(r"^assets/(?P<asset_path>.+)$", _public_asset_view),
         *register_spa(_base, "clock.urls"),
         *register_spa("oslo-conquest", "oslo_conquest.urls"),
         path("trading/", include("trading.urls")),
@@ -85,6 +98,7 @@ else:
     from clock.urls import urlpatterns as _clock_urls  # noqa: E402
     urlpatterns = [
         path("", _home_view),
+        re_path(r"^assets/(?P<asset_path>.+)$", _public_asset_view),
         *_clock_urls,
         *register_spa("oslo-conquest", "oslo_conquest.urls"),
         path("trading/", include("trading.urls")),
