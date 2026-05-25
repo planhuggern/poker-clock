@@ -1,24 +1,149 @@
 # CLAUDE.md
 
 @AGENTS.md
-@memory/frontend/CLAUDE.md
-@memory/spec/CLAUDE.md
+@memory/frontend.md
+@memory/oslo-conquest-spec.md
 
-## Development strategy
+This file contains Claude-specific runtime optimisations and supplements the shared project instructions in `AGENTS.md`.
 
-### Iterations
-- Each task should produce something runnable. No half-finished features — a small thing that works beats a large thing that doesn't.
-- Prefer vertical slices: one complete feature end-to-end (backend + frontend + test) per iteration rather than horizontal layers.
-- Commit after each green iteration.
+The primary workflow source of truth is:
 
-### TDD
-- Write the test first, watch it fail, then implement.
-- For Django: pytest-django integration tests that hit the real DB and channel layer — no mocking.
-- For frontend logic (game rules, state mutations): unit tests against pure functions in `game-data.js`, `game-state.js`, `actions.js`, `missions.js`.
-- Tests live next to the code they cover. A feature is done when the tests are green.
+```txt
+.ai/workflows/
+```
 
-### Agents
-- Use parallel agents for independent subtasks: one agent per layer (backend consumer, frontend component, tests) when the interfaces are already agreed on.
-- Always define the interface (WebSocket message shape, function signature, component props) before splitting into parallel agents — otherwise agents block each other.
-- Agents should produce working, tested code. No research-only agents unless the problem is genuinely unknown.
-- After parallel agents finish, integrate and run the full test suite before moving on.
+Preferred feature workflow:
+
+```txt
+.ai/workflows/feature.workflow.md
+```
+
+---
+
+# Claude Runtime Guidance
+
+If the runtime supports sub-agents:
+- use separate agents for:
+  - analysis,
+  - architecture,
+  - implementation,
+  - review,
+  - testing.
+
+If the runtime supports parallel execution:
+- parallelise independent tasks only after interfaces are agreed upon.
+
+If the runtime supports dedicated review/refactoring skills:
+- use them during the refactoring phase.
+
+If `/simplify` is available:
+- run it on changed files during the refactoring review phase.
+
+Do not skip approval checkpoints defined in workflows.
+
+---
+
+# Development strategy
+
+## Iterations
+
+- Each task should produce something runnable.
+- No half-finished features.
+- A small thing that works beats a large thing that doesn't.
+- Prefer vertical slices:
+  - one complete feature end-to-end
+  - backend + frontend + tests
+  - per iteration.
+- Commit after each green iteration when commit support exists.
+
+## TDD
+
+- Write the test first.
+- Watch it fail.
+- Implement the minimal required code.
+- Run tests again.
+- Iterate until green.
+
+### Backend testing
+
+Prefer:
+- pytest-django integration tests,
+- real DB access,
+- real channel layer behaviour.
+
+Avoid mocking unless isolation is necessary.
+
+### Frontend testing
+
+Prefer unit tests for:
+- game rules,
+- state mutations,
+- reducers,
+- actions,
+- derived state logic.
+
+Current frontend-focused modules include:
+- `game-data.js`
+- `game-state.js`
+- `actions.js`
+- `missions.js`
+
+Tests should live close to the code they cover.
+
+A feature is not complete until relevant tests are green.
+
+---
+
+# Agents
+
+Use parallel agents only for independent subtasks.
+
+Examples:
+- backend consumer,
+- frontend component,
+- tests,
+- websocket protocol implementation.
+
+Before parallelisation:
+- define interfaces first,
+- agree on:
+  - websocket message shapes,
+  - function signatures,
+  - component props,
+  - shared contracts.
+
+Avoid splitting work before interfaces are stable.
+
+Agents should:
+- produce working code,
+- produce tested code,
+- avoid research-only output unless the problem is genuinely unknown.
+
+After parallel work completes:
+- integrate changes,
+- run the full relevant test suite,
+- verify behaviour end-to-end before continuing.
+
+---
+
+# Architecture expectations
+
+Prefer:
+- explicit boundaries,
+- modular code,
+- low coupling,
+- readable state transitions,
+- deterministic websocket behaviour,
+- minimal hidden state.
+
+Avoid:
+- large rewrites,
+- speculative abstractions,
+- duplicated websocket logic,
+- mixing transport logic with domain logic,
+- blocking async consumers.
+
+Keep:
+- websocket protocols explicit,
+- state mutation paths understandable,
+- server/client responsibilities clearly separated.

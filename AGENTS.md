@@ -1,7 +1,12 @@
-````md
 # Poker-Clock – Project
 
-Multi-app portal: `poker-clock` (tournament clock) and `oslo-conquest` (strategy game) share the same Django backend and static file server.
+Multi-app portal:
+
+- `poker-clock` (tournament clock)
+- `oslo-conquest` (strategy game)
+- `trading` (trading dashboard)
+
+share the same Django backend and static file server.
 
 ---
 
@@ -38,6 +43,16 @@ Before implementation:
 2. Identify the current phase.
 3. Summarise the goal briefly.
 4. Continue only if the previous phase has been approved.
+
+## Shared project memory
+
+Additional model-agnostic project context lives in:
+
+- `memory/frontend.md` — frontend architecture notes for the portal apps
+- `memory/oslo-conquest-spec.md` — Oslo Conquest game rules, state model, and WebSocket API
+
+Legacy `memory/*/CLAUDE.md` files are compatibility wrappers that point to
+these shared files.
 
 ## Coding philosophy
 
