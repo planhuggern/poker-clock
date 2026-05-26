@@ -64,6 +64,9 @@ export const TERRITORIES = [
   { id: 't33', name: 'Nordstrand sentrum',district: 'nordstrand',        price: 320, neutralUnits: 2, x: 0.56, y: 0.76 },
   { id: 't34', name: 'Holmlia',           district: 'søndre-nordstrand', price: 240, neutralUnits: 1, x: 0.55, y: 0.82 },
   { id: 't35', name: 'Mortensrud',        district: 'søndre-nordstrand', price: 220, neutralUnits: 1, x: 0.59, y: 0.80 },
+  { id: 'lørenskog_cp', name: 'Lørenskog', type: 'checkpoint', checkpoint: 'lørenskog', x: 0.82, y: 0.50 },
+  { id: 'lysaker_cp',   name: 'Lysaker',   type: 'checkpoint', checkpoint: 'lysaker',   x: 0.24, y: 0.60 },
+  { id: 'kolbotn_cp',   name: 'Kolbotn',   type: 'checkpoint', checkpoint: 'kolbotn',   x: 0.62, y: 0.88 },
 ];
 
 // Hvilke territorier som grenser til hverandre — beregnet automatisk fra kartpolygonene.
@@ -84,9 +87,9 @@ export const ADJACENCY = {
   't12': ['t0a', 't0b', 't11', 't13', 't14'],
   't13': ['t12', 't14'],
   't14': ['t11', 't12', 't13', 't15', 't16', 't17'],
-  't15': ['t14', 't17'],
+  't15': ['t14', 't17', 'lysaker_cp'],
   't16': ['t11', 't14', 't17', 't20'],
-  't17': ['t14', 't15', 't16', 't18'],
+  't17': ['t14', 't15', 't16', 't18', 'lysaker_cp'],
   't18': ['t17'],
   't19': ['t6', 't7', 't8', 't20', 't21', 't22', 't23'],
   't20': ['t7', 't8', 't10', 't11', 't16', 't19', 't21'],
@@ -95,16 +98,19 @@ export const ADJACENCY = {
   't23': ['t19', 't22', 't25', 't28', 't29'],
   't24': ['t25', 't26'],
   't25': ['t23', 't24', 't26', 't28'],
-  't26': ['t24', 't25', 't27', 't28'],
-  't27': ['t26', 't28'],
-  't28': ['t23', 't25', 't26', 't27', 't29'],
+  't26': ['t24', 't25', 't27', 't28', 'lørenskog_cp'],
+  't27': ['t26', 't28', 'lørenskog_cp'],
+  't28': ['t23', 't25', 't26', 't27', 't29', 'lørenskog_cp'],
   't29': ['t3', 't6', 't22', 't23', 't28', 't30', 't31'],
   't30': ['t2', 't3', 't29', 't31', 't32', 't33', 't35'],
   't31': ['t29', 't30'],
   't32': ['t30', 't33', 't34', 't35'],
   't33': ['t2', 't30', 't32'],
-  't34': ['t32', 't35'],
-  't35': ['t30', 't32', 't34'],
+  't34': ['t32', 't35', 'kolbotn_cp'],
+  't35': ['t30', 't32', 't34', 'kolbotn_cp'],
+  'lørenskog_cp': ['t26', 't27', 't28'],
+  'lysaker_cp': ['t17', 't15'],
+  'kolbotn_cp': ['t35', 't34'],
 };
 
 // De tre runde-sjekkpunktene spillere må innom for å få bonusen på 500 kr + 3 bat.

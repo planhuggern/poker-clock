@@ -86,6 +86,10 @@ function buyTerritory(draft, cp, territoryId, log, sendState, events) {
   const territory = TERRITORIES.find((item) => item.id === territoryId);
   const territoryState = draft.territories[territoryId];
   if (!territory || !territoryState) return;
+  if (isCheckpointTerritory(territory)) {
+    log(draft, 'Checkpoint er friområde og kan ikke kjøpes');
+    return;
+  }
 
   if (territoryState.owner) { log(draft, 'Området er allerede eid'); return; }
   if (cp.money < territory.price) { log(draft, 'Ikke nok penger'); return; }
@@ -105,6 +109,10 @@ function invadeTerritory(draft, cp, territoryId, context, log, sendState, events
   const territory = TERRITORIES.find((item) => item.id === territoryId);
   const territoryState = draft.territories[territoryId];
   if (!territory || !territoryState) return;
+  if (isCheckpointTerritory(territory)) {
+    log(draft, 'Checkpoint er friområde og kan ikke angripes');
+    return;
+  }
 
   if (territoryState.owner === cp.id) { log(draft, 'Du eier allerede dette området'); return; }
   if (cp.units < 1) { log(draft, 'Ingen bataljoner til invasjon'); return; }
@@ -172,6 +180,10 @@ function reinforceTerritory(draft, cp, territoryId, log, sendState) {
   const territoryState = draft.territories[territoryId];
   const territory = TERRITORIES.find((item) => item.id === territoryId);
   if (!territoryState || !territory) return;
+  if (isCheckpointTerritory(territory)) {
+    log(draft, 'Checkpoint er friområde og kan ikke forsterkes');
+    return;
+  }
 
   if (cp.units < 1) { log(draft, 'Ingen bataljoner å forsterke med'); return; }
   if (territoryState.owner !== cp.id) { log(draft, 'Du eier ikke dette området'); return; }
@@ -188,14 +200,18 @@ function moveToTerritory(draft, cp, territoryId, events, context, log, sendState
   cp.diceUsed += 1;
   cp.position = territoryId;
 
-  if (territoryId === 'lysaker_cp') cp.checkpoints.lysaker = true;
-  if (territoryId === 'kolbotn_cp') cp.checkpoints.kolbotn = true;
-
   const territory = TERRITORIES.find((item) => item.id === territoryId);
+  if (territory?.checkpoint) cp.checkpoints[territory.checkpoint] = true;
+
   const territoryState = draft.territories[territoryId];
   if (!territory || !territoryState) return;
 
   log(draft, `${cp.name} beveger seg til ${territory.name} (${cp.diceUsed}/${cp.diceRoll})`);
+
+  if (isCheckpointTerritory(territory)) {
+    sendState();
+    return;
+  }
 
   if (cp.diceUsed === cp.diceRoll && territoryState.owner && territoryState.owner !== cp.id) {
     const rent = Math.floor(territory.price * 0.15);
@@ -220,6 +236,10 @@ function payRent(draft, cp, territoryId, context, log, sendState, events) {
   const territory = TERRITORIES.find((item) => item.id === territoryId);
   const territoryState = draft.territories[territoryId];
   if (!territory || !territoryState) return;
+  if (isCheckpointTerritory(territory)) {
+    log(draft, 'Checkpoint er friområde og har ingen leie');
+    return;
+  }
 
   const rent = Math.floor(territory.price * 0.15);
   if (cp.money < rent) {
@@ -333,4 +353,8 @@ function isMyTurn(gameState, playerId) {
 
 function isMvpGame(gameState) {
   return Boolean(gameState?.activePlayer);
+}
+
+function isCheckpointTerritory(territory) {
+  return territory?.type === 'checkpoint';
 }

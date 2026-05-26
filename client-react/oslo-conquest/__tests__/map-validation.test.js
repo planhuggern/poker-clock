@@ -16,12 +16,13 @@ function sharePoint(ptsA, ptsB, tol = 2) {
 }
 
 const territoryIds = new Set(TERRITORIES.map(t => t.id));
+const shapedTerritoryIds = new Set(TERRITORIES.filter(t => t.type !== 'checkpoint').map(t => t.id));
 const shapeIds = new Set(Object.keys(territoryShapes));
 const adjacencyIds = new Set(Object.keys(ADJACENCY));
 
 describe('H1: ID-konsistens', () => {
   it('alle TERRITORIES-IDer finnes i territoryShapes', () => {
-    expect([...territoryIds].filter(id => !shapeIds.has(id))).toEqual([]);
+    expect([...shapedTerritoryIds].filter(id => !shapeIds.has(id))).toEqual([]);
   });
 
   it('alle TERRITORIES-IDer finnes i ADJACENCY', () => {
@@ -34,6 +35,14 @@ describe('H1: ID-konsistens', () => {
 
   it('alle ADJACENCY-IDer finnes i TERRITORIES', () => {
     expect([...adjacencyIds].filter(id => !territoryIds.has(id))).toEqual([]);
+  });
+});
+
+describe('Checkpoint-friområder', () => {
+  it('har eksplisitte landbare nabolister', () => {
+    expect(ADJACENCY.kolbotn_cp).toEqual(expect.arrayContaining(['t35', 't34']));
+    expect(ADJACENCY.lørenskog_cp).toEqual(expect.arrayContaining(['t26', 't27', 't28']));
+    expect(ADJACENCY.lysaker_cp).toEqual(expect.arrayContaining(['t17', 't15']));
   });
 });
 

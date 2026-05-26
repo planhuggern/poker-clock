@@ -167,26 +167,36 @@ function ActionContent({ dispatchGameAction }) {
   const owner = findPlayerByOwner(territoryState.owner);
   const currentPlayer = getCurrentPlayer();
   const district = DISTRICTS[territory.district];
+  const isCheckpoint = territory.type === "checkpoint";
 
   return (
     <div id="action-content">
       <div className="territory-info">
         <div className="territory-name">{territory.name}</div>
-        <div className="territory-district">{district.name}</div>
+        <div className="territory-district">{isCheckpoint ? "Checkpoint · friområde" : district.name}</div>
         <div className="territory-stats">
           <div className="stat">
-            <span className="stat-label">Eier</span>
-            <span style={{ color: owner?.color || "#888" }}>{owner?.name || "Nøytral"}</span>
+            <span className="stat-label">{isCheckpoint ? "Status" : "Eier"}</span>
+            <span style={{ color: owner?.color || "#888" }}>{isCheckpoint ? "Friområde" : owner?.name || "Nøytral"}</span>
           </div>
-          <div className="stat">
-            <span className="stat-label">{isMvpGame() ? "Units" : "Bataljoner"}</span>
-            <span>{territoryState.units}</span>
-          </div>
-          {!isMvpGame() && (
+          {isCheckpoint ? (
             <div className="stat">
-              <span className="stat-label">Pris</span>
-              <span style={{ color: "var(--gold)" }}>{territory.price} kr</span>
+              <span className="stat-label">Regel</span>
+              <span>Trygt område</span>
             </div>
+          ) : (
+            <>
+              <div className="stat">
+                <span className="stat-label">{isMvpGame() ? "Units" : "Bataljoner"}</span>
+                <span>{territoryState.units}</span>
+              </div>
+              {!isMvpGame() && (
+                <div className="stat">
+                  <span className="stat-label">Pris</span>
+                  <span style={{ color: "var(--gold)" }}>{territory.price} kr</span>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -229,10 +239,20 @@ function RollDicePrompt({ dispatchGameAction }) {
 function TerritoryActions({ territory, territoryState, currentPlayer, dispatchGameAction }) {
   if (!isMyTurn() || !currentPlayer) return null;
 
+  const isCheckpoint = territory.type === "checkpoint";
   const myTerritory = territoryState.owner === currentPlayer.id;
   const neutral = !territoryState.owner;
   const enemy = territoryState.owner && territoryState.owner !== currentPlayer.id;
   const adjacent = ADJACENCY[territory.id]?.some((id) => state.gameState.territories[id]?.owner === currentPlayer.id);
+  const canMove = currentPlayer.diceRoll !== null && currentPlayer.diceUsed < currentPlayer.diceRoll;
+
+  if (isCheckpoint) {
+    return canMove ? (
+      <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: "move_to_territory", territoryId: territory.id })}>
+        🚶 Beveg hit ({currentPlayer.diceUsed + 1}/{currentPlayer.diceRoll})
+      </button>
+    ) : null;
+  }
 
   return (
     <>
@@ -266,7 +286,7 @@ function TerritoryActions({ territory, territoryState, currentPlayer, dispatchGa
         </button>
       )}
 
-      {currentPlayer.diceRoll !== null && currentPlayer.diceUsed < currentPlayer.diceRoll && (
+      {canMove && (
         <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: "move_to_territory", territoryId: territory.id })}>
           🚶 Beveg hit ({currentPlayer.diceUsed + 1}/{currentPlayer.diceRoll})
         </button>

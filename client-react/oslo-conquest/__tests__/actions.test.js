@@ -54,6 +54,15 @@ describe('buy_territory', () => {
     expect(result.state.territories.t3.owner).toBeNull();
     expect(result.state.players[0].money).toBe(100);
   });
+
+  it('avviser kjøp av checkpoint-friområde', () => {
+    const moneyBefore = gameState.players[0].money;
+    const result = reduce({ type: 'buy_territory', territoryId: 'lysaker_cp' });
+
+    expect(result.state.territories.lysaker_cp.owner).toBeNull();
+    expect(result.state.players[0].money).toBe(moneyBefore);
+    expect(result.events).toContainEqual({ type: 'log', message: 'Checkpoint er friområde og kan ikke kjøpes', level: '' });
+  });
 });
 
 describe('invade_territory', () => {
@@ -90,6 +99,42 @@ describe('invade_territory', () => {
       expect.objectContaining({ type: 'modal', modal: expect.objectContaining({ type: 'dice' }) }),
       { type: 'send_state' },
     ]));
+  });
+
+  it('avviser angrep på checkpoint-friområde', () => {
+    gameState.territories.t15.owner = 'p1';
+    const unitsBefore = gameState.players[0].units;
+
+    const result = reduce({ type: 'invade_territory', territoryId: 'lysaker_cp' });
+
+    expect(result.state.players[0].units).toBe(unitsBefore);
+    expect(result.state.territories.lysaker_cp.owner).toBeNull();
+    expect(result.events).toContainEqual({ type: 'log', message: 'Checkpoint er friområde og kan ikke angripes', level: '' });
+  });
+});
+
+describe('checkpoint movement', () => {
+  it('lar spiller lande på checkpoint og markerer checkpointet', () => {
+    gameState.players[0].diceRoll = 1;
+    gameState.players[0].diceUsed = 0;
+    gameState.players[0].position = 't15';
+
+    const result = reduce({ type: 'move_to_territory', territoryId: 'lysaker_cp' });
+
+    expect(result.state.players[0].position).toBe('lysaker_cp');
+    expect(result.state.players[0].checkpoints.lysaker).toBe(true);
+    expect(result.state.players[0].diceUsed).toBe(1);
+    expect(result.events).toContainEqual({ type: 'send_state' });
+  });
+
+  it('avviser forsterkning av checkpoint-friområde', () => {
+    const unitsBefore = gameState.players[0].units;
+
+    const result = reduce({ type: 'reinforce_territory', territoryId: 'kolbotn_cp' });
+
+    expect(result.state.players[0].units).toBe(unitsBefore);
+    expect(result.state.territories.kolbotn_cp.units).toBe(0);
+    expect(result.events).toContainEqual({ type: 'log', message: 'Checkpoint er friområde og kan ikke forsterkes', level: '' });
   });
 });
 

@@ -89,8 +89,10 @@ function setTooltipText(tooltip, territory, gameState) {
   const owner = findPlayerByOwner(territoryState?.owner);
   const district = DISTRICTS[territory.district];
   tooltip.title.text(territory.name);
-  tooltip.district.text(district?.name || '');
-  tooltip.owner.text(`${owner?.name || 'Nøytral'} · ${territoryState?.units || 0} units`);
+  tooltip.district.text(territory.type === 'checkpoint' ? 'Checkpoint · friområde' : district?.name || '');
+  tooltip.owner.text(territory.type === 'checkpoint'
+    ? 'Trygt område · ingen eier'
+    : `${owner?.name || 'Nøytral'} · ${territoryState?.units || 0} units`);
   tooltip.owner.attr({ fill: owner?.color || '#888' });
 }
 
@@ -182,17 +184,51 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
   const checkpointGroup = draw.group().attr({ id: 'checkpoint-layer' });
   for (const [checkpointId, checkpoint] of Object.entries(CHECKPOINTS)) {
     const [cx, cy] = CHECKPOINT_POS[checkpointId];
-    const group = checkpointGroup.group().attr({ filter: 'url(#cp-glow)' });
-    group.svg(`
-      <polygon points="${cx},${cy - 22} ${cx + 16},${cy} ${cx},${cy + 22} ${cx - 16},${cy}" fill="rgba(255,215,0,0.12)" stroke="#ffd700" stroke-width="1.8"/>
-      <circle cx="${cx}" cy="${cy}" r="3.5" fill="#ffd700"/>
-      <text class="checkpoint-label" x="${cx}" y="${cy + 36}">${checkpoint.name}</text>
-      <text class="checkpoint-label" x="${cx}" y="${cy + 48}" style="font-size:7px;fill:rgba(255,215,0,0.6)">${checkpointId === 'lørenskog' ? 'START' : 'CHECKPOINT'}</text>
-    `);
+    const territoryId = `${checkpointId}_cp`;
+    const territory = TERRITORIES.find((item) => item.id === territoryId);
+    if (!territory) continue;
+
+    const group = checkpointGroup.group().attr({
+      id: `terr-${territoryId}`,
+      class: 'svg-territory checkpoint-territory',
+      'data-id': territoryId,
+      filter: 'url(#cp-glow)',
+    });
+    const poly = group.polygon(`${cx},${cy - 22} ${cx + 16},${cy} ${cx},${cy + 22} ${cx - 16},${cy}`).attr({
+      class: 'terr-poly',
+      fill: 'rgba(255,215,0,0.12)',
+      stroke: '#ffd700',
+      'stroke-width': 1.8,
+      'stroke-dasharray': 'none',
+      'pointer-events': 'all',
+    });
+    group.circle(7).center(cx, cy).fill('#ffd700');
+    group.text(checkpoint.name).attr({ class: 'checkpoint-label', x: cx, y: cy + 36 });
+    group.text(checkpointId === 'lørenskog' ? 'START' : 'CHECKPOINT').attr({
+      class: 'checkpoint-label',
+      x: cx,
+      y: cy + 48,
+      style: 'font-size:7px;fill:rgba(255,215,0,0.6)',
+    });
+
+    group.on('mouseenter', (event) => {
+      setTooltipText(tooltip, territory, currentGameState);
+      tooltip.group.show();
+      moveTooltip(event);
+    });
+    group.on('mousemove', moveTooltip);
+    group.on('mouseleave', () => tooltip.group.hide());
+    group.on('pointerup', () => {
+      if (panState.hasMoved) return;
+      onSelectTerritory?.(territoryId);
+    });
+
+    territoryNodes.set(territoryId, { group, poly, units: null });
   }
 
   const territoryGroup = draw.group().attr({ id: 'territory-layer' });
   for (const territory of TERRITORIES) {
+    if (territory.type === 'checkpoint') continue;
     const pathD = mapData.territoryShapes[territory.id];
     const pos = TERRITORY_POS[territory.id];
     if (!pathD || !pos) continue;
@@ -281,6 +317,19 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
       if (!nodes) continue;
 
       const territoryState = currentGameState.territories[territory.id];
+      const isSelected = currentSelectedTerritory === territory.id;
+      if (territory.type === 'checkpoint') {
+        if (isSelected) nodes.group.addClass('selected');
+        else nodes.group.removeClass('selected');
+        nodes.poly.attr({
+          fill: isSelected ? 'rgba(255,215,0,0.22)' : 'rgba(255,215,0,0.12)',
+          stroke: isSelected ? 'rgba(255,215,0,0.95)' : '#ffd700',
+          'stroke-width': isSelected ? 2.4 : 1.8,
+          filter: isSelected ? 'url(#sel-glow)' : '',
+        });
+        continue;
+      }
+
       const owner = findPlayerByOwner(territoryState?.owner);
       if (owner) {
         nodes.poly.attr({
@@ -298,9 +347,8 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
         });
       }
 
-      nodes.units.text(String(territoryState?.units || 0));
+      nodes.units?.text(String(territoryState?.units || 0));
 
-      const isSelected = currentSelectedTerritory === territory.id;
       if (isSelected) {
         nodes.group.addClass('selected');
         nodes.poly.attr({
