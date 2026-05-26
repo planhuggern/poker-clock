@@ -128,99 +128,153 @@ export function App() {
   return (
     <div id="lobby">
       <div className="lobby-card">
-        <h1 className="title">Oslo Conquest</h1>
-        <p className="subtitle">Krig, handel og makt i Norges hjerte</p>
-
-        <div className="ws-status">
-          <div className={`ws-dot${connectionStatus === "connected" ? " connected" : ""}`} />
-          <span>{connectionStatus === "connected" ? "Tilkoblet" : connectionStatus === "connecting" ? "Kobler til..." : "Frakoblet"}</span>
-        </div>
-        <div className={`lobby-status${lobbyStatus.isError ? " error" : ""}`}>{lobbyStatus.message}</div>
-
-        <div className="form-group">
-          <label htmlFor="ws-url">WebSocket server</label>
-          <input
-            type="text"
-            id="ws-url"
-            value={wsUrl}
-            placeholder="ws://..."
-            onInput={(event) => setWsUrl(event.currentTarget.value)}
+        <LobbyHeader />
+        <div className="lobby-grid">
+          <LobbyConnectionColumn
+            connectionStatus={connectionStatus}
+            wsUrl={wsUrl}
+            setWsUrl={setWsUrl}
+            playerName={playerName}
+            setPlayerName={setPlayerName}
+            roomId={roomId}
+            setRoomId={setRoomId}
+            handleConnect={handleConnect}
+            handleCreateGame={handleCreateGame}
+            handleJoinGame={handleJoinGame}
+          />
+          <LobbyRoomsColumn
+            lobbyStatus={lobbyStatus}
+            rooms={rooms}
+            roomId={roomId}
+            handleRefreshRooms={handleRefreshRooms}
+            handleSelectRoom={handleSelectRoom}
+            handleStartLocalGame={handleStartLocalGame}
           />
         </div>
-        <button className="btn" type="button" onClick={handleConnect}>Koble til server</button>
-
-        <hr className="divider" />
-
-        <div className="form-group">
-          <label htmlFor="player-name">Ditt navn</label>
-          <input
-            type="text"
-            id="player-name"
-            value={playerName}
-            placeholder="Ola Nordmann"
-            maxLength={20}
-            onInput={(event) => setPlayerName(event.currentTarget.value)}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="room-id">Rom-ID</label>
-          <input
-            type="text"
-            id="room-id"
-            value={roomId}
-            placeholder="oslo-1"
-            maxLength={20}
-            onInput={(event) => setRoomId(event.currentTarget.value)}
-          />
-        </div>
-
-        <button className="btn primary" type="button" onClick={handleCreateGame}>Opprett spill</button>
-        <button className="btn" type="button" onClick={handleJoinGame}>Bli med i spill</button>
-
-        <hr className="divider" />
-
-        <div className="room-list-header">
-          <label>Aktive rom</label>
-          <button className="text-btn" type="button" onClick={handleRefreshRooms}>Oppdater</button>
-        </div>
-        <div className="room-list">
-          {rooms.length === 0 ? (
-            <div className="room-empty">Ingen aktive rom</div>
-          ) : rooms.map((room) => {
-            const unavailable = room.started || room.playerCount >= room.maxPlayers;
-            const selected = room.room === roomId;
-            return (
-              <button
-                className={`room-card${selected ? " selected" : ""}`}
-                type="button"
-                key={room.room}
-                disabled={unavailable}
-                onClick={() => handleSelectRoom(room.room)}
-              >
-                <div className="room-main">
-                  <span className="room-name">{room.room}</span>
-                  <span className={`room-status${unavailable ? " unavailable" : ""}`}>
-                    {unavailable ? "I gang" : "Venter på spiller"} · {room.playerCount}/{room.maxPlayers}
-                  </span>
-                </div>
-                <div className="room-players">{room.players?.join(", ") || "Ingen spillere"}</div>
-              </button>
-            );
-          })}
-        </div>
-
-        <hr className="divider" />
-
-        <button
-          className="btn"
-          type="button"
-          onClick={handleStartLocalGame}
-          style={{ borderColor: "#556", color: "#aaa" }}
-        >
-          Spill lokalt (testing)
-        </button>
       </div>
     </div>
+  );
+}
+
+function LobbyHeader() {
+  return (
+    <div className="lobby-header">
+      <h1 className="title">Oslo Conquest</h1>
+      <p className="subtitle">Krig, handel og makt i Norges hjerte</p>
+    </div>
+  );
+}
+
+function LobbyConnectionColumn({
+  connectionStatus,
+  wsUrl,
+  setWsUrl,
+  playerName,
+  setPlayerName,
+  roomId,
+  setRoomId,
+  handleConnect,
+  handleCreateGame,
+  handleJoinGame,
+}) {
+  return (
+    <section className="lobby-column">
+      <div className="ws-status">
+        <div className={`ws-dot${connectionStatus === "connected" ? " connected" : ""}`} />
+        <span>{connectionStatus === "connected" ? "Tilkoblet" : connectionStatus === "connecting" ? "Kobler til..." : "Frakoblet"}</span>
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="ws-url">WebSocket server</label>
+        <input
+          type="text"
+          id="ws-url"
+          value={wsUrl}
+          placeholder="ws://..."
+          onInput={(event) => setWsUrl(event.currentTarget.value)}
+        />
+      </div>
+      <button className="btn" type="button" onClick={handleConnect}>Koble til server</button>
+
+      <hr className="divider" />
+
+      <div className="form-group">
+        <label htmlFor="player-name">Ditt navn</label>
+        <input
+          type="text"
+          id="player-name"
+          value={playerName}
+          placeholder="Ola Nordmann"
+          maxLength={20}
+          onInput={(event) => setPlayerName(event.currentTarget.value)}
+        />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="room-id">Rom-ID</label>
+        <input
+          type="text"
+          id="room-id"
+          value={roomId}
+          placeholder="oslo-1"
+          maxLength={20}
+          onInput={(event) => setRoomId(event.currentTarget.value)}
+        />
+      </div>
+
+      <button className="btn primary" type="button" onClick={handleCreateGame}>Opprett spill</button>
+      <button className="btn" type="button" onClick={handleJoinGame}>Bli med i spill</button>
+    </section>
+  );
+}
+
+function LobbyRoomsColumn({
+  lobbyStatus,
+  rooms,
+  roomId,
+  handleRefreshRooms,
+  handleSelectRoom,
+  handleStartLocalGame,
+}) {
+  return (
+    <section className="lobby-column lobby-rooms-column">
+      <div className={`lobby-status${lobbyStatus.isError ? " error" : ""}`}>{lobbyStatus.message}</div>
+
+      <div className="room-list-header">
+        <label>Aktive rom</label>
+        <button className="text-btn" type="button" onClick={handleRefreshRooms}>Oppdater</button>
+      </div>
+      <div className="room-list">
+        {rooms.length === 0 ? (
+          <div className="room-empty">Ingen aktive rom</div>
+        ) : rooms.map((room) => {
+          const unavailable = room.started || room.playerCount >= room.maxPlayers;
+          const selected = room.room === roomId;
+          return (
+            <button
+              className={`room-card${selected ? " selected" : ""}`}
+              type="button"
+              key={room.room}
+              disabled={unavailable}
+              onClick={() => handleSelectRoom(room.room)}
+            >
+              <div className="room-main">
+                <span className="room-name">{room.room}</span>
+                <span className={`room-status${unavailable ? " unavailable" : ""}`}>
+                  {unavailable ? "I gang" : "Venter på spiller"} · {room.playerCount}/{room.maxPlayers}
+                </span>
+              </div>
+              <div className="room-players">{room.players?.join(", ") || "Ingen spillere"}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      <hr className="divider" />
+
+      <button className="btn local-game-btn" type="button" onClick={handleStartLocalGame}>
+        Spill lokalt (testing)
+      </button>
+    </section>
   );
 }
