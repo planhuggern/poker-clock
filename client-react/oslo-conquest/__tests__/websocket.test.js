@@ -68,4 +68,18 @@ describe('websocket lobby commands', () => {
 
     expect(onModal).toHaveBeenCalledWith({ type: 'dice', result: dice });
   });
+
+  it('rapporterer tilkoblingsfeil via callbacks', () => {
+    const onConnectionChange = vi.fn();
+    const onLobbyStatus = vi.fn();
+
+    connectWS({
+      url: 'ws://localhost:8000/ws/oslo-conquest/',
+      handlers: { onConnectionChange, onLobbyStatus },
+    });
+    FakeWebSocket.instances[0].onerror();
+
+    expect(onConnectionChange).toHaveBeenCalledWith('disconnected');
+    expect(onLobbyStatus).toHaveBeenCalledWith('Kunne ikke koble til serveren.', true);
+  });
 });

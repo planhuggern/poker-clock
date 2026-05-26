@@ -15,7 +15,6 @@ import { notifyGameChanged, state } from "./state.js";
 const DEFAULT_WS_URL = "ws://localhost:8000/ws/oslo-conquest/";
 
 export function App() {
-  const [wsUrl, setWsUrl] = useState(DEFAULT_WS_URL);
   const [playerName, setPlayerName] = useState("");
   const [roomId, setRoomId] = useState("");
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
@@ -50,6 +49,10 @@ export function App() {
     onError: (message) => setLobbyStatus({ message, isError: true }),
   }), []);
 
+  useEffect(() => {
+    if (!inGame) connectWS({ url: DEFAULT_WS_URL, handlers });
+  }, [handlers, inGame]);
+
   function handleReducerEvents(result) {
     for (const event of result.events) {
       if (event.type === "modal") setModal(event.modal);
@@ -78,24 +81,20 @@ export function App() {
     return true;
   }
 
-  function handleConnect() {
-    connectWS({ url: wsUrl, handlers });
-  }
-
   function handleCreateGame() {
     if (!requireLobbyFields()) return;
-    createGame({ url: wsUrl, name: playerName, room: roomId, handlers });
+    createGame({ url: DEFAULT_WS_URL, name: playerName, room: roomId, handlers });
     setMyPlayerId(state.myPlayerId);
   }
 
   function handleJoinGame() {
     if (!requireLobbyFields()) return;
-    joinGame({ url: wsUrl, name: playerName, room: roomId, handlers });
+    joinGame({ url: DEFAULT_WS_URL, name: playerName, room: roomId, handlers });
     setMyPlayerId(state.myPlayerId);
   }
 
   function handleRefreshRooms() {
-    connectWS({ url: wsUrl, handlers });
+    connectWS({ url: DEFAULT_WS_URL, handlers });
     refreshRooms(handlers);
   }
 
@@ -132,13 +131,10 @@ export function App() {
         <div className="lobby-grid">
           <LobbyConnectionColumn
             connectionStatus={connectionStatus}
-            wsUrl={wsUrl}
-            setWsUrl={setWsUrl}
             playerName={playerName}
             setPlayerName={setPlayerName}
             roomId={roomId}
             setRoomId={setRoomId}
-            handleConnect={handleConnect}
             handleCreateGame={handleCreateGame}
             handleJoinGame={handleJoinGame}
           />
@@ -167,13 +163,10 @@ function LobbyHeader() {
 
 function LobbyConnectionColumn({
   connectionStatus,
-  wsUrl,
-  setWsUrl,
   playerName,
   setPlayerName,
   roomId,
   setRoomId,
-  handleConnect,
   handleCreateGame,
   handleJoinGame,
 }) {
@@ -183,20 +176,6 @@ function LobbyConnectionColumn({
         <div className={`ws-dot${connectionStatus === "connected" ? " connected" : ""}`} />
         <span>{connectionStatus === "connected" ? "Tilkoblet" : connectionStatus === "connecting" ? "Kobler til..." : "Frakoblet"}</span>
       </div>
-
-      <div className="form-group">
-        <label htmlFor="ws-url">WebSocket server</label>
-        <input
-          type="text"
-          id="ws-url"
-          value={wsUrl}
-          placeholder="ws://..."
-          onInput={(event) => setWsUrl(event.currentTarget.value)}
-        />
-      </div>
-      <button className="btn" type="button" onClick={handleConnect}>Koble til server</button>
-
-      <hr className="divider" />
 
       <div className="form-group">
         <label htmlFor="player-name">Ditt navn</label>

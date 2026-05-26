@@ -79,6 +79,11 @@ export function connectWS({ url, handlers: nextHandlers } = {}) {
     emit('onLobbyStatus', 'Mistet tilkoblingen til serveren.', true);
   };
 
+  state.ws.onerror = () => {
+    emit('onConnectionChange', 'disconnected');
+    emit('onLobbyStatus', 'Kunne ikke koble til serveren.', true);
+  };
+
   state.ws.onmessage = (event) => handleMessage(event.data);
 
   return false;
