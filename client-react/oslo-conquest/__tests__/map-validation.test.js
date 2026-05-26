@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { TERRITORIES, ADJACENCY } from '../game-data.js';
 import mapData from '../map.json';
 
-const { territoryShapes, _rawTerritories } = mapData;
+const { specialShapes, territoryShapes, _rawSpecial, _rawTerritories } = mapData;
 
 function sharePoint(ptsA, ptsB, tol = 2) {
   const tol2 = tol * tol;
@@ -19,6 +19,7 @@ const territoryIds = new Set(TERRITORIES.map(t => t.id));
 const shapedTerritoryIds = new Set(TERRITORIES.filter(t => t.type !== 'checkpoint').map(t => t.id));
 const shapeIds = new Set(Object.keys(territoryShapes));
 const adjacencyIds = new Set(Object.keys(ADJACENCY));
+const checkpointTerritories = TERRITORIES.filter(t => t.type === 'checkpoint');
 
 describe('H1: ID-konsistens', () => {
   it('alle TERRITORIES-IDer finnes i territoryShapes', () => {
@@ -43,6 +44,13 @@ describe('Checkpoint-friområder', () => {
     expect(ADJACENCY.kolbotn_cp).toEqual(expect.arrayContaining(['t35', 't34']));
     expect(ADJACENCY.lørenskog_cp).toEqual(expect.arrayContaining(['t26', 't27', 't28']));
     expect(ADJACENCY.lysaker_cp).toEqual(expect.arrayContaining(['t17', 't15']));
+  });
+
+  it('har specialShape-geometri for polygonflatene', () => {
+    const missing = checkpointTerritories
+      .map(t => t.checkpoint)
+      .filter(checkpointId => !specialShapes[checkpointId] || !_rawSpecial[checkpointId]);
+    expect(missing).toEqual([]);
   });
 });
 

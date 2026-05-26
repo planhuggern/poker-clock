@@ -11,11 +11,11 @@ export const MAP_H = 850;
 // Territorieposisjoner (sentrum) beregnet fra tegnede polygoner i karteditoren
 export const TERRITORY_POS = mapData.TERRITORY_POS;
 
-// Sjekkpunktposisjoner beregnet fra spesialstedpolygonene
+// Visuelle markørposisjoner inne i checkpoint-polygonene.
 const CHECKPOINT_POS = {
-  'lørenskog': [827, 165],
-  lysaker: [97, 248],
-  kolbotn: [511, 769],
+  'lørenskog': [852, 160],
+  lysaker: [58, 270],
+  kolbotn: [545, 796],
 };
 
 function centroid(pts) {
@@ -186,7 +186,8 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
     const [cx, cy] = CHECKPOINT_POS[checkpointId];
     const territoryId = `${checkpointId}_cp`;
     const territory = TERRITORIES.find((item) => item.id === territoryId);
-    if (!territory) continue;
+    const shape = mapData.specialShapes[checkpointId];
+    if (!territory || !shape) continue;
 
     const group = checkpointGroup.group().attr({
       id: `terr-${territoryId}`,
@@ -194,20 +195,26 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
       'data-id': territoryId,
       filter: 'url(#cp-glow)',
     });
-    const poly = group.polygon(`${cx},${cy - 22} ${cx + 16},${cy} ${cx},${cy + 22} ${cx - 16},${cy}`).attr({
+    const poly = group.path(shape).attr({
       class: 'terr-poly',
-      fill: 'rgba(255,215,0,0.12)',
-      stroke: '#ffd700',
-      'stroke-width': 1.8,
+      fill: 'rgba(255,232,150,0.28)',
+      stroke: 'rgba(255,215,0,0.75)',
+      'stroke-width': 1.4,
       'stroke-dasharray': 'none',
       'pointer-events': 'all',
     });
+    group.polygon(`${cx},${cy - 18} ${cx + 13},${cy} ${cx},${cy + 18} ${cx - 13},${cy}`).attr({
+      fill: 'rgba(255,215,0,0.18)',
+      stroke: '#ffd700',
+      'stroke-width': 1.8,
+      'pointer-events': 'none',
+    });
     group.circle(7).center(cx, cy).fill('#ffd700');
-    group.text(checkpoint.name).attr({ class: 'checkpoint-label', x: cx, y: cy + 36 });
+    group.text(checkpoint.name).attr({ class: 'checkpoint-label', x: cx, y: cy + 28 });
     group.text(checkpointId === 'lørenskog' ? 'START' : 'CHECKPOINT').attr({
       class: 'checkpoint-label',
       x: cx,
-      y: cy + 48,
+      y: cy + 39,
       style: 'font-size:7px;fill:rgba(255,215,0,0.6)',
     });
 
@@ -322,7 +329,7 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
         if (isSelected) nodes.group.addClass('selected');
         else nodes.group.removeClass('selected');
         nodes.poly.attr({
-          fill: isSelected ? 'rgba(255,215,0,0.22)' : 'rgba(255,215,0,0.12)',
+          fill: isSelected ? 'rgba(255,232,150,0.42)' : 'rgba(255,232,150,0.28)',
           stroke: isSelected ? 'rgba(255,215,0,0.95)' : '#ffd700',
           'stroke-width': isSelected ? 2.4 : 1.8,
           filter: isSelected ? 'url(#sel-glow)' : '',
