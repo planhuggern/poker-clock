@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { fmtChips } from "./ClockCard";
+import { fmtChips } from "../lib/clockFormat";
 
 export default function TournamentPlayersPanel({
   isAdmin,

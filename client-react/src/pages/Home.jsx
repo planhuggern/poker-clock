@@ -21,7 +21,7 @@ export default function Home() {
   const isRegistered = profile?.activeTournamentId === tournamentId;
 
   const {
-    status, error, snapshot,
+    status, snapshot,
     start, pause, reset, next, prev, jump,
     updateTournament, addTime, setPlayers, rebuy, addOn, bustout,
   } = usePokerSocket(token, tournamentId);

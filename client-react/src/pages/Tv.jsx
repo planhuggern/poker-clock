@@ -1,6 +1,7 @@
 import { Navigate, useParams } from "react-router-dom";
 import { usePokerSocket } from "../lib/usePokerSocket";
-import ClockCard, { fmtTime, fmtChips } from "../components/ClockCard";
+import ClockCard from "../components/ClockCard";
+import { fmtChips } from "../lib/clockFormat";
 
 export default function Tv() {
   const token = localStorage.getItem("poker_token");
