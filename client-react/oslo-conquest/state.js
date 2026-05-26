@@ -7,13 +7,6 @@ export const state = {
   missionRevealed: false,
   modal: null,
   ws: null,
-  svgEl: null,
-  mapTransform: { x: 0, y: 0, scale: 1 },
-  panState: {
-    active: false, hasMoved: false,
-    startX: 0, startY: 0, lastX: 0, lastY: 0,
-    startTx: 0, startTy: 0,
-  },
 };
 
 const listeners = new Set();
@@ -25,21 +18,4 @@ export function subscribe(listener) {
 
 export function notifyGameChanged() {
   for (const listener of listeners) listener(state);
-}
-
-export function notifySelectionChanged() {
-  notifyGameChanged();
-}
-
-export function notifyModalChanged() {
-  notifyGameChanged();
-}
-
-export function setModal(modal) {
-  state.modal = modal;
-  notifyModalChanged();
-}
-
-export function clearModal() {
-  setModal(null);
 }

@@ -221,11 +221,6 @@ input:focus, select:focus { border-color: var(--gold); }
   margin-top: 4px;
 }
 
-#game-container {
-  position: fixed; inset: 0;
-  display: none;
-}
-
 #map-container {
   position: absolute;
   top: 60px; left: 0; right: 0; bottom: 0;
@@ -300,20 +295,6 @@ input:focus, select:focus { border-color: var(--gold); }
   stroke: rgba(201,168,76,0.5);
   stroke-width: 1.8;
   stroke-dasharray: none;
-}
-
-#map-tooltip {
-  position: fixed;
-  background: rgba(10,10,20,0.97);
-  border: 1px solid #c9a84c;
-  color: #e8e0d0;
-  font-family: 'Crimson Pro', serif;
-  font-size: 13px;
-  padding: 8px 12px;
-  pointer-events: none;
-  display: none;
-  z-index: 50;
-  line-height: 1.6;
 }
 
 #hud {

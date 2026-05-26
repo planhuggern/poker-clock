@@ -4,9 +4,6 @@
 
 import { notifyGameChanged, state } from './state.js';
 import { createInitialGameState } from './game-state.js';
-import { renderGame } from './ui.js';
-import { showDiceResult } from './dice.js';
-import { initMap } from './map.js';
 
 let pendingMessage = null;
 let activeUrl = '';
@@ -20,25 +17,17 @@ function emit(name, ...args) {
   handlers[name]?.(...args);
 }
 
-function showGameContainer() {
-  const gameContainer = document.getElementById('game-container');
-  if (gameContainer) gameContainer.style.display = 'block';
-}
-
 function handleGameState(nextState) {
   state.gameState = nextState;
 
   if (nextState.started) {
-    showGameContainer();
     emit('onGameStarted', nextState);
     emit('onGameState', nextState);
-    if (!state.svgEl) initMap();
   } else if (nextState.phase === 'waiting') {
     emit('onLobbyStatus', `Rom "${nextState.room || ''}" er opprettet. Venter på spiller 2.`, false);
     emit('onGameState', nextState);
   }
 
-  renderGame();
   notifyGameChanged();
 }
 
@@ -50,9 +39,8 @@ function handleMessage(rawMessage) {
   } else if (msg.type === 'action_result') {
     state.gameState = msg.state;
     emit('onGameState', msg.state);
-    renderGame();
     notifyGameChanged();
-    if (msg.dice) showDiceResult(msg.dice);
+    if (msg.dice) emit('onModal', { type: 'dice', result: msg.dice });
   } else if (msg.type === 'room_list') {
     emit('onRooms', msg.rooms || []);
   } else if (msg.type === 'error') {
@@ -167,10 +155,8 @@ export function startLocalGame({ name, handlers: nextHandlers } = {}) {
     { id: 'p3', name: 'Spiller 3' },
   ];
   state.gameState = createInitialGameState(players);
-  showGameContainer();
   emit('onGameStarted', state.gameState);
   emit('onGameState', state.gameState);
-  initMap();
   notifyGameChanged();
   return true;
 }

@@ -3,11 +3,13 @@ import { ADJACENCY, CHECKPOINTS, DISTRICTS, MISSIONS, TERRITORIES } from "./game
 import { findPlayerByOwner, getCurrentPlayer, isMvpGame, isMyTurn } from "./game-state.js";
 import { state, notifyGameChanged, subscribe } from "./state.js";
 import { DICE_FACES } from "./dice.js";
+import { MapView } from "./MapView.jsx";
 
 export function GameUI({
   gameState,
   myPlayerId,
   selectedTerritory,
+  setSelectedTerritory,
   modal,
   missionRevealed,
   dispatchGameAction,
@@ -31,6 +33,11 @@ export function GameUI({
   return (
     <>
       <HUD dispatchGameAction={dispatchGameAction} />
+      <MapView
+        gameState={gameState}
+        selectedTerritory={selectedTerritory}
+        onSelectTerritory={setSelectedTerritory}
+      />
       <TurnIndicator />
       <CheckpointBar />
       <LogPanel />

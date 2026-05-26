@@ -10,7 +10,7 @@ import {
 } from "./websocket.js";
 import { GameUI } from "./GameUI.jsx";
 import { reduceGameAction } from "./game-reducer.js";
-import { notifyGameChanged, state, subscribe } from "./state.js";
+import { notifyGameChanged, state } from "./state.js";
 
 const DEFAULT_WS_URL = "ws://localhost:8000/ws/oslo-conquest/";
 
@@ -37,15 +37,12 @@ export function App() {
     notifyGameChanged();
   }, [gameState, myPlayerId, selectedTerritory, modal, missionRevealed]);
 
-  useEffect(() => {
-    return subscribe(() => setSelectedTerritory(state.selectedTerritory));
-  }, []);
-
   const handlers = useMemo(() => ({
     onConnectionChange: setConnectionStatus,
     onLobbyStatus: (message, isError = false) => setLobbyStatus({ message, isError }),
     onRooms: setRooms,
     onGameStarted: () => setInGame(true),
+    onModal: setModal,
     onGameState: (nextGameState) => {
       state.gameState = nextGameState;
       setGameState(nextGameState);
@@ -58,9 +55,6 @@ export function App() {
       if (event.type === "modal") setModal(event.modal);
       if (event.type === "send_state") sendGameState(result.state);
       if (event.type === "send_end_turn") sendEndTurn(event.playerId);
-      if (event.type === "map_update") {
-        import("./map.js").then(({ updateTerritoryVisuals }) => updateTerritoryVisuals());
-      }
     }
   }
 
@@ -121,6 +115,7 @@ export function App() {
         gameState={gameState}
         myPlayerId={myPlayerId}
         selectedTerritory={selectedTerritory}
+        setSelectedTerritory={setSelectedTerritory}
         modal={modal}
         missionRevealed={missionRevealed}
         dispatchGameAction={dispatchGameAction}

@@ -1,11 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-vi.mock('../ui.js');
-vi.mock('../map.js');
-vi.mock('../dice.js');
-
 import { state } from '../state.js';
-import { createGame, joinGame } from '../websocket.js';
+import { connectWS, createGame, joinGame } from '../websocket.js';
 
 class FakeWebSocket {
   static OPEN = 1;
@@ -58,5 +54,18 @@ describe('websocket lobby commands', () => {
       room: 'oslo-1',
       player: { id: state.myPlayerId, name: 'Kari' },
     });
+  });
+
+  it('rapporterer dice-resultat som modal-event uten imperative UI', () => {
+    const onModal = vi.fn();
+    const gameState = { players: [], territories: {}, started: true };
+    const dice = { attackerDice: [6], defenderDice: [1], attackerWins: true };
+
+    connectWS({ url: 'ws://localhost:8000/ws/oslo-conquest/', handlers: { onModal } });
+    FakeWebSocket.instances[0].onmessage({
+      data: JSON.stringify({ type: 'action_result', state: gameState, dice }),
+    });
+
+    expect(onModal).toHaveBeenCalledWith({ type: 'dice', result: dice });
   });
 });
