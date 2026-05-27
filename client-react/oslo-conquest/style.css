@@ -285,6 +285,9 @@ input:focus, select:focus { border-color: var(--gold); }
 }
 .svg-territory:hover .terr-poly { filter: brightness(1.35); }
 .terr-poly { transition: filter 0.15s, stroke 0.15s; }
+.svg-territory.reachable .terr-poly {
+  filter: brightness(1.12);
+}
 
 .terr-label {
   font-family: 'Crimson Pro', serif;

@@ -91,9 +91,13 @@ function TurnIndicator() {
   if (!currentPlayer) return null;
 
   const round = state.gameState.round ? ` – Runde ${state.gameState.round}` : "";
-  const diceText = !isMvpGame() && currentPlayer.diceRoll !== null
-    ? ` | Terning: ${currentPlayer.diceRoll} (brukt: ${currentPlayer.diceUsed})`
-    : "";
+  const diceText = isMvpGame()
+    ? (currentPlayer.diceRoll !== null
+      ? ` | Terning: ${currentPlayer.diceRoll} (trekk tilgjengelig)`
+      : "")
+    : (currentPlayer.diceRoll !== null
+      ? ` | Terning: ${currentPlayer.diceRoll} (brukt: ${currentPlayer.diceUsed})`
+      : "");
 
   return (
     <div id="turn-indicator">
@@ -145,12 +149,22 @@ function ActionPanel({ dispatchGameAction }) {
 }
 
 function ActionContent({ dispatchGameAction }) {
+  const currentPlayer = getCurrentPlayer();
+
   if (!state.selectedTerritory) {
     return (
       <div id="action-content">
         <p style={{ color: "var(--text-muted)", fontStyle: "italic", fontSize: "0.9rem" }}>Velg et område på kartet</p>
         {isMvpGame() ? (
           <div style={{ marginTop: "12px" }}>
+            <button
+              className="action-btn"
+              type="button"
+              onClick={() => dispatchGameAction({ type: "roll_dice" })}
+              disabled={!isMyTurn() || currentPlayer?.diceRoll !== null}
+            >
+              🎲 Kast terning
+            </button>
             <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: "end_turn" })} disabled={!isMyTurn()}>
               Avslutt tur
             </button>
@@ -165,9 +179,15 @@ function ActionContent({ dispatchGameAction }) {
   if (!territory || !territoryState) return null;
 
   const owner = findPlayerByOwner(territoryState.owner);
-  const currentPlayer = getCurrentPlayer();
   const district = DISTRICTS[territory.district];
   const isCheckpoint = territory.type === "checkpoint";
+  const validMoves = currentPlayer?.validMoves || [];
+  const canMvpMove = Boolean(
+    isMvpGame() &&
+    isMyTurn() &&
+    currentPlayer?.diceRoll !== null &&
+    validMoves.includes(territory.id)
+  );
   const selectedNeighbors = ADJACENCY[territory.id] || [];
   const mvpAttackFrom = isMvpGame()
     ? selectedNeighbors.find((id) => state.gameState.territories[id]?.owner === currentPlayer?.side)
@@ -218,6 +238,22 @@ function ActionContent({ dispatchGameAction }) {
             <button
               className="action-btn"
               type="button"
+              onClick={() => dispatchGameAction({ type: "roll_dice" })}
+              disabled={!isMyTurn() || currentPlayer?.diceRoll !== null}
+            >
+              🎲 Kast terning
+            </button>
+            <button
+              className="action-btn"
+              type="button"
+              onClick={() => dispatchGameAction({ type: "move_to_territory", territoryId: territory.id })}
+              disabled={!canMvpMove}
+            >
+              🚶 Flytt hit
+            </button>
+            <button
+              className="action-btn"
+              type="button"
               onClick={() => dispatchGameAction({
                 type: "invade_territory",
                 territoryId: territory.id,
@@ -230,6 +266,11 @@ function ActionContent({ dispatchGameAction }) {
             <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: "end_turn" })} disabled={!isMyTurn()}>
               Avslutt tur
             </button>
+            {isMyTurn() && currentPlayer?.diceRoll !== null && (
+              <div style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
+                Gyldige trekk: {validMoves.length}
+              </div>
+            )}
           </>
         ) : (
           <TerritoryActions

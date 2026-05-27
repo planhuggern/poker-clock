@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { state } from '../state.js';
-import { connectWS, createGame, joinGame, sendAttack } from '../websocket.js';
+import {
+  connectWS,
+  createGame,
+  joinGame,
+  sendAttack,
+  sendMove,
+  sendRollDice,
+} from '../websocket.js';
 
 class FakeWebSocket {
   static OPEN = 1;
@@ -95,6 +102,33 @@ describe('websocket lobby commands', () => {
       playerId: 'p1',
       fromTerritoryId: 't0a',
       toTerritoryId: 't1',
+    });
+  });
+
+  it('sender roll_dice-melding for aktiv spiller', () => {
+    state.myPlayerId = 'p1';
+    connectWS({ url: 'ws://localhost:8000/ws/oslo-conquest/' });
+    FakeWebSocket.instances[0].onopen();
+
+    sendRollDice();
+
+    expect(FakeWebSocket.instances[0].sent.at(-1)).toEqual({
+      type: 'roll_dice',
+      playerId: 'p1',
+    });
+  });
+
+  it('sender move-melding med målfelt', () => {
+    state.myPlayerId = 'p1';
+    connectWS({ url: 'ws://localhost:8000/ws/oslo-conquest/' });
+    FakeWebSocket.instances[0].onopen();
+
+    sendMove('t3');
+
+    expect(FakeWebSocket.instances[0].sent.at(-1)).toEqual({
+      type: 'move',
+      playerId: 'p1',
+      toTerritoryId: 't3',
     });
   });
 });

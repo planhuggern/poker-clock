@@ -6,6 +6,8 @@ import {
   refreshRooms,
   sendAttack,
   sendEndTurn,
+  sendMove,
+  sendRollDice,
   sendGameState,
   startLocalGame,
 } from "./websocket.js";
@@ -66,6 +68,12 @@ export function App() {
     if (!gameState) return;
 
     if (gameState.activePlayer) {
+      if (action.type === "roll_dice") {
+        sendRollDice();
+      }
+      if (action.type === "move_to_territory") {
+        sendMove(action.territoryId);
+      }
       if (action.type === "end_turn") {
         sendEndTurn();
       }

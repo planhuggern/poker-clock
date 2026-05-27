@@ -118,6 +118,14 @@ export function sendAttack(fromTerritoryId, toTerritoryId) {
   });
 }
 
+export function sendRollDice() {
+  sendWS({ type: 'roll_dice', playerId: state.myPlayerId });
+}
+
+export function sendMove(toTerritoryId) {
+  sendWS({ type: 'move', playerId: state.myPlayerId, toTerritoryId });
+}
+
 export function refreshRooms(nextHandlers) {
   setHandlers(nextHandlers);
   sendWS({ type: 'list_rooms' });

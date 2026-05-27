@@ -319,12 +319,18 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
     currentSelectedTerritory = selectedTerritory;
     if (!currentGameState) return;
 
+    const activePlayer = currentGameState.players?.find(
+      (player) => player.side === currentGameState.activePlayer,
+    );
+    const reachable = new Set(activePlayer?.validMoves || []);
+
     for (const territory of TERRITORIES) {
       const nodes = territoryNodes.get(territory.id);
       if (!nodes) continue;
 
       const territoryState = currentGameState.territories[territory.id];
       const isSelected = currentSelectedTerritory === territory.id;
+      const isReachable = reachable.has(territory.id);
       if (territory.type === 'checkpoint') {
         if (isSelected) nodes.group.addClass('selected');
         else nodes.group.removeClass('selected');
@@ -366,10 +372,21 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
         });
       } else {
         nodes.group.removeClass('selected');
-        nodes.poly.attr({
-          'stroke-width': 1,
-          'stroke-dasharray': '4 3',
-        });
+        if (isReachable) {
+          nodes.group.addClass('reachable');
+          nodes.poly.attr({
+            stroke: 'rgba(140,255,180,0.9)',
+            'stroke-width': 1.8,
+            'stroke-dasharray': 'none',
+            filter: '',
+          });
+        } else {
+          nodes.group.removeClass('reachable');
+          nodes.poly.attr({
+            'stroke-width': 1,
+            'stroke-dasharray': '4 3',
+          });
+        }
       }
     }
 

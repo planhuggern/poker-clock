@@ -1,5 +1,7 @@
 """Minimal server-authoritative rules for Oslo Conquest MVP."""
 
+import random
+
 from .board import ADJACENCY, START_TERRITORIES, TERRITORY_IDS
 
 PLAYER_SIDES = ("red", "blue")
@@ -29,6 +31,10 @@ def assign_player(player: dict, side: str) -> dict:
         "side": side,
         "color": PLAYER_COLORS[side],
         "colorName": "Rød" if side == "red" else "Blå",
+        "position": None,
+        "diceRoll": None,
+        "movesRemaining": 0,
+        "validMoves": [],
     }
 
 
@@ -67,6 +73,13 @@ def start_game(room_state: dict) -> dict:
         territories[territory_id]["owner"] = side
         territories[territory_id]["units"] = 3
 
+    for player in room_state.get("players", []):
+        start_territory = START_TERRITORIES.get(player["side"])
+        player["position"] = start_territory
+        player["diceRoll"] = None
+        player["movesRemaining"] = 0
+        player["validMoves"] = []
+
     room_state.update(
         {
             "phase": "playing",
@@ -91,6 +104,10 @@ def end_turn(room_state: dict, player_id: str | None) -> tuple[dict, str | None]
     if player.get("side") != active_side:
         return room_state, "Det er ikke din tur"
 
+    player["diceRoll"] = None
+    player["movesRemaining"] = 0
+    player["validMoves"] = []
+
     room_state["activePlayer"] = "blue" if active_side == "red" else "red"
     next_player = next(
         p for p in room_state["players"] if p["side"] == room_state["activePlayer"]
@@ -98,6 +115,72 @@ def end_turn(room_state: dict, player_id: str | None) -> tuple[dict, str | None]
     room_state.setdefault("log", []).insert(
         0,
         log_entry(f"{next_player['name']} sin tur"),
+    )
+    return room_state, None
+
+
+def roll_dice(room_state: dict, player_id: str | None) -> tuple[dict, str | None]:
+    if not room_state.get("started"):
+        return room_state, "Spillet har ikke startet"
+
+    player = find_player_by_id(room_state, player_id)
+    if not player:
+        return room_state, "Ukjent spiller"
+
+    if player.get("side") != room_state.get("activePlayer"):
+        return room_state, "Det er ikke din tur"
+
+    if player.get("diceRoll") is not None:
+        return room_state, "Du har allerede kastet denne turen"
+
+    dice_roll = random.randint(1, 6)
+    position = player.get("position")
+
+    player["diceRoll"] = dice_roll
+    player["movesRemaining"] = dice_roll
+    player["validMoves"] = _reachable_territories(position, dice_roll)
+
+    room_state.setdefault("log", []).insert(
+        0,
+        log_entry(f"{player['name']} kastet {dice_roll}"),
+    )
+
+    return room_state, None
+
+
+def move(
+    room_state: dict,
+    player_id: str | None,
+    to_territory_id: str | None,
+) -> tuple[dict, str | None]:
+    if not room_state.get("started"):
+        return room_state, "Spillet har ikke startet"
+
+    player = find_player_by_id(room_state, player_id)
+    if not player:
+        return room_state, "Ukjent spiller"
+
+    if player.get("side") != room_state.get("activePlayer"):
+        return room_state, "Det er ikke din tur"
+
+    destination = str(to_territory_id or "")
+    if destination not in TERRITORY_IDS:
+        return room_state, "Ugyldig territorium"
+
+    if player.get("diceRoll") is None:
+        return room_state, "Du må kaste terning først"
+
+    valid_moves = player.get("validMoves") or []
+    if destination not in valid_moves:
+        return room_state, "Territoriet er utenfor rekkevidde"
+
+    player["position"] = destination
+    player["movesRemaining"] = 0
+    player["validMoves"] = []
+
+    room_state.setdefault("log", []).insert(
+        0,
+        log_entry(f"{player['name']} flyttet til {destination}"),
     )
     return room_state, None
 
@@ -184,6 +267,30 @@ def _update_winner(room_state: dict) -> None:
         if count >= win_threshold:
             room_state["winner"] = side
             break
+
+
+def _reachable_territories(start_id: str | None, max_steps: int) -> list[str]:
+    if not start_id or max_steps <= 0:
+        return []
+
+    visited: dict[str, int] = {start_id: 0}
+    queue: list[str] = [start_id]
+
+    while queue:
+        node = queue.pop(0)
+        depth = visited[node]
+        if depth >= max_steps:
+            continue
+
+        for neighbor in ADJACENCY.get(node, []):
+            if neighbor not in TERRITORY_IDS:
+                continue
+            if neighbor in visited and visited[neighbor] <= depth + 1:
+                continue
+            visited[neighbor] = depth + 1
+            queue.append(neighbor)
+
+    return sorted([territory_id for territory_id, dist in visited.items() if dist > 0])
 
 
 def log_entry(message: str) -> dict:

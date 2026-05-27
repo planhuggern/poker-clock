@@ -16,7 +16,15 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from .mvp import add_player, attack, create_waiting_room, end_turn, summarize_rooms
+from .mvp import (
+    add_player,
+    attack,
+    create_waiting_room,
+    end_turn,
+    move,
+    roll_dice,
+    summarize_rooms,
+)
 
 # In-memory room storage: { room_id: latest_game_state }
 _rooms: dict[str, dict] = {}
@@ -52,6 +60,10 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
             await self._handle_end_turn(data)
         elif msg_type == "attack":
             await self._handle_attack(data)
+        elif msg_type == "roll_dice":
+            await self._handle_roll_dice(data)
+        elif msg_type == "move":
+            await self._handle_move(data)
         elif msg_type == "list_rooms":
             await self._handle_list_rooms()
         elif msg_type == "game_action":
@@ -122,6 +134,33 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
             from_territory_id,
             to_territory_id,
         )
+        if error:
+            await self.send(text_data=json.dumps({"type": "error", "message": error}))
+            return
+        await self._broadcast(
+            self.room,
+            {"type": "game_state", "state": _rooms[self.room]},
+        )
+
+    async def _handle_roll_dice(self, data: dict) -> None:
+        if not self.room or self.room not in _rooms:
+            return
+        player_id = str(data.get("playerId") or self.player_id or "")
+        _rooms[self.room], error = roll_dice(_rooms[self.room], player_id)
+        if error:
+            await self.send(text_data=json.dumps({"type": "error", "message": error}))
+            return
+        await self._broadcast(
+            self.room,
+            {"type": "game_state", "state": _rooms[self.room]},
+        )
+
+    async def _handle_move(self, data: dict) -> None:
+        if not self.room or self.room not in _rooms:
+            return
+        player_id = str(data.get("playerId") or self.player_id or "")
+        to_territory_id = data.get("toTerritoryId") or data.get("to_id")
+        _rooms[self.room], error = move(_rooms[self.room], player_id, to_territory_id)
         if error:
             await self.send(text_data=json.dumps({"type": "error", "message": error}))
             return

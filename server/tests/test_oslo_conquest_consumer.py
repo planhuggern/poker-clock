@@ -235,6 +235,114 @@ def test_attack_rejects_non_neighbor_territories():
     assert async_to_sync(run)() == {"type": "error", "message": "Territoriene er ikke naboer"}
 
 
+def test_active_player_can_roll_dice_and_get_valid_moves():
+    async def run():
+        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        assert (await first.connect())[0]
+        assert (await second.connect())[0]
+
+        await first.send_json_to(
+            {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
+        )
+        await first.receive_json_from()
+        await second.send_json_to(
+            {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        await first.send_json_to({"type": "roll_dice"})
+        first_snapshot = await first.receive_json_from()
+        second_snapshot = await second.receive_json_from()
+
+        await first.disconnect()
+        await second.disconnect()
+        return first_snapshot, second_snapshot
+
+    first_snapshot, second_snapshot = async_to_sync(run)()
+    assert first_snapshot == second_snapshot
+
+    red = next(player for player in first_snapshot["state"]["players"] if player["side"] == "red")
+    assert 1 <= red["diceRoll"] <= 6
+    assert red["movesRemaining"] == red["diceRoll"]
+    assert isinstance(red["validMoves"], list)
+    assert len(red["validMoves"]) > 0
+
+
+def test_active_player_can_move_to_territory_in_valid_moves():
+    async def run():
+        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        assert (await first.connect())[0]
+        assert (await second.connect())[0]
+
+        await first.send_json_to(
+            {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
+        )
+        await first.receive_json_from()
+        await second.send_json_to(
+            {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        await first.send_json_to({"type": "roll_dice"})
+        first_after_roll = await first.receive_json_from()
+        await second.receive_json_from()
+        red = next(player for player in first_after_roll["state"]["players"] if player["side"] == "red")
+        destination = red["validMoves"][0]
+
+        await first.send_json_to({"type": "move", "toTerritoryId": destination})
+        first_after_move = await first.receive_json_from()
+        second_after_move = await second.receive_json_from()
+
+        await first.disconnect()
+        await second.disconnect()
+        return first_after_move, second_after_move, destination
+
+    first_snapshot, second_snapshot, destination = async_to_sync(run)()
+    assert first_snapshot == second_snapshot
+    red = next(player for player in first_snapshot["state"]["players"] if player["side"] == "red")
+    assert red["position"] == destination
+    assert red["movesRemaining"] == 0
+    assert red["validMoves"] == []
+
+
+def test_move_rejects_territory_outside_valid_moves():
+    async def run():
+        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        assert (await first.connect())[0]
+        assert (await second.connect())[0]
+
+        await first.send_json_to(
+            {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
+        )
+        await first.receive_json_from()
+        await second.send_json_to(
+            {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        await first.send_json_to({"type": "roll_dice"})
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        await first.send_json_to({"type": "move", "toTerritoryId": "t0a"})
+        error = await first.receive_json_from()
+
+        await first.disconnect()
+        await second.disconnect()
+        return error
+
+    assert async_to_sync(run)() == {
+        "type": "error",
+        "message": "Territoriet er utenfor rekkevidde",
+    }
+
+
 def test_game_action_cannot_overwrite_mvp_state():
     ws_roundtrip(
         [
