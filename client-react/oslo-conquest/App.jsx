@@ -4,6 +4,7 @@ import {
   createGame,
   joinGame,
   refreshRooms,
+  sendAttack,
   sendEndTurn,
   sendGameState,
   startLocalGame,
@@ -63,6 +64,17 @@ export function App() {
 
   function dispatchGameAction(action) {
     if (!gameState) return;
+
+    if (gameState.activePlayer) {
+      if (action.type === "end_turn") {
+        sendEndTurn();
+      }
+      if (action.type === "invade_territory") {
+        sendAttack(action.fromTerritoryId, action.territoryId);
+      }
+      return;
+    }
+
     const result = reduceGameAction(gameState, {
       playerId: myPlayerId,
       random: Math.random,

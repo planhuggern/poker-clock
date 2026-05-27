@@ -168,6 +168,17 @@ function ActionContent({ dispatchGameAction }) {
   const currentPlayer = getCurrentPlayer();
   const district = DISTRICTS[territory.district];
   const isCheckpoint = territory.type === "checkpoint";
+  const selectedNeighbors = ADJACENCY[territory.id] || [];
+  const mvpAttackFrom = isMvpGame()
+    ? selectedNeighbors.find((id) => state.gameState.territories[id]?.owner === currentPlayer?.side)
+    : null;
+  const canMvpAttack = Boolean(
+    isMvpGame() &&
+    isMyTurn() &&
+    !isCheckpoint &&
+    territoryState.owner !== currentPlayer?.side &&
+    mvpAttackFrom
+  );
 
   return (
     <div id="action-content">
@@ -203,9 +214,23 @@ function ActionContent({ dispatchGameAction }) {
 
       <div className="action-buttons">
         {isMvpGame() ? (
-          <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: "end_turn" })} disabled={!isMyTurn()}>
-            Avslutt tur
-          </button>
+          <>
+            <button
+              className="action-btn"
+              type="button"
+              onClick={() => dispatchGameAction({
+                type: "invade_territory",
+                territoryId: territory.id,
+                fromTerritoryId: mvpAttackFrom,
+              })}
+              disabled={!canMvpAttack}
+            >
+              ⚔ Angrip område
+            </button>
+            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: "end_turn" })} disabled={!isMyTurn()}>
+              Avslutt tur
+            </button>
+          </>
         ) : (
           <TerritoryActions
             territory={territory}

@@ -14,7 +14,7 @@ Et turbasert strategispill inspirert av Risk + Monopol, satt til Oslo. Spilles i
 - **Checkpoints:** Lørenskog → Lysaker → Kolbotn. Passerer du ett får du +500 kr og +3 bat.
 
 ## MVP-regler
-MVP-en bruker det eksisterende kartet som spillbrett, men kutter økonomi, terningbevegelse, oppdragskort, leie, bydelsbonus og checkpoints fra første spillbare versjon.
+MVP-en bruker det eksisterende kartet som spillbrett, men følger en forenklet monopol-lignende runde med mobil hær. Full økonomi, leie, bydelsbonus, checkpoints og oppdragskort kan fortsatt komme senere.
 
 ### MVP-scope
 - **2 spillere** per rom.
@@ -22,7 +22,11 @@ MVP-en bruker det eksisterende kartet som spillbrett, men kutter økonomi, terni
 - Alle spillbare områder fra eksisterende kart brukes som territorier.
 - Hvert territorium må ha `id`, `name`, `neighbors`, `owner` og `units`.
 - Territorier kan eies av `red`, `blue` eller være nøytrale.
-- Ingen flytting mellom egne territorier i første MVP.
+- Hver spiller har en **mobil hær** som følger spillerbrikken.
+- Hver spiller kan flytte opptil terningkastets rekkevidde, men kan stoppe tidligere.
+- Territorier innen rekkevidde skal kunne markeres som gyldige trekkvalg i klienten.
+- Når en spiller lander på eget territorium, kan hen både sette av og plukke opp overskytende bataljoner.
+- Det må alltid stå igjen minst `1` bataljon på et eid territorium.
 - Ingen lokal-only regelavvik: samme regler skal gjelde for WebSocket-spill og eventuell lokal spillmodus.
 
 ### MVP-startoppsett
@@ -30,33 +34,44 @@ MVP-en bruker det eksisterende kartet som spillbrett, men kutter økonomi, terni
 - Startterritoriene kan hardkodes fra kartet eller velges automatisk som to territorier med rimelig avstand.
 - Startterritorier starter med `3` units.
 - Alle andre territorier starter nøytrale med `1` unit.
+- Hver spiller starter med en mobil hær knyttet til sin spillerbrikke.
+- Spillerbrikken starter på spillerens startterritorium.
 - `red` starter første tur.
 
 ### MVP-tur
 Spillet er turbasert, og bare aktiv spiller kan utføre handlinger.
 
-1. Aktiv spiller får forsterkninger.
-2. Aktiv spiller plasserer alle forsterkninger på ett eid territorium.
-3. Aktiv spiller kan gjøre maks ett angrep.
-4. Aktiv spiller avslutter turen.
+1. Aktiv spiller kaster terning (`1`–`6`) og får et bevegelsesbudsjett.
+2. Aktiv spiller flytter spillerbrikken og den mobile hæren til et territorium innen rekkevidde.
+3. På destinasjonen kan spilleren, avhengig av hvem som eier territoriet:
+   - kjøpe nøytralt territorium,
+   - angripe nøytralt eller fiendtlig territorium,
+   - forsterke eget territorium,
+   - plukke opp overskytende bataljoner fra eget territorium.
+4. Aktiv spiller kan stoppe før hele rekkevidden er brukt opp dersom reglene tillater det.
+5. Aktiv spiller avslutter turen.
 
-Forsterkninger beregnes slik:
-
-```txt
-reinforcements = max(1, floor(ownedTerritories / 3))
-```
+### MVP-mobil hær
+- Hver spiller har en separat **mobil styrke** som følger spillerbrikken.
+- Garnisoner på territorier og mobil hær er to forskjellige beholdninger.
+- Når spilleren lander på eget territorium med mer enn `1` bataljon der, kan hen flytte et valgfritt antall av de overskytende bataljonene inn i den mobile hæren.
+- Når spilleren lander på eget territorium, kan hen også sette av et valgfritt antall bataljoner fra den mobile hæren til territoriet.
+- Et eid territorium kan aldri reduseres til `0` bataljoner; minst `1` må bli stående igjen.
+- Når et territorium kjøpes eller erobres, må minst `1` bataljon bli stående igjen der. Spilleren velger selv hvor mange flere som eventuelt settes igjen.
+- Den mobile hæren følger videre med spillerbrikken med mindre bataljoner eksplisitt blir stående igjen som garnison.
 
 ### MVP-angrep
-- Angriper må eie `from`.
-- `to` må være nabo av `from`.
-- `to` må ikke eies av angriper.
-- `from.units` må være minst `2`.
+- Angrep skjer mot territoriet spilleren **lander på**.
+- Angrepsstyrken består av den mobile hæren spilleren har med seg.
 - Nøytrale territorier forsvarer seg med sine `units`, men tar aldri egne turer.
+- Dersom spilleren eier tilstøtende territorier, kan disse brukes til **mass attack**.
+- Ved mass attack flyttes de deltagende støttebataljonene fysisk inn i det erobrede territoriet ved seier.
+- Dersom spilleren avbryter kampen uten å vinne territoriet, returnerer støttebataljonene til territoriene de kom fra.
 
 Kamp avgjøres deterministisk:
 
 ```txt
-if from.units > to.units:
+if mobileArmy + supportUnits > to.units:
     attacker wins
 else:
     attacker loses
@@ -65,15 +80,15 @@ else:
 Ved seier:
 
 ```txt
-from.units -= 1
 to.owner = attacker
 to.units = 1
+player chooses how many extra units stay behind
 ```
 
 Ved tap:
 
 ```txt
-from.units -= 1
+attacking force loses units according to combat result
 ```
 
 ### MVP-seier
@@ -85,8 +100,12 @@ Klienten må minimum kunne sende:
 
 ```txt
 join_room
-place_reinforcements(territory_id, amount)
-attack(from_id, to_id)
+roll_dice
+move(to_id)
+pickup_units(territory_id, amount)
+drop_units(territory_id, amount)
+buy_territory(territory_id, amount_to_leave)
+attack(to_id, support={territory_id: amount})
 end_turn
 ```
 
@@ -95,17 +114,28 @@ Server/klient-state må minimum kunne uttrykke:
 ```js
 {
   roomId: 'oslo-1',
-  phase: 'reinforce',
+  phase: 'playing',
   activePlayer: 'red',
   winner: null,
   players: {
-    red: { name: 'Player 1' },
-    blue: { name: 'Player 2' }
+    red: {
+      name: 'Player 1',
+      position: 't0a',
+      mobileUnits: 3,
+      diceRoll: null,
+      movesRemaining: 0
+    },
+    blue: {
+      name: 'Player 2',
+      position: 't35',
+      mobileUnits: 3,
+      diceRoll: null,
+      movesRemaining: 0
+    }
   },
   territories: {
     sentrum: { owner: 'red', units: 3 }
-  },
-  reinforcementsRemaining: 2
+  }
 }
 ```
 
@@ -161,9 +191,8 @@ Oppdrag 8 (Blodhevn) er skjult — målet vises ikke før det er fullført.
 ```js
 {
   phase: 'playing', round: 1, currentPlayerIdx: 0,
-  players: [{ id, name, color, money, units, mission, target, position,
-               checkpoints: {lørenskog, lysaker, kolbotn}, diceRoll, diceUsed,
-               eliminated, conquests: {[playerId]: count} }],
+  players: [{ id, name, color, side, position, mobileUnits,
+               diceRoll, movesRemaining, eliminated }],
   territories: { [id]: { id, owner, units } },
   log: [{ msg, type, time }]
 }
@@ -182,6 +211,6 @@ Serveren broadcaster til alle i rommet:
 ```
 
 ## Designvalg
-- **Ingen server-side validering.** Handlende klient muterer state lokalt, broadcaster det. Alle klienter (inkludert avsender) oppdaterer fra broadcasten.
+- **Server-autoritativ MVP-state.** Flytting, kjøp, pickup/drop og angrep skal valideres og avgjøres på serveren.
 - **Ingen DB-persistens.** Restarter serveren → alle spill mistes.
-- **Lokal spillemodus.** Man kan starte et spill uten WebSocket-tilkobling — state håndteres utelukkende klientsiden.
+- **Lokal spillemodus.** Lokal modus bør bruke samme regler som multiplayer så langt det er praktisk.

@@ -21,6 +21,12 @@
 
 **Migration status:** Preact, `@preact/preset-vite`, SVG.js, and Immer are installed. `index.html` now loads `main.jsx`; lobby and game UI are rendered by Preact, game actions use an Immer reducer that returns `{ state, events }`, while the map still uses the existing imperative native SVG module.
 
+**Current rules direction:** MVP is moving toward a server-authoritative, movement-driven model. The important UI consequences are:
+- the player has a separate mobile army that follows the piece,
+- reachable territories within a dice roll should light up,
+- landing on owned territory should allow both dropping and picking up surplus units,
+- landing on neutral/enemy territory should drive buy/attack choices from the destination tile rather than classic territory-to-territory Risk turns.
+
 The desired direction is to migrate Oslo Conquest from imperative DOM rendering to a small Preact app:
 - Preact owns application shell, lobby, HUD, panels, modals, and render state.
 - SVG.js owns map construction and SVG interaction primitives: pan/zoom, territory groups, labels, hit targets, and visual updates.

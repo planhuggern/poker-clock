@@ -109,6 +109,15 @@ export function sendEndTurn() {
   sendWS({ type: 'end_turn', playerId: state.myPlayerId });
 }
 
+export function sendAttack(fromTerritoryId, toTerritoryId) {
+  sendWS({
+    type: 'attack',
+    playerId: state.myPlayerId,
+    fromTerritoryId,
+    toTerritoryId,
+  });
+}
+
 export function refreshRooms(nextHandlers) {
   setHandlers(nextHandlers);
   sendWS({ type: 'list_rooms' });

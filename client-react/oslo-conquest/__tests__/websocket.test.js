@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { state } from '../state.js';
-import { connectWS, createGame, joinGame } from '../websocket.js';
+import { connectWS, createGame, joinGame, sendAttack } from '../websocket.js';
 
 class FakeWebSocket {
   static OPEN = 1;
@@ -81,5 +81,20 @@ describe('websocket lobby commands', () => {
 
     expect(onConnectionChange).toHaveBeenCalledWith('disconnected');
     expect(onLobbyStatus).toHaveBeenCalledWith('Kunne ikke koble til serveren.', true);
+  });
+
+  it('sender attack-melding med fra- og tilterritorium', () => {
+    state.myPlayerId = 'p1';
+    connectWS({ url: 'ws://localhost:8000/ws/oslo-conquest/' });
+    FakeWebSocket.instances[0].onopen();
+
+    sendAttack('t0a', 't1');
+
+    expect(FakeWebSocket.instances[0].sent.at(-1)).toEqual({
+      type: 'attack',
+      playerId: 'p1',
+      fromTerritoryId: 't0a',
+      toTerritoryId: 't1',
+    });
   });
 });
