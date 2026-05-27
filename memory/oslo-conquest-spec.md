@@ -71,10 +71,27 @@ Spillet er turbasert, og bare aktiv spiller kan utføre handlinger.
 Kamp avgjøres deterministisk:
 
 ```txt
-if mobileArmy + supportUnits > to.units:
-    attacker wins
+attackPower = mobileArmy + supportUnits
+defensePower = to.units
+
+if attackPower > defensePower:
+  attacker wins
 else:
-    attacker loses
+  attacker loses
+```
+
+Deterministisk tapsmodell (MVP):
+
+```txt
+losses = min(attackPower, defensePower)
+```
+
+Fordeling av tap på angripersiden:
+
+```txt
+1) mobileArmy tar tap først
+2) hvis mobileArmy går til 0 og det fortsatt gjenstår tap,
+   trekkes resten fra supportUnits
 ```
 
 Ved seier:
@@ -82,13 +99,35 @@ Ved seier:
 ```txt
 to.owner = attacker
 to.units = 1
-player chooses how many extra units stay behind
+remainingAttackers = attackPower - losses
+
+player chooses garrisonExtra >= 0
+to.units = 1 + garrisonExtra
+
+remainingAttackers is split into:
+- mobileArmyAfterCombat (follows player piece)
+- supportUnitsMovedIn (came from adjacent owned territories)
+```
+
+Mass attack ved seier:
+
+```txt
+support units that joined the attack move physically into the conquered territory,
+unless consumed by combat losses
+```
+
+Mass attack uten erobring (spiller avbryter):
+
+```txt
+surviving support units return to their source territories
 ```
 
 Ved tap:
 
 ```txt
-attacking force loses units according to combat result
+territory owner does not change
+defender units stay unchanged in MVP deterministic model
+attacker side loses `losses` units using the loss allocation order above
 ```
 
 ### MVP-seier
