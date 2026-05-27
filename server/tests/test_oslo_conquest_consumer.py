@@ -173,6 +173,68 @@ def test_non_active_player_cannot_end_turn():
     assert _rooms["oslo-1"]["activePlayer"] == "red"
 
 
+def test_active_player_can_attack_with_deterministic_mvp_rules():
+    async def run():
+        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        assert (await first.connect())[0]
+        assert (await second.connect())[0]
+
+        await first.send_json_to(
+            {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
+        )
+        await first.receive_json_from()
+        await second.send_json_to(
+            {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        await first.send_json_to({"type": "attack", "fromTerritoryId": "t0a", "toTerritoryId": "t1"})
+        first_snapshot = await first.receive_json_from()
+        second_snapshot = await second.receive_json_from()
+
+        await first.disconnect()
+        await second.disconnect()
+        return first_snapshot, second_snapshot
+
+    first_snapshot, second_snapshot = async_to_sync(run)()
+    assert first_snapshot == second_snapshot
+
+    state = first_snapshot["state"]
+    assert state["territories"]["t0a"]["owner"] == "red"
+    assert state["territories"]["t0a"]["units"] == 2
+    assert state["territories"]["t1"]["owner"] == "red"
+    assert state["territories"]["t1"]["units"] == 1
+
+
+def test_attack_rejects_non_neighbor_territories():
+    async def run():
+        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        assert (await first.connect())[0]
+        assert (await second.connect())[0]
+
+        await first.send_json_to(
+            {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
+        )
+        await first.receive_json_from()
+        await second.send_json_to(
+            {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        await first.send_json_to({"type": "attack", "fromTerritoryId": "t0a", "toTerritoryId": "t35"})
+        error = await first.receive_json_from()
+
+        await first.disconnect()
+        await second.disconnect()
+        return error
+
+    assert async_to_sync(run)() == {"type": "error", "message": "Territoriene er ikke naboer"}
+
+
 def test_game_action_cannot_overwrite_mvp_state():
     ws_roundtrip(
         [

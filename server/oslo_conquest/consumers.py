@@ -16,7 +16,7 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from .mvp import add_player, create_waiting_room, end_turn, summarize_rooms
+from .mvp import add_player, attack, create_waiting_room, end_turn, summarize_rooms
 
 # In-memory room storage: { room_id: latest_game_state }
 _rooms: dict[str, dict] = {}
@@ -31,7 +31,10 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code: int) -> None:
         if self.room:
-            await self.channel_layer.group_discard(self._group_name(self.room), self.channel_name)
+            await self.channel_layer.group_discard(
+                self._group_name(self.room),
+                self.channel_name,
+            )
 
     async def receive(self, text_data: str = "", **kwargs) -> None:
         try:
@@ -47,6 +50,8 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
             await self._handle_join(data)
         elif msg_type == "end_turn":
             await self._handle_end_turn(data)
+        elif msg_type == "attack":
+            await self._handle_attack(data)
         elif msg_type == "list_rooms":
             await self._handle_list_rooms()
         elif msg_type == "game_action":
@@ -72,7 +77,9 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
         else:
             _rooms[room], error = add_player(_rooms[room], player)
             if error:
-                await self.send(text_data=json.dumps({"type": "error", "message": error}))
+                await self.send(
+                    text_data=json.dumps({"type": "error", "message": error})
+                )
                 return
         await self._broadcast(room, {"type": "game_state", "state": _rooms[room]})
 
@@ -98,7 +105,30 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
         if error:
             await self.send(text_data=json.dumps({"type": "error", "message": error}))
             return
-        await self._broadcast(self.room, {"type": "game_state", "state": _rooms[self.room]})
+        await self._broadcast(
+            self.room,
+            {"type": "game_state", "state": _rooms[self.room]},
+        )
+
+    async def _handle_attack(self, data: dict) -> None:
+        if not self.room or self.room not in _rooms:
+            return
+        player_id = str(data.get("playerId") or self.player_id or "")
+        from_territory_id = data.get("fromTerritoryId") or data.get("from_id")
+        to_territory_id = data.get("toTerritoryId") or data.get("to_id")
+        _rooms[self.room], error = attack(
+            _rooms[self.room],
+            player_id,
+            from_territory_id,
+            to_territory_id,
+        )
+        if error:
+            await self.send(text_data=json.dumps({"type": "error", "message": error}))
+            return
+        await self._broadcast(
+            self.room,
+            {"type": "game_state", "state": _rooms[self.room]},
+        )
 
     async def _handle_list_rooms(self) -> None:
         await self._send_room_list()
@@ -117,7 +147,10 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
 
     async def _join_group(self, room: str) -> None:
         if self.room and self.room != room:
-            await self.channel_layer.group_discard(self._group_name(self.room), self.channel_name)
+            await self.channel_layer.group_discard(
+                self._group_name(self.room),
+                self.channel_name,
+            )
         self.room = room
         await self.channel_layer.group_add(self._group_name(room), self.channel_name)
 
