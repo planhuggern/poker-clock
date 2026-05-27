@@ -73,9 +73,11 @@ def test_second_player_starts_game_with_initial_territories():
 
     state = first_snapshot["state"]
     assert state["started"] is True
-    assert state["phase"] == "playing"
+    assert state["phase"] == "setup"
     assert state["activePlayer"] == "red"
     assert state["players"][1]["side"] == "blue"
+    assert state["players"][0]["position"] is None
+    assert state["players"][1]["position"] is None
     assert state["territories"]["t0a"] == {"id": "t0a", "owner": "red", "units": 3}
     assert state["territories"]["t35"] == {"id": "t35", "owner": "blue", "units": 3}
     assert state["territories"]["t1"] == {"id": "t1", "owner": None, "units": 1}
@@ -132,6 +134,17 @@ def test_active_player_can_end_turn():
         await first.receive_json_from()
         await second.receive_json_from()
 
+        await first.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+        await second.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
         await first.send_json_to({"type": "end_turn"})
         first_snapshot = await first.receive_json_from()
         second_snapshot = await second.receive_json_from()
@@ -162,6 +175,17 @@ def test_non_active_player_cannot_end_turn():
         await first.receive_json_from()
         await second.receive_json_from()
 
+        await first.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+        await second.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
         await second.send_json_to({"type": "end_turn"})
         error = await second.receive_json_from()
 
@@ -186,6 +210,17 @@ def test_active_player_can_attack_with_deterministic_mvp_rules():
         await first.receive_json_from()
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        await first.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+        await second.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
         )
         await first.receive_json_from()
         await second.receive_json_from()
@@ -225,6 +260,17 @@ def test_attack_rejects_non_neighbor_territories():
         await first.receive_json_from()
         await second.receive_json_from()
 
+        await first.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+        await second.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
         await first.send_json_to({"type": "attack", "fromTerritoryId": "t0a", "toTerritoryId": "t35"})
         error = await first.receive_json_from()
 
@@ -248,6 +294,17 @@ def test_active_player_can_roll_dice_and_get_valid_moves():
         await first.receive_json_from()
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        await first.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+        await second.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
         )
         await first.receive_json_from()
         await second.receive_json_from()
@@ -283,6 +340,17 @@ def test_active_player_can_move_to_territory_in_valid_moves():
         await first.receive_json_from()
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        await first.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+        await second.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
         )
         await first.receive_json_from()
         await second.receive_json_from()
@@ -326,11 +394,22 @@ def test_move_rejects_territory_outside_valid_moves():
         await first.receive_json_from()
         await second.receive_json_from()
 
+        await first.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+        await second.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
         await first.send_json_to({"type": "roll_dice"})
         await first.receive_json_from()
         await second.receive_json_from()
 
-        await first.send_json_to({"type": "move", "toTerritoryId": "t0a"})
+        await first.send_json_to({"type": "move", "toTerritoryId": "lørenskog_cp"})
         error = await first.receive_json_from()
 
         await first.disconnect()
@@ -340,6 +419,71 @@ def test_move_rejects_territory_outside_valid_moves():
     assert async_to_sync(run)() == {
         "type": "error",
         "message": "Territoriet er utenfor rekkevidde",
+    }
+
+
+def test_player_can_choose_start_checkpoint_before_roll():
+    async def run():
+        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        assert (await first.connect())[0]
+        assert (await second.connect())[0]
+
+        await first.send_json_to(
+            {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
+        )
+        await first.receive_json_from()
+        await second.send_json_to(
+            {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        await first.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
+        )
+        first_snapshot = await first.receive_json_from()
+        second_snapshot = await second.receive_json_from()
+
+        await first.disconnect()
+        await second.disconnect()
+        return first_snapshot, second_snapshot
+
+    first_snapshot, second_snapshot = async_to_sync(run)()
+    assert first_snapshot == second_snapshot
+    red = next(player for player in first_snapshot["state"]["players"] if player["side"] == "red")
+    assert red["position"] == "lysaker_cp"
+    assert first_snapshot["state"]["phase"] == "setup"
+    assert first_snapshot["state"]["activePlayer"] == "blue"
+
+
+def test_roll_dice_requires_start_checkpoint_selection():
+    async def run():
+        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        assert (await first.connect())[0]
+        assert (await second.connect())[0]
+
+        await first.send_json_to(
+            {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
+        )
+        await first.receive_json_from()
+        await second.send_json_to(
+            {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        await first.send_json_to({"type": "roll_dice"})
+        error = await first.receive_json_from()
+
+        await first.disconnect()
+        await second.disconnect()
+        return error
+
+    assert async_to_sync(run)() == {
+        "type": "error",
+        "message": "Velg startcheckpoint før første runde",
     }
 
 
@@ -443,7 +587,7 @@ def test_list_rooms_marks_started_room_unavailable():
     assert room["playerCount"] == 2
     assert room["maxPlayers"] == 2
     assert room["started"] is True
-    assert room["phase"] == "playing"
+    assert room["phase"] == "setup"
     assert room["status"] == "started"
     assert room["players"] == ["Ola", "Kari"]
     assert "territories" not in room

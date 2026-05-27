@@ -47,7 +47,12 @@ export function isMyTurn() {
 }
 
 export function isMvpGame() {
-  return Boolean(state.gameState?.activePlayer);
+  const gameState = state.gameState;
+  if (!gameState) return false;
+
+  // Server-authoritative MVP states include side markers on players.
+  // We also treat setup as MVP even if activePlayer is temporarily missing.
+  return Boolean(gameState.phase === 'setup' || gameState.players?.some((player) => player.side));
 }
 
 export function findPlayerByOwner(owner) {

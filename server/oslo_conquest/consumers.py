@@ -19,6 +19,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from .mvp import (
     add_player,
     attack,
+    choose_start_checkpoint,
     create_waiting_room,
     end_turn,
     move,
@@ -64,6 +65,8 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
             await self._handle_roll_dice(data)
         elif msg_type == "move":
             await self._handle_move(data)
+        elif msg_type == "choose_start_checkpoint":
+            await self._handle_choose_start_checkpoint(data)
         elif msg_type == "list_rooms":
             await self._handle_list_rooms()
         elif msg_type == "game_action":
@@ -161,6 +164,24 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
         player_id = str(data.get("playerId") or self.player_id or "")
         to_territory_id = data.get("toTerritoryId") or data.get("to_id")
         _rooms[self.room], error = move(_rooms[self.room], player_id, to_territory_id)
+        if error:
+            await self.send(text_data=json.dumps({"type": "error", "message": error}))
+            return
+        await self._broadcast(
+            self.room,
+            {"type": "game_state", "state": _rooms[self.room]},
+        )
+
+    async def _handle_choose_start_checkpoint(self, data: dict) -> None:
+        if not self.room or self.room not in _rooms:
+            return
+        player_id = str(data.get("playerId") or self.player_id or "")
+        checkpoint_id = data.get("checkpointTerritoryId") or data.get("checkpoint_id")
+        _rooms[self.room], error = choose_start_checkpoint(
+            _rooms[self.room],
+            player_id,
+            checkpoint_id,
+        )
         if error:
             await self.send(text_data=json.dumps({"type": "error", "message": error}))
             return

@@ -50,6 +50,13 @@ export function GameUI({
 
 function HUD({ dispatchGameAction }) {
   const currentPlayer = getCurrentPlayer();
+  const showMvpRollButton = Boolean(
+    isMvpGame() &&
+    isMyTurn() &&
+    state.gameState?.phase === "playing" &&
+    currentPlayer?.position !== null &&
+    currentPlayer?.diceRoll === null,
+  );
 
   return (
     <div id="hud">
@@ -74,6 +81,16 @@ function HUD({ dispatchGameAction }) {
           </div>
         ))}
       </div>
+      {showMvpRollButton && (
+        <button
+          className="btn"
+          style={{ width: "auto", padding: "6px 16px", fontSize: "0.75rem" }}
+          type="button"
+          onClick={() => dispatchGameAction({ type: "roll_dice" })}
+        >
+          🎲 Kast terning
+        </button>
+      )}
       <button
         className="btn"
         style={{ width: "auto", padding: "6px 16px", fontSize: "0.75rem" }}
@@ -150,6 +167,33 @@ function ActionPanel({ dispatchGameAction }) {
 
 function ActionContent({ dispatchGameAction }) {
   const currentPlayer = getCurrentPlayer();
+  const needsStartCheckpoint = Boolean(isMvpGame() && currentPlayer && currentPlayer.position === null);
+
+  if (needsStartCheckpoint) {
+    return (
+      <div id="action-content">
+        <p style={{ color: "var(--text-muted)", fontStyle: "italic", fontSize: "0.9rem" }}>
+          Velg startcheckpoint for spillerbrikken
+        </p>
+        <div className="action-buttons" style={{ marginTop: "12px" }}>
+          {Object.entries(CHECKPOINTS).map(([checkpointId, checkpoint]) => (
+            <button
+              key={checkpointId}
+              className="action-btn"
+              type="button"
+              onClick={() => dispatchGameAction({
+                type: "choose_start_checkpoint",
+                checkpointTerritoryId: `${checkpointId}_cp`,
+              })}
+              disabled={!isMyTurn()}
+            >
+              Start: {checkpoint.name}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (!state.selectedTerritory) {
     return (

@@ -126,6 +126,14 @@ export function sendMove(toTerritoryId) {
   sendWS({ type: 'move', playerId: state.myPlayerId, toTerritoryId });
 }
 
+export function sendChooseStartCheckpoint(checkpointTerritoryId) {
+  sendWS({
+    type: 'choose_start_checkpoint',
+    playerId: state.myPlayerId,
+    checkpointTerritoryId,
+  });
+}
+
 export function refreshRooms(nextHandlers) {
   setHandlers(nextHandlers);
   sendWS({ type: 'list_rooms' });

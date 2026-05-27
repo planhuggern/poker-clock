@@ -117,6 +117,7 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
   };
   const territoryNodes = new Map();
   const districtNodes = new Map();
+  const playerPieces = new Map();
   let currentGameState = null;
   let currentSelectedTerritory = null;
 
@@ -232,6 +233,8 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
 
     territoryNodes.set(territoryId, { group, poly, units: null });
   }
+
+  const pieceLayer = draw.group().attr({ id: 'piece-layer', 'pointer-events': 'none' });
 
   const territoryGroup = draw.group().attr({ id: 'territory-layer' });
   for (const territory of TERRITORIES) {
@@ -407,6 +410,53 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
       } else {
         districtPath.attr({ fill: districtInfo?.color || '#1a1a2a', 'fill-opacity': 0.75 });
       }
+    }
+
+    for (const player of currentGameState.players || []) {
+      const position = player.position;
+      if (!position) {
+        playerPieces.get(player.id)?.group.hide();
+        continue;
+      }
+
+      let coords = TERRITORY_POS[position];
+      if (!coords && position.endsWith('_cp')) {
+        const checkpointId = position.replace('_cp', '');
+        coords = CHECKPOINT_POS[checkpointId];
+      }
+      if (!coords) {
+        playerPieces.get(player.id)?.group.hide();
+        continue;
+      }
+
+      let piece = playerPieces.get(player.id);
+      if (!piece) {
+        const group = pieceLayer.group().attr({ class: 'player-piece' });
+        const outer = group.circle(16).attr({
+          fill: 'rgba(5, 5, 10, 0.85)',
+          stroke: '#d7d7d7',
+          'stroke-width': 1.2,
+        });
+        const inner = group.circle(12).attr({ fill: player.color || '#ddd' });
+        const label = group.text((player.name || '?').slice(0, 1).toUpperCase()).attr({
+          fill: '#f8f8f8',
+          'font-size': 9,
+          'font-family': 'Cinzel Decorative, serif',
+          'font-weight': 700,
+          'text-anchor': 'middle',
+          'dominant-baseline': 'middle',
+        });
+        piece = { group, outer, inner, label };
+        playerPieces.set(player.id, piece);
+      }
+
+      piece.group.center(coords[0], coords[1] - 12).show();
+      piece.inner.attr({ fill: player.color || '#ddd' });
+      piece.label.text((player.name || '?').slice(0, 1).toUpperCase());
+      piece.outer.attr({
+        stroke: player.side === currentGameState.activePlayer ? '#ffd700' : '#d7d7d7',
+        'stroke-width': player.side === currentGameState.activePlayer ? 2 : 1.2,
+      });
     }
   }
 

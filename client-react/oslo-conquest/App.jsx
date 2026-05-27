@@ -5,6 +5,7 @@ import {
   joinGame,
   refreshRooms,
   sendAttack,
+  sendChooseStartCheckpoint,
   sendEndTurn,
   sendMove,
   sendRollDice,
@@ -16,6 +17,10 @@ import { reduceGameAction } from "./game-reducer.js";
 import { notifyGameChanged, state } from "./state.js";
 
 const DEFAULT_WS_URL = "ws://localhost:8000/ws/oslo-conquest/";
+
+function isServerAuthoritativeGame(gameState) {
+  return Boolean(gameState?.players?.some((player) => player.side));
+}
 
 export function App() {
   const [playerName, setPlayerName] = useState("");
@@ -67,7 +72,10 @@ export function App() {
   function dispatchGameAction(action) {
     if (!gameState) return;
 
-    if (gameState.activePlayer) {
+    if (isServerAuthoritativeGame(gameState)) {
+      if (action.type === "choose_start_checkpoint") {
+        sendChooseStartCheckpoint(action.checkpointTerritoryId);
+      }
       if (action.type === "roll_dice") {
         sendRollDice();
       }

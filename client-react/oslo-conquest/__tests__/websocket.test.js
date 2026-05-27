@@ -6,6 +6,7 @@ import {
   createGame,
   joinGame,
   sendAttack,
+  sendChooseStartCheckpoint,
   sendMove,
   sendRollDice,
 } from '../websocket.js';
@@ -129,6 +130,20 @@ describe('websocket lobby commands', () => {
       type: 'move',
       playerId: 'p1',
       toTerritoryId: 't3',
+    });
+  });
+
+  it('sender choose_start_checkpoint-melding med valgt checkpoint', () => {
+    state.myPlayerId = 'p1';
+    connectWS({ url: 'ws://localhost:8000/ws/oslo-conquest/' });
+    FakeWebSocket.instances[0].onopen();
+
+    sendChooseStartCheckpoint('lysaker_cp');
+
+    expect(FakeWebSocket.instances[0].sent.at(-1)).toEqual({
+      type: 'choose_start_checkpoint',
+      playerId: 'p1',
+      checkpointTerritoryId: 'lysaker_cp',
     });
   });
 });

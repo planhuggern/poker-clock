@@ -5,6 +5,13 @@ TERRITORY_IDS = (
     "t9", "t10", "t11", "t12", "t13", "t14", "t15", "t16", "t17",
     "t18", "t19", "t20", "t21", "t22", "t23", "t24", "t25", "t26",
     "t27", "t28", "t29", "t30", "t31", "t32", "t33", "t34", "t35",
+    "lørenskog_cp", "lysaker_cp", "kolbotn_cp",
+)
+
+CHECKPOINT_IDS = (
+    "lørenskog_cp",
+    "lysaker_cp",
+    "kolbotn_cp",
 )
 
 START_TERRITORIES = {
@@ -48,6 +55,9 @@ ADJACENCY = {
     "t31": ["t29", "t30"],
     "t32": ["t30", "t33", "t34", "t35"],
     "t33": ["t2", "t30", "t32"],
-    "t34": ["t32", "t35"],
-    "t35": ["t30", "t32", "t34"],
+    "t34": ["t32", "t35", "kolbotn_cp"],
+    "t35": ["t30", "t32", "t34", "kolbotn_cp"],
+    "lørenskog_cp": ["t26", "t27", "t28"],
+    "lysaker_cp": ["t17", "t15"],
+    "kolbotn_cp": ["t35", "t34"],
 }
