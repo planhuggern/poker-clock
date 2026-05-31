@@ -18,6 +18,13 @@ import { notifyGameChanged, state } from "./state.js";
 
 const DEFAULT_WS_URL = "ws://localhost:8000/ws/oslo-conquest/";
 
+// Server authoritative betyr at serveren har full kontroll over spillets tilstand,
+// og klientene sender kun handlinger som serveren validerer og utfører.
+// Dette er i motsetning til en klient-autoritativ modell, 
+// hvor klientene har mer kontroll over spillets tilstand og kan utføre handlinger 
+// lokalt uten å vente på serveren. I Oslo Conquest brukes server-autoritativ modell 
+// for flerspiller-spill, mens lokal spillmodus bruker klient-autoritativ modell for å 
+// forenkle implementasjonen.
 function isServerAuthoritativeGame(gameState) {
   return Boolean(gameState?.players?.some((player) => player.side));
 }

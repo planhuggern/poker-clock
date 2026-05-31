@@ -4,17 +4,24 @@ import { createMapAdapter } from "./map.js";
 export function MapView({ gameState, selectedTerritory, onSelectTerritory }) {
   const containerRef = useRef(null);
   const adapterRef = useRef(null);
+  const onSelectTerritoryRef = useRef(onSelectTerritory);
+
+  useEffect(() => {
+    onSelectTerritoryRef.current = onSelectTerritory;
+  }, [onSelectTerritory]);
 
   useEffect(() => {
     if (!containerRef.current) return undefined;
 
-    adapterRef.current = createMapAdapter(containerRef.current, { onSelectTerritory });
+    adapterRef.current = createMapAdapter(containerRef.current, {
+      onSelectTerritory: (territoryId) => onSelectTerritoryRef.current?.(territoryId),
+    });
 
     return () => {
       adapterRef.current?.destroy();
       adapterRef.current = null;
     };
-  }, [onSelectTerritory]);
+  }, []);
 
   useEffect(() => {
     adapterRef.current?.update({ gameState, selectedTerritory });

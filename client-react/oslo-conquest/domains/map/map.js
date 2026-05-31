@@ -234,7 +234,7 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
     territoryNodes.set(territoryId, { group, poly, units: null });
   }
 
-  const pieceLayer = draw.group().attr({ id: 'piece-layer', 'pointer-events': 'none' });
+  let pieceLayer;
 
   const territoryGroup = draw.group().attr({ id: 'territory-layer' });
   for (const territory of TERRITORIES) {
@@ -289,6 +289,9 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
       'stroke-width': 1.8,
     });
   }
+
+  // Keep player pieces above map polygons/borders so setup placement is always visible.
+  pieceLayer = draw.group().attr({ id: 'piece-layer', 'pointer-events': 'none' });
 
   const compass = draw.group().transform({ translateX: 840, translateY: 80 });
   compass.svg(`
