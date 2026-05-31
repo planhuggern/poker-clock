@@ -35,6 +35,7 @@ def assign_player(player: dict, side: str) -> dict:
         "diceRoll": None,
         "movesRemaining": 0,
         "validMoves": [],
+        "setupConfirmed": False,
     }
 
 
@@ -81,6 +82,7 @@ def start_game(room_state: dict) -> dict:
         player["diceRoll"] = None
         player["movesRemaining"] = 0
         player["validMoves"] = []
+        player["setupConfirmed"] = False
 
     room_state.update(
         {
@@ -98,9 +100,6 @@ def end_turn(room_state: dict, player_id: str | None) -> tuple[dict, str | None]
     if not room_state.get("started"):
         return room_state, "Spillet har ikke startet"
 
-    if room_state.get("phase") != "playing":
-        return room_state, "Velg startcheckpoint før første runde"
-
     player = find_player_by_id(room_state, player_id)
     if not player:
         return room_state, "Ukjent spiller"
@@ -108,6 +107,36 @@ def end_turn(room_state: dict, player_id: str | None) -> tuple[dict, str | None]
     active_side = room_state.get("activePlayer")
     if player.get("side") != active_side:
         return room_state, "Det er ikke din tur"
+
+    if room_state.get("phase") == "setup":
+        if player.get("position") is None:
+            return room_state, "Velg startcheckpoint før du avslutter turen"
+
+        player["setupConfirmed"] = True
+        next_side = _next_setup_side(room_state)
+        if next_side:
+            room_state["activePlayer"] = next_side
+            next_player = next(
+                p
+                for p in room_state["players"]
+                if p["side"] == room_state["activePlayer"]
+            )
+            room_state.setdefault("log", []).insert(
+                0,
+                log_entry(f"{next_player['name']} velger startcheckpoint"),
+            )
+            return room_state, None
+
+        room_state["phase"] = "playing"
+        room_state["activePlayer"] = "red"
+        room_state.setdefault("log", []).insert(
+            0,
+            log_entry("Alle spillere har valgt startcheckpoint. Runde 1 starter."),
+        )
+        return room_state, None
+
+    if room_state.get("phase") != "playing":
+        return room_state, "Velg startcheckpoint før første runde"
 
     player["diceRoll"] = None
     player["movesRemaining"] = 0
@@ -177,8 +206,8 @@ def choose_start_checkpoint(
     if player.get("side") != room_state.get("activePlayer"):
         return room_state, "Det er ikke din tur"
 
-    if player.get("position") is not None:
-        return room_state, "Startcheckpoint er allerede valgt"
+    if player.get("setupConfirmed"):
+        return room_state, "Startcheckpoint er allerede låst"
 
     checkpoint_id = str(checkpoint_territory_id or "")
     if checkpoint_id not in CHECKPOINT_IDS:
@@ -188,21 +217,11 @@ def choose_start_checkpoint(
     player["diceRoll"] = None
     player["movesRemaining"] = 0
     player["validMoves"] = []
+    player["setupConfirmed"] = False
     room_state.setdefault("log", []).insert(
         0,
-        log_entry(f"{player['name']} valgte startcheckpoint {checkpoint_id}"),
+        log_entry(f"{player['name']} flyttet startbrikken til {checkpoint_id}"),
     )
-
-    next_side = _next_setup_side(room_state)
-    if next_side:
-        room_state["activePlayer"] = next_side
-    else:
-        room_state["phase"] = "playing"
-        room_state["activePlayer"] = "red"
-        room_state.setdefault("log", []).insert(
-            0,
-            log_entry("Alle spillere har valgt startcheckpoint. Runde 1 starter."),
-        )
 
     return room_state, None
 
@@ -367,7 +386,7 @@ def _next_setup_side(room_state: dict) -> str | None:
             (item for item in room_state.get("players", []) if item.get("side") == side),
             None,
         )
-        if player and player.get("position") is None:
+        if player and not player.get("setupConfirmed"):
             return side
     return None
 

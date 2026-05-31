@@ -1,9 +1,9 @@
 import { useEffect, useState } from "preact/hooks";
-import { ADJACENCY, CHECKPOINTS, DISTRICTS, MISSIONS, TERRITORIES } from "./game-data.js";
-import { findPlayerByOwner, getCurrentPlayer, isMvpGame, isMyTurn } from "./game-state.js";
-import { state, notifyGameChanged, subscribe } from "./state.js";
-import { DICE_FACES } from "./dice.js";
-import { MapView } from "./MapView.jsx";
+import { ADJACENCY, CHECKPOINTS, DISTRICTS, MISSIONS, TERRITORIES } from "../../domains/game/model/game-data.js";
+import { findPlayerByOwner, getCurrentPlayer, isMvpGame, isMyTurn } from "../../domains/game/state/game-state.js";
+import { state, notifyGameChanged, subscribe } from "../../domains/game/state/state.js";
+import { DICE_FACES } from "../../domains/dice/dice.js";
+import { MapView } from "../../domains/map/MapView.jsx";
 
 export function GameUI({
   gameState,
@@ -30,13 +30,27 @@ export function GameUI({
 
   if (!gameState) return null;
 
+  function handleSelectTerritory(territoryId) {
+    setSelectedTerritory(territoryId);
+
+    if (!isMvpGame() || state.gameState?.phase !== "setup" || !isMyTurn()) return;
+
+    const territory = TERRITORIES.find((item) => item.id === territoryId);
+    if (territory?.type !== "checkpoint") return;
+
+    dispatchGameAction({
+      type: "choose_start_checkpoint",
+      checkpointTerritoryId: territoryId,
+    });
+  }
+
   return (
     <>
       <HUD dispatchGameAction={dispatchGameAction} />
       <MapView
         gameState={gameState}
         selectedTerritory={selectedTerritory}
-        onSelectTerritory={setSelectedTerritory}
+        onSelectTerritory={handleSelectTerritory}
       />
       <TurnIndicator />
       <CheckpointBar />
@@ -167,30 +181,23 @@ function ActionPanel({ dispatchGameAction }) {
 
 function ActionContent({ dispatchGameAction }) {
   const currentPlayer = getCurrentPlayer();
-  const needsStartCheckpoint = Boolean(isMvpGame() && currentPlayer && currentPlayer.position === null);
+  const isMvpSetup = Boolean(isMvpGame() && state.gameState?.phase === "setup");
 
-  if (needsStartCheckpoint) {
+  if (isMvpSetup) {
+    const selectedCheckpointName = currentPlayer?.position
+      ? CHECKPOINTS[currentPlayer.position.replace("_cp", "")]?.name || currentPlayer.position
+      : null;
+
     return (
       <div id="action-content">
         <p style={{ color: "var(--text-muted)", fontStyle: "italic", fontSize: "0.9rem" }}>
-          Velg startcheckpoint for spillerbrikken
+          Klikk direkte på checkpoint i kartet for å flytte startbrikken.
         </p>
-        <div className="action-buttons" style={{ marginTop: "12px" }}>
-          {Object.entries(CHECKPOINTS).map(([checkpointId, checkpoint]) => (
-            <button
-              key={checkpointId}
-              className="action-btn"
-              type="button"
-              onClick={() => dispatchGameAction({
-                type: "choose_start_checkpoint",
-                checkpointTerritoryId: `${checkpointId}_cp`,
-              })}
-              disabled={!isMyTurn()}
-            >
-              Start: {checkpoint.name}
-            </button>
-          ))}
-        </div>
+        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "8px" }}>
+          {selectedCheckpointName
+            ? `Valgt startcheckpoint: ${selectedCheckpointName}. Trykk Avslutt tur for å låse valget.`
+            : "Velg et checkpoint, og trykk deretter Avslutt tur for å bekrefte."}
+        </p>
       </div>
     );
   }

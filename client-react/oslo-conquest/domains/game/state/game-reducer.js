@@ -1,5 +1,5 @@
 import { produce } from 'immer';
-import { ADJACENCY, DISTRICTS, MISSIONS, TERRITORIES } from './game-data.js';
+import { ADJACENCY, DISTRICTS, MISSIONS, TERRITORIES } from '../model/game-data.js';
 
 export function reduceGameAction(gameState, context, action) {
   const events = [];

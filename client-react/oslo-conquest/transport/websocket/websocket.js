@@ -2,8 +2,8 @@
 // Lobby-UI eies av Preact; denne modulen sender/mottar meldinger og rapporterer
 // status tilbake via callbacks.
 
-import { notifyGameChanged, state } from './state.js';
-import { createInitialGameState } from './game-state.js';
+import { notifyGameChanged, state } from '../../domains/game/state/state.js';
+import { createInitialGameState } from '../../domains/game/state/game-state.js';
 
 let pendingMessage = null;
 let activeUrl = '';

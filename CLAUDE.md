@@ -83,10 +83,12 @@ Prefer unit tests for:
 - derived state logic.
 
 Current frontend-focused modules include:
-- `game-data.js`
-- `game-state.js`
-- `actions.js`
-- `missions.js`
+- `client-react/oslo-conquest/domains/game/model/game-data.js`
+- `client-react/oslo-conquest/domains/game/state/game-state.js`
+- `client-react/oslo-conquest/domains/game/state/actions.js`
+- `client-react/oslo-conquest/domains/game/state/game-reducer.js`
+- `client-react/oslo-conquest/transport/websocket/websocket.js`
+- `client-react/oslo-conquest/ui/components/GameUI.jsx`
 
 Tests should live close to the code they cover.
 

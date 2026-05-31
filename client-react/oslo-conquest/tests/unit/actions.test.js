@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { createInitialGameState } from '../game-state.js';
-import { reduceGameAction } from '../game-reducer.js';
-import { DISTRICTS, TERRITORIES } from '../game-data.js';
+import { createInitialGameState } from '../../domains/game/state/game-state.js';
+import { reduceGameAction } from '../../domains/game/state/game-reducer.js';
+import { DISTRICTS, TERRITORIES } from '../../domains/game/model/game-data.js';
 
 let gameState;
 const context = { playerId: 'p1', random: Math.random };

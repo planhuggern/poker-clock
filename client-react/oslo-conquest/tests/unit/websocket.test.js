@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { state } from '../state.js';
+import { state } from '../../domains/game/state/state.js';
 import {
   connectWS,
   createGame,
@@ -9,7 +9,7 @@ import {
   sendChooseStartCheckpoint,
   sendMove,
   sendRollDice,
-} from '../websocket.js';
+} from '../../transport/websocket/websocket.js';
 
 class FakeWebSocket {
   static OPEN = 1;

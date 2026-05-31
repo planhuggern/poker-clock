@@ -28,6 +28,28 @@ def setup_function():
     _rooms.clear()
 
 
+async def _complete_setup_round(first, second):
+    await first.send_json_to(
+        {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
+    )
+    await first.receive_json_from()
+    await second.receive_json_from()
+
+    await first.send_json_to({"type": "end_turn"})
+    await first.receive_json_from()
+    await second.receive_json_from()
+
+    await second.send_json_to(
+        {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
+    )
+    await first.receive_json_from()
+    await second.receive_json_from()
+
+    await second.send_json_to({"type": "end_turn"})
+    await first.receive_json_from()
+    await second.receive_json_from()
+
+
 def test_create_game_assigns_red_player():
     responses = ws_roundtrip(
         [
@@ -134,16 +156,7 @@ def test_active_player_can_end_turn():
         await first.receive_json_from()
         await second.receive_json_from()
 
-        await first.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
-        await second.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await _complete_setup_round(first, second)
 
         await first.send_json_to({"type": "end_turn"})
         first_snapshot = await first.receive_json_from()
@@ -175,16 +188,7 @@ def test_non_active_player_cannot_end_turn():
         await first.receive_json_from()
         await second.receive_json_from()
 
-        await first.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
-        await second.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await _complete_setup_round(first, second)
 
         await second.send_json_to({"type": "end_turn"})
         error = await second.receive_json_from()
@@ -214,16 +218,7 @@ def test_active_player_can_attack_with_deterministic_mvp_rules():
         await first.receive_json_from()
         await second.receive_json_from()
 
-        await first.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
-        await second.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await _complete_setup_round(first, second)
 
         await first.send_json_to({"type": "attack", "fromTerritoryId": "t0a", "toTerritoryId": "t1"})
         first_snapshot = await first.receive_json_from()
@@ -260,16 +255,7 @@ def test_attack_rejects_non_neighbor_territories():
         await first.receive_json_from()
         await second.receive_json_from()
 
-        await first.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
-        await second.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await _complete_setup_round(first, second)
 
         await first.send_json_to({"type": "attack", "fromTerritoryId": "t0a", "toTerritoryId": "t35"})
         error = await first.receive_json_from()
@@ -298,16 +284,7 @@ def test_active_player_can_roll_dice_and_get_valid_moves():
         await first.receive_json_from()
         await second.receive_json_from()
 
-        await first.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
-        await second.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await _complete_setup_round(first, second)
 
         await first.send_json_to({"type": "roll_dice"})
         first_snapshot = await first.receive_json_from()
@@ -344,16 +321,7 @@ def test_active_player_can_move_to_territory_in_valid_moves():
         await first.receive_json_from()
         await second.receive_json_from()
 
-        await first.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
-        await second.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await _complete_setup_round(first, second)
 
         await first.send_json_to({"type": "roll_dice"})
         first_after_roll = await first.receive_json_from()
@@ -394,16 +362,7 @@ def test_move_rejects_territory_outside_valid_moves():
         await first.receive_json_from()
         await second.receive_json_from()
 
-        await first.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
-        await second.send_json_to(
-            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
-        )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await _complete_setup_round(first, second)
 
         await first.send_json_to({"type": "roll_dice"})
         await first.receive_json_from()
@@ -453,8 +412,9 @@ def test_player_can_choose_start_checkpoint_before_roll():
     assert first_snapshot == second_snapshot
     red = next(player for player in first_snapshot["state"]["players"] if player["side"] == "red")
     assert red["position"] == "lysaker_cp"
+    assert red["setupConfirmed"] is False
     assert first_snapshot["state"]["phase"] == "setup"
-    assert first_snapshot["state"]["activePlayer"] == "blue"
+    assert first_snapshot["state"]["activePlayer"] == "red"
 
 
 def test_roll_dice_requires_start_checkpoint_selection():
