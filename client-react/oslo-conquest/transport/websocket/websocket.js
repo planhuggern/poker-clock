@@ -13,10 +13,15 @@ function setHandlers(nextHandlers = {}) {
   handlers = { ...handlers, ...nextHandlers };
 }
 
+// emit gjør at vi kan kalle handlers uten å sjekke om de finnes hver gang, 
+// og sentraliserer logikken for hvordan vi håndterer statusmeldinger og feil.
 function emit(name, ...args) {
   handlers[name]?.(...args);
 }
 
+// I en server-autoritativ modell er det viktig at all spilllogikk og validering skjer på serveren,
+// og at klientene kun sender handlinger som serveren kan validere og utføre. Dette sikrer at
+// alle spillere har en konsistent spillopplevelse, og forhindrer juks og urettferdige fordeler.
 function handleGameState(nextState) {
   state.gameState = nextState;
 
@@ -34,19 +39,28 @@ function handleGameState(nextState) {
 function handleMessage(rawMessage) {
   const msg = JSON.parse(rawMessage);
 
-  if (msg.type === 'game_state') {
-    handleGameState(msg.state);
-  } else if (msg.type === 'action_result') {
-    state.gameState = msg.state;
-    emit('onGameState', msg.state);
-    notifyGameChanged();
-    if (msg.dice) emit('onModal', { type: 'dice', result: msg.dice });
-  } else if (msg.type === 'room_list') {
-    emit('onRooms', msg.rooms || []);
-  } else if (msg.type === 'error') {
-    const message = msg.message || 'Ugyldig handling';
-    emit('onLobbyStatus', message, true);
-    emit('onError', message);
+  switch (msg.type) {
+    case 'game_state':
+      handleGameState(msg.state);
+      break;
+    case 'action_result':
+      state.gameState = msg.state;
+      emit('onGameState', msg.state);
+      notifyGameChanged();
+      if (msg.dice) emit('onModal', { type: 'dice', result: msg.dice });
+      break;
+    case 'room_list':
+      emit('onRooms', msg.rooms || []);
+      break;
+    case 'error': {
+      const message = msg.message || 'Ugyldig handling';
+      emit('onLobbyStatus', message, true);
+      emit('onError', message);
+      break;
+    }
+    default:
+      console.warn('Unknown websocket message type:', msg.type, msg);
+      break;
   }
 }
 

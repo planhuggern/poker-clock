@@ -18,6 +18,13 @@ import { notifyGameChanged, state } from "../domains/game/state/state.js";
 
 const DEFAULT_WS_URL = "ws://localhost:8000/ws/oslo-conquest/";
 
+// Server authoritative betyr at serveren har full kontroll over spillets tilstand,
+// og klientene sender kun handlinger som serveren validerer og utfører.
+// Dette er i motsetning til en klient-autoritativ modell, 
+// hvor klientene har mer kontroll over spillets tilstand og kan utføre handlinger 
+// lokalt uten å vente på serveren. I Oslo Conquest brukes server-autoritativ modell 
+// for flerspiller-spill, mens lokal spillmodus bruker klient-autoritativ modell for å 
+// forenkle implementasjonen.
 function isServerAuthoritativeGame(gameState) {
   return Boolean(gameState?.players?.some((player) => player.side));
 }
@@ -34,6 +41,18 @@ export function App() {
   const [selectedTerritory, setSelectedTerritory] = useState(null);
   const [modal, setModal] = useState(null);
   const [missionRevealed, setMissionRevealed] = useState(false);
+
+  // Defaultverdien til et roomId settes til "oslo-x", hvor x er det høyeste eksisterende nummeret + 1 blant aktive rom.
+  // Dette gjør det enklere for spillere å opprette nye rom uten å måtte finne på unike navn:
+  if (roomId === "" || roomId === `oslo-${rooms.length}`) {
+    const largestNumber = rooms
+      .map((room) => {
+        const match = room.room.match(/^oslo-(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .reduce((maks, num) => Math.max(maks, num), 0);
+    setRoomId(`oslo-${largestNumber + 1}`);
+  }
 
   useEffect(() => {
     state.gameState = gameState;
@@ -223,7 +242,6 @@ function LobbyConnectionColumn({
           type="text"
           id="room-id"
           value={roomId}
-          placeholder="oslo-1"
           maxLength={20}
           onInput={(event) => setRoomId(event.currentTarget.value)}
         />
