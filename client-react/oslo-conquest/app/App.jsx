@@ -44,7 +44,7 @@ export function App() {
 
   // Defaultverdien til et roomId settes til "oslo-x", hvor x er det høyeste eksisterende nummeret + 1 blant aktive rom.
   // Dette gjør det enklere for spillere å opprette nye rom uten å måtte finne på unike navn:
-  if (roomId === "" || roomId === `oslo-${rooms.length}`) {
+  if (roomId === "" || roomId.startsWith("oslo-")) {
     const largestNumber = rooms
       .map((room) => {
         const match = room.room.match(/^oslo-(\d+)$/);
@@ -53,6 +53,31 @@ export function App() {
       .reduce((maks, num) => Math.max(maks, num), 0);
     setRoomId(`oslo-${largestNumber + 1}`);
   }
+
+
+  // Spillernavnet settes til en tilfeldig kul navn fra en tilfelg nickname generator,
+  // for å gjøre det raskt og gøy å komme i gang:
+  useEffect(() => {
+    if (playerName.trim() === "") {
+      const adjectives = [
+        "Rasende", "Lynende", "Skinnende",
+        "Dundrende", "Glitrende", "Brølende",
+        "Voldsomme", "Skumle", "Mektige",
+        "Fryktløse", "Våghalsende", "Uovervinnelige",
+        "Tordnende", "Skjoldbærende", "Kraftfulle"
+        ];
+      const nouns = [
+        "Ulv", "Ørn", "Løve",
+        "Bjørn", "Slange", "Havfrue",
+        "Trollmann", "Viking", "Kriger",
+        "Skurk", "Eventyrer", "Konge",
+        "Dronning", "Ninja", "Samurai",
+        "Krabbe", "Falk", "Panter"
+        ];
+      const randomName = `${adjectives[Math.floor(Math.random() * adjectives.length)]} ${nouns[Math.floor(Math.random() * nouns.length)]}`;
+      setPlayerName(randomName);
+    }
+  }, []);
 
   useEffect(() => {
     state.gameState = gameState;
