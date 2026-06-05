@@ -33,15 +33,27 @@ export function GameUI({
   function handleSelectTerritory(territoryId) {
     setSelectedTerritory(territoryId);
 
-    if (!isMvpGame() || state.gameState?.phase !== "setup" || !isMyTurn()) return;
+    if (!isMvpGame() || !isMyTurn()) return;
 
-    const territory = TERRITORIES.find((item) => item.id === territoryId);
-    if (territory?.type !== "checkpoint") return;
+    if (state.gameState?.phase === "setup") {
+      const territory = TERRITORIES.find((item) => item.id === territoryId);
+      if (territory?.type !== "checkpoint") return;
 
-    dispatchGameAction({
-      type: "choose_start_checkpoint",
-      checkpointTerritoryId: territoryId,
-    });
+      dispatchGameAction({
+        type: "choose_start_checkpoint",
+        checkpointTerritoryId: territoryId,
+      });
+      return;
+    }
+
+    const currentPlayer = getCurrentPlayer();
+    if (
+      state.gameState?.phase === "playing" &&
+      currentPlayer?.diceRoll !== null &&
+      currentPlayer?.validMoves?.includes(territoryId)
+    ) {
+      dispatchGameAction({ type: "move_to_territory", territoryId });
+    }
   }
 
   return (

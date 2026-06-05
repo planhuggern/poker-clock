@@ -156,6 +156,12 @@ export function App() {
   function handleCreateGame() {
     if (!requireLobbyFields()) return;
     createGame({ url: DEFAULT_WS_URL, name: playerName, room: roomId, handlers });
+    // Etter å ha opprettet et spill, settes myPlayerId fra state som oppdateres av onGameState
+    // når serveren sender den nye tilstanden. Deretter åpnes en lobby-flis for spillet som vises til 
+    // høyre for listen over aktive rom, hvor spilleren kan vente på at andre skal bli med før spillet starter.
+
+    
+
     setMyPlayerId(state.myPlayerId);
   }
 

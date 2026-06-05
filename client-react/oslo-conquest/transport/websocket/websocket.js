@@ -64,6 +64,8 @@ function handleMessage(rawMessage) {
   }
 }
 
+// connectWS prøver å koble til WebSocket-serveren hvis vi ikke allerede er tilkoblet, 
+// og setter opp event handlers for tilkoblingsstatus og innkommende meldinger. 
 export function connectWS({ url, handlers: nextHandlers } = {}) {
   setHandlers(nextHandlers);
   if (url) activeUrl = url.trim();

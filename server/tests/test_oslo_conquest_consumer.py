@@ -381,6 +381,83 @@ def test_move_rejects_territory_outside_valid_moves():
     }
 
 
+def test_move_requires_dice_roll_without_changing_state():
+    async def run():
+        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        assert (await first.connect())[0]
+        assert (await second.connect())[0]
+
+        await first.send_json_to(
+            {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
+        )
+        await first.receive_json_from()
+        await second.send_json_to(
+            {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        await _complete_setup_round(first, second)
+        original_position = next(
+            player for player in _rooms["oslo-1"]["players"] if player["side"] == "red"
+        )["position"]
+
+        await first.send_json_to({"type": "move", "toTerritoryId": "t0a"})
+        error = await first.receive_json_from()
+
+        await first.disconnect()
+        await second.disconnect()
+        return error, original_position
+
+    error, original_position = async_to_sync(run)()
+    red = next(player for player in _rooms["oslo-1"]["players"] if player["side"] == "red")
+    assert error == {"type": "error", "message": "Du må kaste terning først"}
+    assert red["position"] == original_position
+    assert red["movesRemaining"] == 0
+    assert red["validMoves"] == []
+
+
+def test_non_active_player_cannot_move_after_active_player_rolls():
+    async def run():
+        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
+        assert (await first.connect())[0]
+        assert (await second.connect())[0]
+
+        await first.send_json_to(
+            {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
+        )
+        await first.receive_json_from()
+        await second.send_json_to(
+            {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        await _complete_setup_round(first, second)
+
+        await first.send_json_to({"type": "roll_dice"})
+        await first.receive_json_from()
+        await second.receive_json_from()
+
+        blue_before = next(
+            player for player in _rooms["oslo-1"]["players"] if player["side"] == "blue"
+        )["position"]
+
+        await second.send_json_to({"type": "move", "toTerritoryId": "t0a"})
+        error = await second.receive_json_from()
+
+        await first.disconnect()
+        await second.disconnect()
+        return error, blue_before
+
+    error, blue_before = async_to_sync(run)()
+    blue = next(player for player in _rooms["oslo-1"]["players"] if player["side"] == "blue")
+    assert error == {"type": "error", "message": "Det er ikke din tur"}
+    assert blue["position"] == blue_before
+
+
 def test_player_can_choose_start_checkpoint_before_roll():
     async def run():
         first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
