@@ -11,10 +11,10 @@ import {
   sendRollDice,
   sendGameState,
   startLocalGame,
-} from "../transport/websocket/websocket.js";
-import { GameUI } from "../ui/components/GameUI.jsx";
-import { reduceGameAction } from "../domains/game/state/game-reducer.js";
-import { notifyGameChanged, state } from "../domains/game/state/state.js";
+} from "./transport/websocket/websocket.js";
+import { GameUI } from "./ui/components/GameUI.jsx";
+import { reduceGameAction } from "./domains/game/state/game-reducer.js";
+import { notifyGameChanged, state } from "./domains/game/state/state.js";
 
 const DEFAULT_WS_URL = "ws://localhost:8000/ws/oslo-conquest/";
 
