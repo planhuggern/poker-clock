@@ -17,7 +17,8 @@ __pycache__/
 
 # Django / server
 server/data/
-server/staticfiles/
+server/staticfiles/*
+!server/staticfiles/.gitkeep
 server/public/
 *.db
 *.db-shm
