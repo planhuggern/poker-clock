@@ -15,6 +15,7 @@
     "oslo-conquest/src/**/*.jsx",
     "oslo-conquest/domains/**/*.js",
     "oslo-conquest/domains/**/*.jsx",
+    "oslo-conquest/domains/**/*.ts",
     "oslo-conquest/transport/**/*.js",
     "oslo-conquest/transport/**/*.jsx",
     "oslo-conquest/ui/**/*.js",
@@ -22,6 +23,6 @@
     "oslo-conquest/tests/**/*.js",
     "oslo-conquest/tests/**/*.jsx",
     "vite.config.js"
-  ],
+],
   "exclude": ["dist", "../server/public"]
 }
