@@ -2,7 +2,7 @@
 // Skiller seg fra state.js: her er logikken, der er bare dataene.
 
 import { TERRITORIES, MISSIONS, PLAYER_COLORS, PLAYER_COLOR_NAMES } from '../model/game-data.js';
-import { state } from './state.js';
+import { state } from './state.ts';
 
 // Bygger et nytt, blankt spillbrett med alle territorier nøytrale og spillerne klar.
 // Trekker tilfeldige oppdragskort og setter startposisjon til Lørenskog for alle.

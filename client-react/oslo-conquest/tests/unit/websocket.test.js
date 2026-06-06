@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { state } from '../../src/domains/game/state/state.js';
+import { state } from '../../src/domains/game/state/state.ts';
 import {
   connectWS,
   createGame,
