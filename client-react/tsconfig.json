@@ -9,9 +9,18 @@
     "checkJs": false
   },
   "include": [
-    "poker-clock/src",
-    "oslo-conquest/**/*.js",
-    "oslo-conquest/**/*.jsx",
+    "poker-clock/src/**/*.js",
+    "poker-clock/src/**/*.jsx",
+    "oslo-conquest/src/**/*.js",
+    "oslo-conquest/src/**/*.jsx",
+    "oslo-conquest/domains/**/*.js",
+    "oslo-conquest/domains/**/*.jsx",
+    "oslo-conquest/transport/**/*.js",
+    "oslo-conquest/transport/**/*.jsx",
+    "oslo-conquest/ui/**/*.js",
+    "oslo-conquest/ui/**/*.jsx",
+    "oslo-conquest/tests/**/*.js",
+    "oslo-conquest/tests/**/*.jsx",
     "vite.config.js"
   ],
   "exclude": ["dist", "../server/public"]
