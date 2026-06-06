@@ -30,7 +30,7 @@ export default defineConfig({
     emptyOutDir: false,
     rollupOptions: {
       input: {
-        "poker-clock": resolve(__dirname, "index.html"),
+        "poker-clock": resolve(__dirname, "poker-clock/index.html"),
         "oslo-conquest": resolve(__dirname, "oslo-conquest/index.html"),
       },
     },
