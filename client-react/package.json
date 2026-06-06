@@ -14,14 +14,12 @@
     "@svgdotjs/svg.js": "^3.2.5",
     "daisyui": "^5.5.19",
     "immer": "^11.1.8",
-    "preact": "^10.29.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.12.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@preact/preset-vite": "^2.10.5",
     "@tailwindcss/vite": "^4.2.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",

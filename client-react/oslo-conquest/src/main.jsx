@@ -1,11 +1,11 @@
 // Aktivt entrypoint for Oslo Conquest.
-// Preact eier lobby, game UI og kartets livssyklus.
+// React eier lobby, game UI og kartets livssyklus.
 
-import { render } from "preact";
+import ReactDOM from "react-dom/client";
 import { App } from "./App.jsx";
 
 const root = document.getElementById("oslo-conquest-root");
 
 if (root) {
-  render(<App />, root);
+  ReactDOM.createRoot(root).render(<App />);
 }

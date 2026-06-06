@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useState } from "react";
 import { ADJACENCY, CHECKPOINTS, DISTRICTS, MISSIONS, TERRITORIES } from "../../domains/game/model/game-data.js";
 import { findPlayerByOwner, getCurrentPlayer, isMvpGame, isMyTurn } from "../../domains/game/state/game-state.js";
 import { state, notifyGameChanged, subscribe } from "../../domains/game/state/state.js";
