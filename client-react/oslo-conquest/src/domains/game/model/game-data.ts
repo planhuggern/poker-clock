@@ -1,6 +1,9 @@
 // Alle spillets konstanter: farger, bydeler, territorier, nabolister og oppdrag.
 // Ingen spillogikk her — bare data som de andre modulene leser.
 
+
+
+
 export const PLAYER_COLORS = ['#c0392b','#1a6b9a','#1a7a4a','#c0692b','#6b3fa0','#1a8a8a'];
 export const PLAYER_COLOR_NAMES = ['Rød','Blå','Grønn','Oransje','Lilla','Cyan'];
 
@@ -26,47 +29,68 @@ export const DISTRICTS = {
 
 // Alle 35 territorier med id, navn, hvilken bydel de tilhører, kjøpspris,
 // antall nøytrale bataljoner ved spillstart og normalisert kartposisjon (x/y 0–1).
-export const TERRITORIES = [
-  { id: 't0a', name: 'Karl Johans gate',  district: 'sentrum',           price: 500, neutralUnits: 3, x: 0.38, y: 0.63 },
-  { id: 't0b', name: 'Aker Brygge',       district: 'sentrum',           price: 480, neutralUnits: 3, x: 0.39, y: 0.65 },
-  { id: 't1',  name: 'Grønland',          district: 'gamle-oslo',        price: 300, neutralUnits: 2, x: 0.54, y: 0.62 },
-  { id: 't2',  name: 'Gamlebyen',         district: 'gamle-oslo',        price: 280, neutralUnits: 2, x: 0.52, y: 0.66 },
-  { id: 't3',  name: 'Tøyen',             district: 'gamle-oslo',        price: 260, neutralUnits: 1, x: 0.55, y: 0.58 },
-  { id: 't4',  name: 'Løkka',             district: 'grunerløkka',       price: 320, neutralUnits: 2, x: 0.52, y: 0.52 },
-  { id: 't5',  name: 'Sofienberg',        district: 'grunerløkka',       price: 280, neutralUnits: 1, x: 0.55, y: 0.54 },
-  { id: 't6',  name: 'Rodeløkka',         district: 'grunerløkka',       price: 260, neutralUnits: 1, x: 0.50, y: 0.56 },
-  { id: 't7',  name: 'Torshov',           district: 'sagene',            price: 240, neutralUnits: 1, x: 0.49, y: 0.49 },
-  { id: 't8',  name: 'Sandaker',          district: 'sagene',            price: 220, neutralUnits: 1, x: 0.47, y: 0.47 },
-  { id: 't9',  name: 'Bislett',           district: 'st-hanshaugen',     price: 320, neutralUnits: 2, x: 0.46, y: 0.54 },
-  { id: 't10', name: 'Adamstuen',         district: 'st-hanshaugen',     price: 280, neutralUnits: 1, x: 0.44, y: 0.52 },
-  { id: 't11', name: 'Majorstuen',        district: 'frogner',           price: 460, neutralUnits: 3, x: 0.40, y: 0.54 },
-  { id: 't12', name: 'Frognerparken',     district: 'frogner',           price: 420, neutralUnits: 3, x: 0.37, y: 0.56 },
-  { id: 't13', name: 'Bygdøy',            district: 'frogner',           price: 400, neutralUnits: 2, x: 0.34, y: 0.62 },
-  { id: 't14', name: 'Skøyen',            district: 'ullern',            price: 380, neutralUnits: 2, x: 0.31, y: 0.58 },
-  { id: 't15', name: 'Montebello',        district: 'ullern',            price: 360, neutralUnits: 2, x: 0.28, y: 0.54 },
-  { id: 't16', name: 'Vinderen',          district: 'vestre-aker',       price: 340, neutralUnits: 2, x: 0.33, y: 0.46 },
-  { id: 't17', name: 'Røa',               district: 'vestre-aker',       price: 320, neutralUnits: 2, x: 0.29, y: 0.42 },
-  { id: 't18', name: 'Holmenkollen',      district: 'vestre-aker',       price: 360, neutralUnits: 2, x: 0.30, y: 0.36 },
-  { id: 't19', name: 'Kjelsås',           district: 'nordre-aker',       price: 300, neutralUnits: 2, x: 0.44, y: 0.38 },
-  { id: 't20', name: 'Nydalen',           district: 'nordre-aker',       price: 320, neutralUnits: 2, x: 0.46, y: 0.42 },
-  { id: 't21', name: 'Maridalen',         district: 'nordre-aker',       price: 260, neutralUnits: 1, x: 0.40, y: 0.32 },
-  { id: 't22', name: 'Økern',             district: 'bjerke',            price: 240, neutralUnits: 1, x: 0.56, y: 0.46 },
-  { id: 't23', name: 'Risløkka',          district: 'bjerke',            price: 220, neutralUnits: 1, x: 0.59, y: 0.44 },
-  { id: 't24', name: 'Romsås',            district: 'grorud',            price: 220, neutralUnits: 1, x: 0.62, y: 0.38 },
-  { id: 't25', name: 'Grorud sentrum',    district: 'grorud',            price: 200, neutralUnits: 1, x: 0.65, y: 0.42 },
-  { id: 't26', name: 'Stovner sentrum',   district: 'stovner',           price: 200, neutralUnits: 1, x: 0.70, y: 0.38 },
-  { id: 't27', name: 'Haugenstua',        district: 'stovner',           price: 200, neutralUnits: 1, x: 0.73, y: 0.42 },
-  { id: 't28', name: 'Furuset',           district: 'alna',              price: 260, neutralUnits: 2, x: 0.71, y: 0.50 },
-  { id: 't29', name: 'Helsfyr',           district: 'alna',              price: 280, neutralUnits: 2, x: 0.63, y: 0.52 },
-  { id: 't30', name: 'Manglerud',         district: 'østensjø',          price: 260, neutralUnits: 2, x: 0.63, y: 0.62 },
-  { id: 't31', name: 'Oppsal',            district: 'østensjø',          price: 240, neutralUnits: 1, x: 0.67, y: 0.64 },
-  { id: 't32', name: 'Ljan',              district: 'nordstrand',        price: 300, neutralUnits: 2, x: 0.60, y: 0.72 },
-  { id: 't33', name: 'Nordstrand sentrum',district: 'nordstrand',        price: 320, neutralUnits: 2, x: 0.56, y: 0.76 },
-  { id: 't34', name: 'Holmlia',           district: 'søndre-nordstrand', price: 240, neutralUnits: 1, x: 0.55, y: 0.82 },
-  { id: 't35', name: 'Mortensrud',        district: 'søndre-nordstrand', price: 220, neutralUnits: 1, x: 0.59, y: 0.80 },
-  { id: 'lørenskog_cp', name: 'Lørenskog', type: 'checkpoint', checkpoint: 'lørenskog', x: 0.82, y: 0.50 },
-  { id: 'lysaker_cp',   name: 'Lysaker',   type: 'checkpoint', checkpoint: 'lysaker',   x: 0.24, y: 0.60 },
-  { id: 'kolbotn_cp',   name: 'Kolbotn',   type: 'checkpoint', checkpoint: 'kolbotn',   x: 0.62, y: 0.88 },
+type Territory = {
+  type: 'territory';
+  id: string;
+  name: string;
+  district: string;
+  price: number;
+  neutralUnits: number;
+  x: number;
+  y: number;
+};
+
+type Checkpoint = {
+  type: 'checkpoint';
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+};
+
+type MapNode = Territory | Checkpoint;
+
+export const TERRITORIES: Territory[] = [
+  { type: 'territory', id: 't0a', name: 'Karl Johans gate',  district: 'sentrum',           price: 500, neutralUnits: 3, x: 0.38, y: 0.63 },
+  { type: 'territory', id: 't0b', name: 'Aker Brygge',       district: 'sentrum',           price: 480, neutralUnits: 3, x: 0.39, y: 0.65 },
+  { type: 'territory', id: 't1',  name: 'Grønland',          district: 'gamle-oslo',        price: 300, neutralUnits: 2, x: 0.54, y: 0.62 },
+  { type: 'territory', id: 't2',  name: 'Gamlebyen',         district: 'gamle-oslo',        price: 280, neutralUnits: 2, x: 0.52, y: 0.66 },
+  { type: 'territory', id: 't3',  name: 'Tøyen',             district: 'gamle-oslo',        price: 260, neutralUnits: 1, x: 0.55, y: 0.58 },
+  { type: 'territory', id: 't4',  name: 'Løkka',             district: 'grunerløkka',       price: 320, neutralUnits: 2, x: 0.52, y: 0.52 },
+  { type: 'territory', id: 't5',  name: 'Sofienberg',        district: 'grunerløkka',       price: 280, neutralUnits: 1, x: 0.55, y: 0.54 },
+  { type: 'territory', id: 't6',  name: 'Rodeløkka',         district: 'grunerløkka',       price: 260, neutralUnits: 1, x: 0.50, y: 0.56 },
+  { type: 'territory', id: 't7',  name: 'Torshov',           district: 'sagene',            price: 240, neutralUnits: 1, x: 0.49, y: 0.49 },
+  { type: 'territory', id: 't8',  name: 'Sandaker',          district: 'sagene',            price: 220, neutralUnits: 1, x: 0.47, y: 0.47 },
+  { type: 'territory', id: 't9',  name: 'Bislett',           district: 'st-hanshaugen',     price: 320, neutralUnits: 2, x: 0.46, y: 0.54 },
+  { type: 'territory', id: 't10', name: 'Adamstuen',         district: 'st-hanshaugen',     price: 280, neutralUnits: 1, x: 0.44, y: 0.52 },
+  { type: 'territory', id: 't11', name: 'Majorstuen',        district: 'frogner',           price: 460, neutralUnits: 3, x: 0.40, y: 0.54 },
+  { type: 'territory', id: 't12', name: 'Frognerparken',     district: 'frogner',           price: 420, neutralUnits: 3, x: 0.37, y: 0.56 },
+  { type: 'territory', id: 't13', name: 'Bygdøy',            district: 'frogner',           price: 400, neutralUnits: 2, x: 0.34, y: 0.62 },
+  { type: 'territory', id: 't14', name: 'Skøyen',            district: 'ullern',            price: 380, neutralUnits: 2, x: 0.31, y: 0.58 },
+  { type: 'territory', id: 't15', name: 'Montebello',        district: 'ullern',            price: 360, neutralUnits: 2, x: 0.28, y: 0.54 },
+  { type: 'territory', id: 't16', name: 'Vinderen',          district: 'vestre-aker',       price: 340, neutralUnits: 2, x: 0.33, y: 0.46 },
+  { type: 'territory', id: 't17', name: 'Røa',               district: 'vestre-aker',       price: 320, neutralUnits: 2, x: 0.29, y: 0.42 },
+  { type: 'territory', id: 't18', name: 'Holmenkollen',      district: 'vestre-aker',       price: 360, neutralUnits: 2, x: 0.30, y: 0.36 },
+  { type: 'territory', id: 't19', name: 'Kjelsås',           district: 'nordre-aker',       price: 300, neutralUnits: 2, x: 0.44, y: 0.38 },
+  { type: 'territory', id: 't20', name: 'Nydalen',           district: 'nordre-aker',       price: 320, neutralUnits: 2, x: 0.46, y: 0.42 },
+  { type: 'territory', id: 't21', name: 'Maridalen',         district: 'nordre-aker',       price: 260, neutralUnits: 1, x: 0.40, y: 0.32 },
+  { type: 'territory', id: 't22', name: 'Økern',             district: 'bjerke',            price: 240, neutralUnits: 1, x: 0.56, y: 0.46 },
+  { type: 'territory', id: 't23', name: 'Risløkka',          district: 'bjerke',            price: 220, neutralUnits: 1, x: 0.59, y: 0.44 },
+  { type: 'territory', id: 't24', name: 'Romsås',            district: 'grorud',            price: 220, neutralUnits: 1, x: 0.62, y: 0.38 },
+  { type: 'territory', id: 't25', name: 'Grorud sentrum',    district: 'grorud',            price: 200, neutralUnits: 1, x: 0.65, y: 0.42 },
+  { type: 'territory', id: 't26', name: 'Stovner sentrum',   district: 'stovner',           price: 200, neutralUnits: 1, x: 0.70, y: 0.38 },
+  { type: 'territory', id: 't27', name: 'Haugenstua',        district: 'stovner',           price: 200, neutralUnits: 1, x: 0.73, y: 0.42 },
+  { type: 'territory', id: 't28', name: 'Furuset',           district: 'alna',              price: 260, neutralUnits: 2, x: 0.71, y: 0.50 },
+  { type: 'territory', id: 't29', name: 'Helsfyr',           district: 'alna',              price: 280, neutralUnits: 2, x: 0.63, y: 0.52 },
+  { type: 'territory', id: 't30', name: 'Manglerud',         district: 'østensjø',          price: 260, neutralUnits: 2, x: 0.63, y: 0.62 },
+  { type: 'territory', id: 't31', name: 'Oppsal',            district: 'østensjø',          price: 240, neutralUnits: 1, x: 0.67, y: 0.64 },
+  { type: 'territory', id: 't32', name: 'Ljan',              district: 'nordstrand',        price: 300, neutralUnits: 2, x: 0.60, y: 0.72 },
+  { type: 'territory', id: 't33', name: 'Nordstrand sentrum',district: 'nordstrand',        price: 320, neutralUnits: 2, x: 0.56, y: 0.76 },
+  { type: 'territory', id: 't34', name: 'Holmlia',           district: 'søndre-nordstrand', price: 240, neutralUnits: 1, x: 0.55, y: 0.82 },
+  { type: 'territory', id: 't35', name: 'Mortensrud',        district: 'søndre-nordstrand', price: 220, neutralUnits: 1, x: 0.59, y: 0.80 },
+  { type: 'checkpoint', id: 'lørenskog_cp', name: 'Lørenskog', checkpoint: 'lørenskog', x: 0.82, y: 0.50 },
+  { type: 'checkpoint', id: 'lysaker_cp',   name: 'Lysaker',   checkpoint: 'lysaker',   x: 0.24, y: 0.60 },
+  { type: 'checkpoint', id: 'kolbotn_cp',   name: 'Kolbotn',   checkpoint: 'kolbotn',   x: 0.62, y: 0.88 },
 ];
 
 // Hvilke territorier som grenser til hverandre — beregnet automatisk fra kartpolygonene.
@@ -113,11 +137,12 @@ export const ADJACENCY = {
   'kolbotn_cp': ['t35', 't34'],
 };
 
+
 // De tre runde-sjekkpunktene spillere må innom for å få bonusen på 500 kr + 3 bat.
-export const CHECKPOINTS = {
-  'lørenskog': { name: 'Lørenskog', x: 0.82, y: 0.50 },
-  'lysaker':   { name: 'Lysaker',   x: 0.24, y: 0.60 },
-  'kolbotn':   { name: 'Kolbotn',   x: 0.62, y: 0.88 },
+export const CHECKPOINTS: { [key: string]: Checkpoint } = {
+  'lørenskog': { type: 'checkpoint', id: 'c1', name: 'Lørenskog', x: 0.82, y: 0.50 },
+  'lysaker':   { type: 'checkpoint', id: 'c2', name: 'Lysaker',   x: 0.24, y: 0.60 },
+  'kolbotn':   { type: 'checkpoint', id: 'c3', name: 'Kolbotn',   x: 0.62, y: 0.88 },
 };
 
 // Hjelpefunksjon: sjekker om en spiller eier alle territorier i de oppgitte bydelene.
