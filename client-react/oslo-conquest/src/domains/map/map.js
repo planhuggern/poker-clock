@@ -2,7 +2,7 @@
 
 import { SVG } from '@svgdotjs/svg.js';
 import { TERRITORIES, DISTRICTS, CHECKPOINTS } from '../game/model/game-data.js';
-import { findPlayerByOwner } from '../game/state/game-state.js';
+import { findPlayerByOwner } from '../game/state/game-state.ts';
 import mapData from './map.json';
 
 export const MAP_W = 900;

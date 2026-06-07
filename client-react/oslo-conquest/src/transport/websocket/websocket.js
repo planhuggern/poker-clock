@@ -3,7 +3,7 @@
 // status tilbake via callbacks.
 
 import { notifyGameChanged, state } from '../../domains/game/state/state.ts';
-import { createInitialGameState } from '../../domains/game/state/game-state.js';
+import { createInitialGameState } from '../../domains/game/state/game-state.ts';
 
 let pendingMessage = null;
 let activeUrl = '';

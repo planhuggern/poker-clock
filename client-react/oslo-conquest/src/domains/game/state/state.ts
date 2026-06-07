@@ -42,6 +42,6 @@ export function subscribe(listener: (state: State) => void): () => void {
   };
 }
 
-export function notifyGameChanged() {
+export function notifyGameChanged(): void {
   for (const listener of listeners) listener(state);
 }
