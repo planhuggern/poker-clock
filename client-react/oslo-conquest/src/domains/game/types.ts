@@ -1,6 +1,7 @@
 export type Player = {
   id: string;
   name: string;
+  side?: string;
   color: string;
   colorName: string;
   money: number;
@@ -17,7 +18,8 @@ export type Player = {
 }
 
 export type GameState = {
-  id: string;
+  id?: string;
+  room?: string;
   currentPlayerIdx: number;
   players: Player[];
   territories: Record<string, TerritoryState>;

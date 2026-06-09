@@ -1,17 +1,20 @@
 // Funksjoner som leser og setter opp spilltilstanden.
 // Skiller seg fra state.js: her er logikken, der er bare dataene.
-
-import { TERRITORIES, MISSIONS, PLAYER_COLORS, PLAYER_COLOR_NAMES } from '../model/game-data.js';
+import { Player, GameState, TerritoryState } from '../types';
+import { TERRITORIES, MISSIONS, PLAYER_COLORS, PLAYER_COLOR_NAMES } from '../model/game-data';
 import { state } from './state.js';
+
+
+
 
 // Bygger et nytt, blankt spillbrett med alle territorier nøytrale og spillerne klar.
 // Trekker tilfeldige oppdragskort og setter startposisjon til Lørenskog for alle.
-export function createInitialGameState(players) {
-  const territories = {};
+export function createInitialGameState(players: Player[]): GameState {
+  const territories: Record<string, TerritoryState> = {};
   for (const t of TERRITORIES) {
     territories[t.id] = t.type === 'checkpoint'
-      ? { id: t.id, owner: null, units: 0, checkpoint: t.checkpoint }
-      : { id: t.id, owner: null, units: t.neutralUnits };
+      ? { territoryId: t.id, owner: null, units: 0, checkpoint: t.checkpoint }
+      : { territoryId: t.id, owner: null, units: t.neutralUnits };
   }
 
   const shuffled = [...MISSIONS].sort(() => Math.random() - 0.5);
@@ -34,19 +37,20 @@ export function createInitialGameState(players) {
   return { phase: 'playing', round: 1, currentPlayerIdx: 0, players: ps, territories, log: [] };
 }
 
-export function getCurrentPlayer() {
-  if (!state.gameState) return null;
-  if (state.gameState.activePlayer) {
-    return state.gameState.players.find(p => p.side === state.gameState.activePlayer);
+export function getCurrentPlayer(): Player | null {
+  const gameState = state.gameState;
+  if (!gameState) return null;
+  if (gameState.activePlayer) {
+    return gameState.players.find(p => p.side === gameState.activePlayer) || null;
   }
-  return state.gameState.players[state.gameState.currentPlayerIdx];
+  return gameState.players[gameState.currentPlayerIdx] || null;
 }
 
-export function isMyTurn() {
+export function isMyTurn(): boolean {
   return getCurrentPlayer()?.id === state.myPlayerId;
 }
 
-export function isMvpGame() {
+export function isMvpGame(): boolean {
   const gameState = state.gameState;
   if (!gameState) return false;
 
@@ -55,7 +59,7 @@ export function isMvpGame() {
   return Boolean(gameState.phase === 'setup' || gameState.players?.some((player) => player.side));
 }
 
-export function findPlayerByOwner(owner) {
+export function findPlayerByOwner(owner: string | null | undefined): Player | null {
   if (!owner || !state.gameState) return null;
   return state.gameState.players.find(p => p.id === owner || p.side === owner) || null;
 }

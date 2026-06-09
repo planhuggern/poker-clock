@@ -1,13 +1,6 @@
 // Delt spilltilstand som alle moduler leser og skriver til.
 // Fordi ES-moduler eksporterer referanser, endres dette objektet live — ingen kopi.
-interface GameState {
-  id: string;
-  players: {
-    id: string;
-    name: string;
-    color: string;
-  }[];
-}
+import { GameState } from '../types';
 
 interface Modal {
   type: "createGame" | "joinGame" | "mission" | "gameOver";
