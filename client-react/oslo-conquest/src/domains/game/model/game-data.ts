@@ -1,5 +1,6 @@
 // Alle spillets konstanter: farger, bydeler, territorier, nabolister og oppdrag.
 // Ingen spillogikk her — bare data som de andre modulene leser.
+import { Player, GameState, District, Territory, Checkpoint, MapNode } from '../types.js';
 
 
 
@@ -8,7 +9,7 @@ export const PLAYER_COLORS = ['#c0392b','#1a6b9a','#1a7a4a','#c0692b','#6b3fa0',
 export const PLAYER_COLOR_NAMES = ['Rød','Blå','Grønn','Oransje','Lilla','Cyan'];
 
 // Bydeler med navn, bonusverdier og bakgrunnsfarge på kartet.
-export const DISTRICTS = {
+export const DISTRICTS: { [key: string]: District } = {
   'sentrum':            { name: 'Sentrum',             bonus: { money: 500, units: 3 }, color: '#3d2d0a' },
   'gamle-oslo':         { name: 'Gamle Oslo',         bonus: { money: 300, units: 2 }, color: '#2d1f3d' },
   'grunerløkka':        { name: 'Grünerløkka',        bonus: { money: 250, units: 2 }, color: '#1f2d3d' },
@@ -29,28 +30,8 @@ export const DISTRICTS = {
 
 // Alle 35 territorier med id, navn, hvilken bydel de tilhører, kjøpspris,
 // antall nøytrale bataljoner ved spillstart og normalisert kartposisjon (x/y 0–1).
-type Territory = {
-  type: 'territory';
-  id: string;
-  name: string;
-  district: string;
-  price: number;
-  neutralUnits: number;
-  x: number;
-  y: number;
-};
 
-type Checkpoint = {
-  type: 'checkpoint';
-  id: string;
-  name: string;
-  x: number;
-  y: number;
-};
-
-type MapNode = Territory | Checkpoint;
-
-export const TERRITORIES: Territory[] = [
+export const TERRITORIES: MapNode[] = [
   { type: 'territory', id: 't0a', name: 'Karl Johans gate',  district: 'sentrum',           price: 500, neutralUnits: 3, x: 0.38, y: 0.63 },
   { type: 'territory', id: 't0b', name: 'Aker Brygge',       district: 'sentrum',           price: 480, neutralUnits: 3, x: 0.39, y: 0.65 },
   { type: 'territory', id: 't1',  name: 'Grønland',          district: 'gamle-oslo',        price: 300, neutralUnits: 2, x: 0.54, y: 0.62 },
@@ -92,6 +73,10 @@ export const TERRITORIES: Territory[] = [
   { type: 'checkpoint', id: 'lysaker_cp',   name: 'Lysaker',   checkpoint: 'lysaker',   x: 0.24, y: 0.60 },
   { type: 'checkpoint', id: 'kolbotn_cp',   name: 'Kolbotn',   checkpoint: 'kolbotn',   x: 0.62, y: 0.88 },
 ];
+
+const TERRITORY_NODES: Territory[] = TERRITORIES.filter(
+  (node): node is Territory => node.type === 'territory'
+);
 
 // Hvilke territorier som grenser til hverandre — beregnet automatisk fra kartpolygonene.
 export const ADJACENCY = {
@@ -140,16 +125,17 @@ export const ADJACENCY = {
 
 // De tre runde-sjekkpunktene spillere må innom for å få bonusen på 500 kr + 3 bat.
 export const CHECKPOINTS: { [key: string]: Checkpoint } = {
-  'lørenskog': { type: 'checkpoint', id: 'c1', name: 'Lørenskog', x: 0.82, y: 0.50 },
-  'lysaker':   { type: 'checkpoint', id: 'c2', name: 'Lysaker',   x: 0.24, y: 0.60 },
-  'kolbotn':   { type: 'checkpoint', id: 'c3', name: 'Kolbotn',   x: 0.62, y: 0.88 },
+  'lørenskog': { type: 'checkpoint', id: 'lørenskog_cp', name: 'Lørenskog', checkpoint: 'lørenskog', x: 0.82, y: 0.50 },
+  'lysaker':   { type: 'checkpoint', id: 'lysaker_cp', name: 'Lysaker',   checkpoint: 'lysaker',   x: 0.24, y: 0.60 },
+  'kolbotn':   { type: 'checkpoint', id: 'kolbotn_cp', name: 'Kolbotn',   checkpoint: 'kolbotn',   x: 0.62, y: 0.88 },
 };
 
 // Hjelpefunksjon: sjekker om en spiller eier alle territorier i de oppgitte bydelene.
-function checkDistrictOwnership(player, gs, districtIds) {
-  return districtIds.every(did => {
-    const terrs = TERRITORIES.filter(t => t.district === did);
-    return terrs.every(t => gs.territories[t.id]?.owner === player.id);
+
+function checkDistrictOwnership(player: Player, gameState: GameState, districtIds: string[]) {
+  return districtIds.every(districtId => {
+    const territoriesInDistrict = TERRITORY_NODES.filter(territory => territory.district === districtId);
+    return territoriesInDistrict.every(t => gameState.territories[t.id]?.owner === player.id);
   });
 }
 
@@ -159,36 +145,36 @@ export const MISSIONS = [
   {
     id: 'm1', emoji: '🗺️', title: 'Vestkanten',
     desc: 'Eie alle områder i Frogner, Ullern og Vestre Aker',
-    check: (p, gs) => checkDistrictOwnership(p, gs, ['frogner','ullern','vestre-aker']),
+    check: (p: Player, gs: GameState) => checkDistrictOwnership(p, gs, ['frogner','ullern','vestre-aker']),
   },
   {
     id: 'm2', emoji: '🏙️', title: 'Østkanten',
     desc: 'Eie alle områder i Alna, Østensjø og Nordstrand',
-    check: (p, gs) => checkDistrictOwnership(p, gs, ['alna','østensjø','nordstrand']),
+    check: (p: Player, gs: GameState) => checkDistrictOwnership(p, gs, ['alna','østensjø','nordstrand']),
   },
   {
     id: 'm3', emoji: '🌲', title: 'Nordmarka-porten',
     desc: 'Eie alle områder i Nordre Aker og Vestre Aker',
-    check: (p, gs) => checkDistrictOwnership(p, gs, ['nordre-aker','vestre-aker']),
+    check: (p: Player, gs: GameState) => checkDistrictOwnership(p, gs, ['nordre-aker','vestre-aker']),
   },
   {
     id: 'm4', emoji: '🔴', title: 'Sentrumsherren',
     desc: 'Eie alle områder i Gamle Oslo, Grünerløkka og St. Hanshaugen',
-    check: (p, gs) => checkDistrictOwnership(p, gs, ['gamle-oslo','grunerløkka','st-hanshaugen']),
+    check: (p: Player, gs: GameState) => checkDistrictOwnership(p, gs, ['gamle-oslo','grunerløkka','st-hanshaugen']),
   },
   {
     id: 'm5', emoji: '🏘️', title: 'Storby',
     desc: 'Eie totalt 20 enkeltområder',
-    check: (p, gs) => Object.values(gs.territories).filter(t => t.owner === p.id).length >= 20,
+    check: (p: Player, gs: GameState) => Object.values(gs.territories).filter(t => t.owner === p.id).length >= 20,
   },
   {
     id: 'm6', emoji: '⚔️', title: 'Conquistador',
     desc: 'Eie minst ett område i alle 16 bydeler',
-    check: (p, gs) => {
+    check: (p: Player, gs: GameState) => {
       const owned = new Set(
         Object.values(gs.territories)
           .filter(t => t.owner === p.id)
-          .map(t => TERRITORIES.find(x => x.id === t.id)?.district)
+          .map(t => TERRITORY_NODES.find(x => x.id === t.territoryId)?.district)
       );
       return Object.keys(DISTRICTS).every(d => owned.has(d));
     },
@@ -196,23 +182,23 @@ export const MISSIONS = [
   {
     id: 'm7', emoji: '💰', title: 'Kapitalist',
     desc: 'Ha 5000 kr og eie minst 10 områder',
-    check: (p, gs) =>
+    check: (p: Player, gs: GameState) =>
       p.money >= 5000 && Object.values(gs.territories).filter(t => t.owner === p.id).length >= 10,
   },
   {
     id: 'm8', emoji: '🗡️', title: 'Blodhevn',
     desc: 'Slå ut din utvalgte fiende',
     secret: true,
-    check: (p, gs) => p.target && gs.players.find(x => x.id === p.target)?.eliminated === true,
+    check: (p: Player, gs: GameState) => p.target && gs.players.find(x => x.id === p.target)?.eliminated === true,
   },
   {
     id: 'm9', emoji: '🛣️', title: 'Ringveien',
     desc: 'Eie minst ett område i hver bydel langs ruten fra Lørenskog til Kolbotn',
-    check: (p, gs) => {
+    check: (p: Player, gs: GameState) => {
       const owned = new Set(
         Object.values(gs.territories)
           .filter(t => t.owner === p.id)
-          .map(t => TERRITORIES.find(x => x.id === t.id)?.district)
+          .map(t => TERRITORY_NODES.find(x => x.id === t.territoryId)?.district)
       );
       return ['alna','stovner','grorud','bjerke','østensjø','nordstrand','søndre-nordstrand']
         .every(d => owned.has(d));
@@ -221,9 +207,9 @@ export const MISSIONS = [
   {
     id: 'm10', emoji: '🎯', title: 'Festning',
     desc: 'Eie en komplett bydel med minst 10 bataljoner fordelt i den',
-    check: (p, gs) => {
+    check: (p: Player, gs: GameState) => {
       for (const did of Object.keys(DISTRICTS)) {
-        const dTerrs = TERRITORIES.filter(t => t.district === did);
+        const dTerrs = TERRITORY_NODES.filter(t => t.district === did);
         if (dTerrs.every(t => gs.territories[t.id]?.owner === p.id)) {
           const total = dTerrs.reduce((sum, t) => sum + (gs.territories[t.id]?.units || 0), 0);
           if (total >= 10) return true;
@@ -235,7 +221,7 @@ export const MISSIONS = [
   {
     id: 'm11', emoji: '🪓', title: 'Barbaren',
     desc: 'Angrip og vinn minst 2 områder fra HVER motspiller',
-    check: (p, gs) => {
+    check: (p: Player, gs: GameState) => {
       const others = gs.players.filter(x => x.id !== p.id && !x.eliminated);
       return others.every(other => (p.conquests?.[other.id] || 0) >= 2);
     },
