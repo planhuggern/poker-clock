@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ADJACENCY, CHECKPOINTS, DISTRICTS, MISSIONS, TERRITORIES } from "../../domains/game/model/game-data.js";
+import { ADJACENCY, CHECKPOINTS, DISTRICTS, MISSIONS, TERRITORIES } from "../../domains/game/model/game-data.ts";
 import { findPlayerByOwner, getCurrentPlayer, isMvpGame, isMyTurn } from "../../domains/game/state/game-state.ts";
 import { state, notifyGameChanged, subscribe } from "../../domains/game/state/state.ts";
 import { DICE_FACES } from "../../domains/dice/dice.js";

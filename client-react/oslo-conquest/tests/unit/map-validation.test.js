@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TERRITORIES, ADJACENCY } from '../../src/domains/game/model/game-data.js';
+import { TERRITORIES, ADJACENCY } from '../../src/domains/game/model/game-data.ts';
 import mapData from '../../src/domains/map/map.json';
 
 const { specialShapes, territoryShapes, _rawSpecial, _rawTerritories } = mapData;

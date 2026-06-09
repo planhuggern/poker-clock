@@ -1,7 +1,7 @@
 // SVG.js-adapter for Oslo-kartet. Preact eier state/livssyklus, adapteren eier SVG-noder og kartinteraksjon.
 
 import { SVG } from '@svgdotjs/svg.js';
-import { TERRITORIES, DISTRICTS, CHECKPOINTS } from '../game/model/game-data.js';
+import { TERRITORIES, DISTRICTS, CHECKPOINTS } from '../game/model/game-data.ts';
 import { findPlayerByOwner } from '../game/state/game-state.ts';
 import mapData from './map.json';
 
