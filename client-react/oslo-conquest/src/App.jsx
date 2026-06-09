@@ -13,7 +13,7 @@ import {
   startLocalGame,
 } from "./transport/websocket/websocket.js";
 import { GameUI } from "./ui/components/GameUI.jsx";
-import { reduceGameAction } from "./domains/game/state/game-reducer.js";
+import { reduceGameAction } from "./domains/game/state/game-reducer.ts";
 import { notifyGameChanged, state } from "./domains/game/state/state.ts";
 
 const DEFAULT_WS_URL = "ws://localhost:8000/ws/oslo-conquest/";

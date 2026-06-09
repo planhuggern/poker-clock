@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { createInitialGameState } from '../../src/domains/game/state/game-state.ts';
-import { reduceGameAction } from '../../src/domains/game/state/game-reducer.js';
+import { reduceGameAction } from '../../src/domains/game/state/game-reducer.ts';
 import { DISTRICTS, TERRITORIES } from '../../src/domains/game/model/game-data.ts';
 
 let gameState;
