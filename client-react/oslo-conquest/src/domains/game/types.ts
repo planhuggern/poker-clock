@@ -18,7 +18,6 @@ export type Player = {
 }
 
 export type GameState = {
-  id?: string;
   room?: string;
   currentPlayerIdx: number;
   players: Player[];
