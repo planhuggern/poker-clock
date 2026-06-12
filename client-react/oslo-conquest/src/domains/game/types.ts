@@ -17,6 +17,20 @@ export type Player = {
   conquests: { [key: string]: number };
 }
 
+export type LogEntry = {
+  msg: string;
+  type: string;
+  time: string;
+};
+
+export type Mission = {
+  id: string;
+  emoji: string;
+  title: string;
+  secret?: boolean;
+  check: (player: Player, gameState: GameState) => boolean;
+};
+
 export type GameState = {
   room?: string;
   currentPlayerIdx: number;
@@ -24,8 +38,8 @@ export type GameState = {
   territories: Record<string, TerritoryState>;
   phase: 'setup' | 'playing' | 'finished';
   round: number;
-  log: string[];
-  activePlayer?: string; // For MVP games, indicates the player whose turn it is.
+  log: LogEntry[];
+  activePlayer?: string;
 }
 
 export type District = {
