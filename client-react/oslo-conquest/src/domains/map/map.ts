@@ -1,31 +1,48 @@
-// SVG.js-adapter for Oslo-kartet. Preact eier state/livssyklus, adapteren eier SVG-noder og kartinteraksjon.
-
-import { SVG } from '@svgdotjs/svg.js';
-import { TERRITORIES, DISTRICTS, CHECKPOINTS } from '../game/model/game-data.ts';
-import { findPlayerByOwner } from '../game/state/game-state.ts';
-import mapData from './map.json';
+import { SVG, Svg, G, Path, Rect, Circle, Text } from '@svgdotjs/svg.js';
+import { TERRITORIES, DISTRICTS, CHECKPOINTS } from '../game/model/game-data.js';
+import { findPlayerByOwner } from '../game/state/game-state.js';
+import { GameState, Territory, MapNode } from '../game/types.js';
+import rawMapData from './map.json';
 
 export const MAP_W = 900;
 export const MAP_H = 850;
 
-// Territorieposisjoner (sentrum) beregnet fra tegnede polygoner i karteditoren
+type MapData = {
+  TERRITORY_POS: Record<string, [number, number]>;
+  territoryShapes: Record<string, string>;
+  districtShapes: Record<string, string>;
+  specialShapes: Record<string, string>;
+  _rawTerritories: Record<string, [number, number][]>;
+  _rawDistricts: Record<string, [number, number][]>;
+  _rawSpecial: Record<string, [number, number][]>;
+};
+
+const mapData = rawMapData as unknown as MapData;
+
 export const TERRITORY_POS = mapData.TERRITORY_POS;
 
-// Visuelle markørposisjoner inne i checkpoint-polygonene.
-const CHECKPOINT_POS = {
-  'lørenskog': [852, 160],
+const CHECKPOINT_POS: Record<string, [number, number]> = {
+  lørenskog: [852, 160],
   lysaker: [58, 270],
   kolbotn: [545, 796],
 };
 
-function centroid(pts) {
+type MapTransform = { x: number; y: number; scale: number };
+type PanState = { active: boolean; hasMoved: boolean; startX: number; startY: number; startTx: number; startTy: number };
+type TerritoryNode = { group: G; poly: Path; units: Text | null };
+type PlayerPiece = { group: G; outer: Circle; inner: Circle; label: Text };
+type TooltipWidget = { group: G; box: Rect; title: Text; district: Text; owner: Text };
+type UpdateOptions = { gameState?: GameState | null; selectedTerritory?: string | null };
+export type MapAdapter = { update: (opts?: UpdateOptions) => void; fit: () => void; destroy: () => void };
+
+function centroid(pts: [number, number][]): [number, number] {
   return [
-    Math.round(pts.reduce((sum, point) => sum + point[0], 0) / pts.length),
-    Math.round(pts.reduce((sum, point) => sum + point[1], 0) / pts.length),
+    Math.round(pts.reduce((sum, p) => sum + p[0], 0) / pts.length),
+    Math.round(pts.reduce((sum, p) => sum + p[1], 0) / pts.length),
   ];
 }
 
-function addDefs(draw) {
+function addDefs(draw: Svg): void {
   draw.svg(`
     <defs>
       <pattern id="water-pat" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
@@ -43,38 +60,18 @@ function addDefs(draw) {
   `);
 }
 
-function buildTooltip(draw) {
+function buildTooltip(draw: Svg): TooltipWidget {
   const group = draw.group().attr({ id: 'map-tooltip-svg', 'pointer-events': 'none' }).hide();
   const box = group.rect(190, 62).radius(4).attr({
-    fill: 'rgba(10,10,20,0.97)',
-    stroke: '#c9a84c',
-    'stroke-width': 1,
+    fill: 'rgba(10,10,20,0.97)', stroke: '#c9a84c', 'stroke-width': 1,
   });
-  const title = group.text('').attr({
-    x: 10,
-    y: 10,
-    fill: '#e8c97a',
-    'font-size': 12,
-    'font-weight': 700,
-  });
-  const district = group.text('').attr({
-    x: 10,
-    y: 28,
-    fill: '#888',
-    'font-size': 10,
-    'font-style': 'italic',
-  });
-  const owner = group.text('').attr({
-    x: 10,
-    y: 45,
-    fill: '#888',
-    'font-size': 10,
-  });
-
+  const title = group.text('').attr({ x: 10, y: 10, fill: '#e8c97a', 'font-size': 12, 'font-weight': 700 });
+  const district = group.text('').attr({ x: 10, y: 28, fill: '#888', 'font-size': 10, 'font-style': 'italic' });
+  const owner = group.text('').attr({ x: 10, y: 45, fill: '#888', 'font-size': 10 });
   return { group, box, title, district, owner };
 }
 
-function tooltipPosition(event, container, transform) {
+function tooltipPosition(event: PointerEvent, container: HTMLElement, transform: MapTransform) {
   const rect = container.getBoundingClientRect();
   const screenX = Math.min(event.clientX - rect.left + 14, rect.width - 205);
   const screenY = Math.max(event.clientY - rect.top - 10, 10);
@@ -84,77 +81,60 @@ function tooltipPosition(event, container, transform) {
   };
 }
 
-function setTooltipText(tooltip, territory, gameState) {
+function setTooltipText(tooltip: TooltipWidget, territory: MapNode, gameState: GameState | null): void {
   const territoryState = gameState?.territories?.[territory.id];
-  const owner = findPlayerByOwner(territoryState?.owner);
-  const district = DISTRICTS[territory.district];
+  const ownerPlayer = findPlayerByOwner(territoryState?.owner);
+  const district = territory.type === 'territory' ? DISTRICTS[territory.district] : null;
   tooltip.title.text(territory.name);
-  tooltip.district.text(territory.type === 'checkpoint' ? 'Checkpoint · friområde' : district?.name || '');
+  tooltip.district.text(territory.type === 'checkpoint' ? 'Checkpoint · friområde' : district?.name ?? '');
   tooltip.owner.text(territory.type === 'checkpoint'
     ? 'Trygt område · ingen eier'
-    : `${owner?.name || 'Nøytral'} · ${territoryState?.units || 0} units`);
-  tooltip.owner.attr({ fill: owner?.color || '#888' });
+    : `${ownerPlayer?.name ?? 'Nøytral'} · ${territoryState?.units ?? 0} units`);
+  tooltip.owner.attr({ fill: ownerPlayer?.color ?? '#888' });
 }
 
-function applyMapTransform(svgNode, transform) {
+function applyMapTransform(svgNode: SVGSVGElement, transform: MapTransform): void {
   svgNode.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
 }
 
-export function createMapAdapter(container, { onSelectTerritory } = {}) {
+export function createMapAdapter(
+  container: HTMLElement,
+  { onSelectTerritory }: { onSelectTerritory?: (id: string) => void } = {},
+): MapAdapter {
   container.innerHTML = '';
 
   const draw = SVG().addTo(container).size(MAP_W, MAP_H).viewbox(0, 0, MAP_W, MAP_H);
   draw.attr({ id: 'oslo-svg' });
 
-  const transform = { x: 0, y: 0, scale: 1 };
-  const panState = {
-    active: false,
-    hasMoved: false,
-    startX: 0,
-    startY: 0,
-    startTx: 0,
-    startTy: 0,
-  };
-  const territoryNodes = new Map();
-  const districtNodes = new Map();
-  const playerPieces = new Map();
-  let currentGameState = null;
-  let currentSelectedTerritory = null;
+  const transform: MapTransform = { x: 0, y: 0, scale: 1 };
+  const panState: PanState = { active: false, hasMoved: false, startX: 0, startY: 0, startTx: 0, startTy: 0 };
+  const territoryNodes = new Map<string, TerritoryNode>();
+  const districtNodes = new Map<string, Path>();
+  const playerPieces = new Map<string, PlayerPiece>();
+  let currentGameState: GameState | null = null;
+  let currentSelectedTerritory: string | null = null;
 
   addDefs(draw);
-
   draw.rect(MAP_W, MAP_H).fill('#0d1520');
 
   if (mapData.specialShapes.oslofjorden) {
     draw.path(mapData.specialShapes.oslofjorden).fill('#0f2540').opacity(0.92);
     draw.path(mapData.specialShapes.oslofjorden).fill('url(#water-pat)').opacity(0.5);
-
     const [fjx, fjy] = centroid(mapData._rawSpecial.oslofjorden);
     draw.text('OSLOFJORDEN').attr({
-      x: fjx,
-      y: fjy,
-      'font-family': 'Georgia,serif',
-      'font-size': 11,
-      fill: 'rgba(100,160,220,0.35)',
-      'letter-spacing': 3,
-      'text-anchor': 'middle',
+      x: fjx, y: fjy, 'font-family': 'Georgia,serif', 'font-size': 11,
+      fill: 'rgba(100,160,220,0.35)', 'letter-spacing': 3, 'text-anchor': 'middle',
     });
   }
 
-  for (const [sid, label] of [['nordmarka', 'NORDMARKA'], ['østmarka', 'ØSTMARKA']]) {
+  for (const [sid, label] of [['nordmarka', 'NORDMARKA'], ['østmarka', 'ØSTMARKA']] as const) {
     const shape = mapData.specialShapes[sid];
     if (!shape) continue;
-
     draw.path(shape).fill('#0d1a0d').opacity(0.85);
     const [lx, ly] = centroid(mapData._rawSpecial[sid]);
     draw.text(label).attr({
-      x: lx,
-      y: ly,
-      'font-family': 'Georgia,serif',
-      'font-size': 10,
-      fill: 'rgba(80,140,80,0.4)',
-      'letter-spacing': 2,
-      'text-anchor': 'middle',
+      x: lx, y: ly, 'font-family': 'Georgia,serif', 'font-size': 10,
+      fill: 'rgba(80,140,80,0.4)', 'letter-spacing': 2, 'text-anchor': 'middle',
     });
   }
 
@@ -162,136 +142,85 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
   for (const [districtId, pathD] of Object.entries(mapData.districtShapes)) {
     const districtInfo = DISTRICTS[districtId];
     const districtPath = districtGroup.path(pathD).attr({
-      id: `district-${districtId}`,
-      class: 'svg-district',
-      fill: districtInfo?.color || '#1a1a2a',
-      'fill-opacity': 0.75,
-      stroke: '#2a3a2a',
-      'stroke-width': 1.5,
+      id: `district-${districtId}`, class: 'svg-district',
+      fill: districtInfo?.color ?? '#1a1a2a', 'fill-opacity': 0.75,
+      stroke: '#2a3a2a', 'stroke-width': 1.5,
     });
     districtNodes.set(districtId, districtPath);
-
     const rawPts = mapData._rawDistricts[districtId];
     if (rawPts) {
       const [lx, ly] = centroid(rawPts);
-      districtGroup.text(districtInfo?.name?.split(' ')[0] || districtId).attr({
-        class: 'district-label',
-        x: lx,
-        y: ly,
-      });
+      districtGroup.text(districtInfo?.name?.split(' ')[0] ?? districtId).attr({ class: 'district-label', x: lx, y: ly });
     }
   }
 
   const checkpointGroup = draw.group().attr({ id: 'checkpoint-layer' });
   for (const [checkpointId, checkpoint] of Object.entries(CHECKPOINTS)) {
-    const [cx, cy] = CHECKPOINT_POS[checkpointId];
+    const pos = CHECKPOINT_POS[checkpointId];
+    if (!pos) continue;
+    const [cx, cy] = pos;
     const territoryId = `${checkpointId}_cp`;
-    const territory = TERRITORIES.find((item) => item.id === territoryId);
+    const territory = TERRITORIES.find((t) => t.id === territoryId);
     const shape = mapData.specialShapes[checkpointId];
     if (!territory || !shape) continue;
 
     const group = checkpointGroup.group().attr({
-      id: `terr-${territoryId}`,
-      class: 'svg-territory checkpoint-territory',
-      'data-id': territoryId,
-      filter: 'url(#cp-glow)',
+      id: `terr-${territoryId}`, class: 'svg-territory checkpoint-territory',
+      'data-id': territoryId, filter: 'url(#cp-glow)',
     });
     const poly = group.path(shape).attr({
-      class: 'terr-poly',
-      fill: 'rgba(255,232,150,0.28)',
-      stroke: 'rgba(255,215,0,0.75)',
-      'stroke-width': 1.4,
-      'stroke-dasharray': 'none',
-      'pointer-events': 'all',
+      class: 'terr-poly', fill: 'rgba(255,232,150,0.28)',
+      stroke: 'rgba(255,215,0,0.75)', 'stroke-width': 1.4,
+      'stroke-dasharray': 'none', 'pointer-events': 'all',
     });
     group.polygon(`${cx},${cy - 18} ${cx + 13},${cy} ${cx},${cy + 18} ${cx - 13},${cy}`).attr({
-      fill: 'rgba(255,215,0,0.18)',
-      stroke: '#ffd700',
-      'stroke-width': 1.8,
-      'pointer-events': 'none',
+      fill: 'rgba(255,215,0,0.18)', stroke: '#ffd700', 'stroke-width': 1.8, 'pointer-events': 'none',
     });
     group.circle(7).center(cx, cy).fill('#ffd700');
     group.text(checkpoint.name).attr({ class: 'checkpoint-label', x: cx, y: cy + 28 });
     group.text(checkpointId === 'lørenskog' ? 'START' : 'CHECKPOINT').attr({
-      class: 'checkpoint-label',
-      x: cx,
-      y: cy + 39,
-      style: 'font-size:7px;fill:rgba(255,215,0,0.6)',
+      class: 'checkpoint-label', x: cx, y: cy + 39, style: 'font-size:7px;fill:rgba(255,215,0,0.6)',
     });
 
-    group.on('mouseenter', (event) => {
-      setTooltipText(tooltip, territory, currentGameState);
-      tooltip.group.show();
-      moveTooltip(event);
-    });
-    group.on('mousemove', moveTooltip);
+    group.on('mouseenter', (event) => { setTooltipText(tooltip, territory, currentGameState); tooltip.group.show(); moveTooltip(event as PointerEvent); });
+    group.on('mousemove', (event) => moveTooltip(event as PointerEvent));
     group.on('mouseleave', () => tooltip.group.hide());
-    group.on('pointerup', () => {
-      if (panState.hasMoved) return;
-      onSelectTerritory?.(territoryId);
-    });
+    group.on('pointerup', () => { if (panState.hasMoved) return; onSelectTerritory?.(territoryId); });
 
     territoryNodes.set(territoryId, { group, poly, units: null });
   }
 
-  let pieceLayer;
-
   const territoryGroup = draw.group().attr({ id: 'territory-layer' });
   for (const territory of TERRITORIES) {
     if (territory.type === 'checkpoint') continue;
-    const pathD = mapData.territoryShapes[territory.id];
-    const pos = TERRITORY_POS[territory.id];
+    const terr = territory as Territory;
+    const pathD = mapData.territoryShapes[terr.id];
+    const pos = TERRITORY_POS[terr.id];
     if (!pathD || !pos) continue;
 
     const [cx, cy] = pos;
-    const group = territoryGroup.group().attr({
-      id: `terr-${territory.id}`,
-      class: 'svg-territory',
-      'data-id': territory.id,
-    });
+    const group = territoryGroup.group().attr({ id: `terr-${terr.id}`, class: 'svg-territory', 'data-id': terr.id });
     const poly = group.path(pathD).attr({
-      class: 'terr-poly',
-      fill: '#1a1a2a',
-      'fill-opacity': 0.6,
-      stroke: 'rgba(201,168,76,0.5)',
-      'stroke-width': 1,
-      'stroke-dasharray': '4 3',
-      'pointer-events': 'all',
+      class: 'terr-poly', fill: '#1a1a2a', 'fill-opacity': 0.6,
+      stroke: 'rgba(201,168,76,0.5)', 'stroke-width': 1, 'stroke-dasharray': '4 3', 'pointer-events': 'all',
     });
-    group.text(territory.name).attr({ class: 'terr-label', x: cx, y: cy - 3 });
-    const units = group.text(String(territory.neutralUnits)).attr({
-      class: 'terr-units',
-      id: `units-${territory.id}`,
-      x: cx,
-      y: cy + 8,
-    });
+    group.text(terr.name).attr({ class: 'terr-label', x: cx, y: cy - 3 });
+    const units = group.text(String(terr.neutralUnits)).attr({ class: 'terr-units', id: `units-${terr.id}`, x: cx, y: cy + 8 });
 
-    group.on('mouseenter', (event) => {
-      setTooltipText(tooltip, territory, currentGameState);
-      tooltip.group.show();
-      moveTooltip(event);
-    });
-    group.on('mousemove', moveTooltip);
+    group.on('mouseenter', (event) => { setTooltipText(tooltip, terr, currentGameState); tooltip.group.show(); moveTooltip(event as PointerEvent); });
+    group.on('mousemove', (event) => moveTooltip(event as PointerEvent));
     group.on('mouseleave', () => tooltip.group.hide());
-    group.on('pointerup', () => {
-      if (panState.hasMoved) return;
-      onSelectTerritory?.(territory.id);
-    });
+    group.on('pointerup', () => { if (panState.hasMoved) return; onSelectTerritory?.(terr.id); });
 
-    territoryNodes.set(territory.id, { group, poly, units });
+    territoryNodes.set(terr.id, { group, poly, units });
   }
 
   const borderGroup = draw.group().attr({ id: 'district-border-layer', 'pointer-events': 'none' });
   for (const pathD of Object.values(mapData.districtShapes)) {
-    borderGroup.path(pathD).attr({
-      fill: 'none',
-      stroke: '#3a4a3a',
-      'stroke-width': 1.8,
-    });
+    borderGroup.path(pathD).attr({ fill: 'none', stroke: '#3a4a3a', 'stroke-width': 1.8 });
   }
 
-  // Keep player pieces above map polygons/borders so setup placement is always visible.
-  pieceLayer = draw.group().attr({ id: 'piece-layer', 'pointer-events': 'none' });
+  const pieceLayer = draw.group().attr({ id: 'piece-layer', 'pointer-events': 'none' });
 
   const compass = draw.group().transform({ translateX: 840, translateY: 80 });
   compass.svg(`
@@ -305,7 +234,7 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
 
   const tooltip = buildTooltip(draw);
 
-  function fit() {
+  function fit(): void {
     const cw = container.clientWidth;
     const ch = container.clientHeight;
     if (!cw || !ch) return;
@@ -315,20 +244,18 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
     applyMapTransform(draw.node, transform);
   }
 
-  function moveTooltip(event) {
+  function moveTooltip(event: PointerEvent): void {
     const position = tooltipPosition(event, container, transform);
     tooltip.group.transform({ translateX: position.x, translateY: position.y });
   }
 
-  function update({ gameState = currentGameState, selectedTerritory = currentSelectedTerritory } = {}) {
-    currentGameState = gameState;
-    currentSelectedTerritory = selectedTerritory;
+  function update({ gameState = currentGameState, selectedTerritory = currentSelectedTerritory }: UpdateOptions = {}): void {
+    currentGameState = gameState ?? null;
+    currentSelectedTerritory = selectedTerritory ?? null;
     if (!currentGameState) return;
 
-    const activePlayer = currentGameState.players?.find(
-      (player) => player.side === currentGameState.activePlayer,
-    );
-    const reachable = new Set(activePlayer?.validMoves || []);
+    const activePlayer = currentGameState.players?.find((p) => p.side === currentGameState!.activePlayer);
+    const reachable = new Set<string>(activePlayer?.validMoves ?? []);
 
     for (const territory of TERRITORIES) {
       const nodes = territoryNodes.get(territory.id);
@@ -337,6 +264,7 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
       const territoryState = currentGameState.territories[territory.id];
       const isSelected = currentSelectedTerritory === territory.id;
       const isReachable = reachable.has(territory.id);
+
       if (territory.type === 'checkpoint') {
         if (isSelected) nodes.group.addClass('selected');
         else nodes.group.removeClass('selected');
@@ -351,111 +279,71 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
 
       const owner = findPlayerByOwner(territoryState?.owner);
       if (owner) {
-        nodes.poly.attr({
-          fill: owner.color,
-          'fill-opacity': 0.55,
-          stroke: owner.color,
-          filter: '',
-        });
+        nodes.poly.attr({ fill: owner.color, 'fill-opacity': 0.55, stroke: owner.color, filter: '' });
       } else {
-        nodes.poly.attr({
-          fill: '#1a1a2a',
-          'fill-opacity': 0.6,
-          stroke: 'rgba(201,168,76,0.5)',
-          filter: '',
-        });
+        nodes.poly.attr({ fill: '#1a1a2a', 'fill-opacity': 0.6, stroke: 'rgba(201,168,76,0.5)', filter: '' });
       }
 
-      nodes.units?.text(String(territoryState?.units || 0));
+      nodes.units?.text(String(territoryState?.units ?? 0));
 
       if (isSelected) {
         nodes.group.addClass('selected');
-        nodes.poly.attr({
-          stroke: 'rgba(255,215,0,0.9)',
-          'stroke-width': 2,
-          'stroke-dasharray': 'none',
-          filter: 'url(#sel-glow)',
-        });
+        nodes.poly.attr({ stroke: 'rgba(255,215,0,0.9)', 'stroke-width': 2, 'stroke-dasharray': 'none', filter: 'url(#sel-glow)' });
       } else {
         nodes.group.removeClass('selected');
         if (isReachable) {
           nodes.group.addClass('reachable');
-          nodes.poly.attr({
-            stroke: 'rgba(140,255,180,0.9)',
-            'stroke-width': 1.8,
-            'stroke-dasharray': 'none',
-            filter: '',
-          });
+          nodes.poly.attr({ stroke: 'rgba(140,255,180,0.9)', 'stroke-width': 1.8, 'stroke-dasharray': 'none', filter: '' });
         } else {
           nodes.group.removeClass('reachable');
-          nodes.poly.attr({
-            'stroke-width': 1,
-            'stroke-dasharray': '4 3',
-          });
+          nodes.poly.attr({ 'stroke-width': 1, 'stroke-dasharray': '4 3' });
         }
       }
     }
 
     for (const [districtId, districtInfo] of Object.entries(DISTRICTS)) {
-      const territories = TERRITORIES.filter((territory) => territory.district === districtId);
+      const territories = TERRITORIES.filter((t): t is Territory => t.type === 'territory' && t.district === districtId);
       const districtPath = districtNodes.get(districtId);
       if (!districtPath) continue;
 
       const ownerIds = [...new Set(territories
-        .map((territory) => currentGameState.territories[territory.id]?.owner)
-        .filter(Boolean))];
-      if (
-        ownerIds.length === 1
-        && territories.every((territory) => currentGameState.territories[territory.id]?.owner === ownerIds[0])
-      ) {
+        .map((t) => currentGameState!.territories[t.id]?.owner)
+        .filter((o): o is string => Boolean(o)))];
+
+      if (ownerIds.length === 1 && territories.every((t) => currentGameState!.territories[t.id]?.owner === ownerIds[0])) {
         const owner = findPlayerByOwner(ownerIds[0]);
-        districtPath.attr({ fill: owner?.color || '#1a1a2a', 'fill-opacity': 0.4 });
+        districtPath.attr({ fill: owner?.color ?? '#1a1a2a', 'fill-opacity': 0.4 });
       } else {
-        districtPath.attr({ fill: districtInfo?.color || '#1a1a2a', 'fill-opacity': 0.75 });
+        districtPath.attr({ fill: districtInfo?.color ?? '#1a1a2a', 'fill-opacity': 0.75 });
       }
     }
 
-    for (const player of currentGameState.players || []) {
+    for (const player of currentGameState.players ?? []) {
       const position = player.position;
-      if (!position) {
-        playerPieces.get(player.id)?.group.hide();
-        continue;
-      }
+      if (!position) { playerPieces.get(player.id)?.group.hide(); continue; }
 
-      let coords = TERRITORY_POS[position];
+      let coords: [number, number] | undefined = TERRITORY_POS[position];
       if (!coords && position.endsWith('_cp')) {
-        const checkpointId = position.replace('_cp', '');
-        coords = CHECKPOINT_POS[checkpointId];
+        coords = CHECKPOINT_POS[position.replace('_cp', '')];
       }
-      if (!coords) {
-        playerPieces.get(player.id)?.group.hide();
-        continue;
-      }
+      if (!coords) { playerPieces.get(player.id)?.group.hide(); continue; }
 
       let piece = playerPieces.get(player.id);
       if (!piece) {
         const group = pieceLayer.group().attr({ class: 'player-piece' });
-        const outer = group.circle(16).attr({
-          fill: 'rgba(5, 5, 10, 0.85)',
-          stroke: '#d7d7d7',
-          'stroke-width': 1.2,
-        });
-        const inner = group.circle(12).attr({ fill: player.color || '#ddd' });
-        const label = group.text((player.name || '?').slice(0, 1).toUpperCase()).attr({
-          fill: '#f8f8f8',
-          'font-size': 9,
-          'font-family': 'Cinzel Decorative, serif',
-          'font-weight': 700,
-          'text-anchor': 'middle',
-          'dominant-baseline': 'middle',
+        const outer = group.circle(16).attr({ fill: 'rgba(5,5,10,0.85)', stroke: '#d7d7d7', 'stroke-width': 1.2 });
+        const inner = group.circle(12).attr({ fill: player.color ?? '#ddd' });
+        const label = group.text((player.name ?? '?').slice(0, 1).toUpperCase()).attr({
+          fill: '#f8f8f8', 'font-size': 9, 'font-family': 'Cinzel Decorative, serif',
+          'font-weight': 700, 'text-anchor': 'middle', 'dominant-baseline': 'middle',
         });
         piece = { group, outer, inner, label };
         playerPieces.set(player.id, piece);
       }
 
       piece.group.center(coords[0], coords[1] - 12).show();
-      piece.inner.attr({ fill: player.color || '#ddd' });
-      piece.label.text((player.name || '?').slice(0, 1).toUpperCase());
+      piece.inner.attr({ fill: player.color ?? '#ddd' });
+      piece.label.text((player.name ?? '?').slice(0, 1).toUpperCase());
       piece.outer.attr({
         stroke: player.side === currentGameState.activePlayer ? '#ffd700' : '#d7d7d7',
         'stroke-width': player.side === currentGameState.activePlayer ? 2 : 1.2,
@@ -463,7 +351,7 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
     }
   }
 
-  function onPointerDown(event) {
+  function onPointerDown(event: PointerEvent): void {
     panState.active = true;
     panState.hasMoved = false;
     panState.startX = event.clientX;
@@ -473,7 +361,7 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
     container.classList.add('grabbing');
   }
 
-  function onPointerMove(event) {
+  function onPointerMove(event: PointerEvent): void {
     if (!panState.active) return;
     const dx = event.clientX - panState.startX;
     const dy = event.clientY - panState.startY;
@@ -484,13 +372,13 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
     tooltip.group.hide();
   }
 
-  function onPointerUp() {
+  function onPointerUp(): void {
     panState.active = false;
     container.classList.remove('grabbing');
     setTimeout(() => { panState.hasMoved = false; }, 20);
   }
 
-  function onWheel(event) {
+  function onWheel(event: WheelEvent): void {
     event.preventDefault();
     const rect = container.getBoundingClientRect();
     const mx = event.clientX - rect.left;
@@ -503,22 +391,15 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
     applyMapTransform(draw.node, transform);
   }
 
-  function onResize() {
-    fit();
-  }
-
   container.addEventListener('pointerdown', onPointerDown);
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
   container.addEventListener('wheel', onWheel, { passive: false });
-  window.addEventListener('resize', onResize);
+  window.addEventListener('resize', fit);
 
-  requestAnimationFrame(() => {
-    fit();
-    update();
-  });
+  requestAnimationFrame(() => { fit(); update(); });
 
-  const adapter = {
+  return {
     update,
     fit,
     destroy() {
@@ -526,10 +407,8 @@ export function createMapAdapter(container, { onSelectTerritory } = {}) {
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
       container.removeEventListener('wheel', onWheel);
-      window.removeEventListener('resize', onResize);
+      window.removeEventListener('resize', fit);
       draw.remove();
     },
   };
-
-  return adapter;
 }

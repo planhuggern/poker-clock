@@ -10,7 +10,9 @@
       "Skill(update-config:*)",
       "PowerShell(npm install)",
       "PowerShell(Remove-Item \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\run_local.ps1\" -Confirm:$false)",
-      "PowerShell(Remove-Item \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\stop_port.ps1\" -Confirm:$false)"
+      "PowerShell(Remove-Item \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\stop_port.ps1\" -Confirm:$false)",
+      "PowerShell(cd \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\client-react\" && \\(Get-Content package.json | Select-String \"svg|preact|react\" | Select-Object -First 20\\))",
+      "PowerShell(cd \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\client-react\" && npx tsc --noEmit 2>&1 | Where-Object { $_ -match \"oslo-conquest/src\" })"
     ]
   }
 }

@@ -1,34 +1,26 @@
-// Nettverkslaget for Oslo Conquest.
-// Lobby-UI eies av Preact; denne modulen sender/mottar meldinger og rapporterer
-// status tilbake via callbacks.
+import { notifyGameChanged, state } from '../../domains/game/state/state.js';
+import { createInitialGameState } from '../../domains/game/state/game-state.js';
+import { GameState, GameModal, Handlers, RoomInfo } from '../../domains/game/types.js';
 
-import { notifyGameChanged, state } from '../../domains/game/state/state.ts';
-import { createInitialGameState } from '../../domains/game/state/game-state.ts';
-
-let pendingMessage = null;
+let pendingMessage: object | null = null;
 let activeUrl = '';
-let handlers = {};
+let handlers: Handlers = {};
 
-function setHandlers(nextHandlers = {}) {
+function setHandlers(nextHandlers: Handlers = {}): void {
   handlers = { ...handlers, ...nextHandlers };
 }
 
-// emit gjør at vi kan kalle handlers uten å sjekke om de finnes hver gang, 
-// og sentraliserer logikken for hvordan vi håndterer statusmeldinger og feil.
-function emit(name, ...args) {
-  handlers[name]?.(...args);
+function emit<K extends keyof Handlers>(name: K, ...args: Parameters<NonNullable<Handlers[K]>>): void {
+  (handlers[name] as ((...a: typeof args) => void) | undefined)?.(...args);
 }
 
-// I en server-autoritativ modell er det viktig at all spilllogikk og validering skjer på serveren,
-// og at klientene kun sender handlinger som serveren kan validere og utføre. Dette sikrer at
-// alle spillere har en konsistent spillopplevelse, og forhindrer juks og urettferdige fordeler.
-function handleGameState(nextState) {
+function handleGameState(nextState: GameState & { started?: boolean }): void {
   state.gameState = nextState;
 
   if (nextState.started) {
     emit('onGameStarted', nextState);
     emit('onGameState', nextState);
-  } else if (nextState.phase === 'waiting') {
+  } else if (nextState.phase === 'waiting' as GameState['phase']) {
     emit('onLobbyStatus', `Rom "${nextState.room || ''}" er opprettet. Venter på spiller 2.`, false);
     emit('onGameState', nextState);
   }
@@ -36,8 +28,14 @@ function handleGameState(nextState) {
   notifyGameChanged();
 }
 
-function handleMessage(rawMessage) {
-  const msg = JSON.parse(rawMessage);
+type IncomingMessage =
+  | { type: 'game_state'; state: GameState & { started?: boolean } }
+  | { type: 'action_result'; state: GameState; dice?: GameModal }
+  | { type: 'room_list'; rooms?: RoomInfo[] }
+  | { type: 'error'; message?: string };
+
+function handleMessage(rawMessage: string): void {
+  const msg = JSON.parse(rawMessage) as IncomingMessage;
 
   switch (msg.type) {
     case 'game_state':
@@ -47,26 +45,23 @@ function handleMessage(rawMessage) {
       state.gameState = msg.state;
       emit('onGameState', msg.state);
       notifyGameChanged();
-      if (msg.dice) emit('onModal', { type: 'dice', result: msg.dice });
+      if (msg.dice) emit('onModal', msg.dice);
       break;
     case 'room_list':
-      emit('onRooms', msg.rooms || []);
+      emit('onRooms', msg.rooms ?? []);
       break;
     case 'error': {
-      const message = msg.message || 'Ugyldig handling';
+      const message = msg.message ?? 'Ugyldig handling';
       emit('onLobbyStatus', message, true);
       emit('onError', message);
       break;
     }
     default:
-      console.warn('Unknown websocket message type:', msg.type, msg);
-      break;
+      console.warn('Unknown websocket message type:', (msg as { type: string }).type, msg);
   }
 }
 
-// connectWS prøver å koble til WebSocket-serveren hvis vi ikke allerede er tilkoblet, 
-// og setter opp event handlers for tilkoblingsstatus og innkommende meldinger. 
-export function connectWS({ url, handlers: nextHandlers } = {}) {
+export function connectWS({ url, handlers: nextHandlers }: { url?: string; handlers?: Handlers } = {}): boolean {
   setHandlers(nextHandlers);
   if (url) activeUrl = url.trim();
   if (!activeUrl) return false;
@@ -100,74 +95,60 @@ export function connectWS({ url, handlers: nextHandlers } = {}) {
     emit('onLobbyStatus', 'Kunne ikke koble til serveren.', true);
   };
 
-  state.ws.onmessage = (event) => handleMessage(event.data);
+  state.ws.onmessage = (event) => handleMessage(event.data as string);
 
   return false;
 }
 
-export function sendWS(msg) {
-  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+export function sendWS(msg: object): boolean {
+  if (state.ws?.readyState === WebSocket.OPEN) {
     state.ws.send(JSON.stringify(msg));
     return true;
   }
-
   pendingMessage = msg;
   connectWS();
   return false;
 }
 
-// Sender hele spilltilstanden til serveren, som videresender den til de andre spillerne.
-export function sendGameState(nextState = state.gameState) {
+export function sendGameState(nextState: GameState = state.gameState!): void {
   sendWS({ type: 'game_action', state: nextState });
 }
 
-export function sendEndTurn() {
-  sendWS({ type: 'end_turn', playerId: state.myPlayerId });
+export function sendEndTurn(playerId?: string): void {
+  sendWS({ type: 'end_turn', playerId: playerId ?? state.myPlayerId });
 }
 
-export function sendAttack(fromTerritoryId, toTerritoryId) {
-  sendWS({
-    type: 'attack',
-    playerId: state.myPlayerId,
-    fromTerritoryId,
-    toTerritoryId,
-  });
+export function sendAttack(fromTerritoryId: string, toTerritoryId: string): void {
+  sendWS({ type: 'attack', playerId: state.myPlayerId, fromTerritoryId, toTerritoryId });
 }
 
-export function sendRollDice() {
+export function sendRollDice(): void {
   sendWS({ type: 'roll_dice', playerId: state.myPlayerId });
 }
 
-export function sendMove(toTerritoryId) {
+export function sendMove(toTerritoryId: string): void {
   sendWS({ type: 'move', playerId: state.myPlayerId, toTerritoryId });
 }
 
-export function sendChooseStartCheckpoint(checkpointTerritoryId) {
-  sendWS({
-    type: 'choose_start_checkpoint',
-    playerId: state.myPlayerId,
-    checkpointTerritoryId,
-  });
+export function sendChooseStartCheckpoint(checkpointTerritoryId: string): void {
+  sendWS({ type: 'choose_start_checkpoint', playerId: state.myPlayerId, checkpointTerritoryId });
 }
 
-export function refreshRooms(nextHandlers) {
+export function refreshRooms(nextHandlers?: Handlers): void {
   setHandlers(nextHandlers);
   sendWS({ type: 'list_rooms' });
 }
 
-function nextPlayerId() {
+function nextPlayerId(): string {
   return 'p_' + Math.random().toString(36).slice(2, 10);
 }
 
-export function createGame({ url, name, room, handlers: nextHandlers } = {}) {
+export function createGame({ url, name, room, handlers: nextHandlers }: { url?: string; name?: string; room?: string; handlers?: Handlers } = {}): boolean {
   setHandlers(nextHandlers);
   if (url) activeUrl = url.trim();
   const cleanName = name?.trim();
   const cleanRoom = room?.trim();
-  if (!cleanName || !cleanRoom) {
-    emit('onError', 'Fyll inn navn og rom-ID');
-    return false;
-  }
+  if (!cleanName || !cleanRoom) { emit('onError', 'Fyll inn navn og rom-ID'); return false; }
 
   state.myPlayerId = nextPlayerId();
   emit('onLobbyStatus', `Oppretter rom "${cleanRoom}"...`, false);
@@ -175,15 +156,12 @@ export function createGame({ url, name, room, handlers: nextHandlers } = {}) {
   return true;
 }
 
-export function joinGame({ url, name, room, handlers: nextHandlers } = {}) {
+export function joinGame({ url, name, room, handlers: nextHandlers }: { url?: string; name?: string; room?: string; handlers?: Handlers } = {}): boolean {
   setHandlers(nextHandlers);
   if (url) activeUrl = url.trim();
   const cleanName = name?.trim();
   const cleanRoom = room?.trim();
-  if (!cleanName || !cleanRoom) {
-    emit('onError', 'Fyll inn navn og rom-ID');
-    return false;
-  }
+  if (!cleanName || !cleanRoom) { emit('onError', 'Fyll inn navn og rom-ID'); return false; }
 
   state.myPlayerId = nextPlayerId();
   emit('onLobbyStatus', `Blir med i rom "${cleanRoom}"...`, false);
@@ -191,7 +169,7 @@ export function joinGame({ url, name, room, handlers: nextHandlers } = {}) {
   return true;
 }
 
-export function startLocalGame({ name, handlers: nextHandlers } = {}) {
+export function startLocalGame({ name, handlers: nextHandlers }: { name?: string; handlers?: Handlers } = {}): boolean {
   setHandlers(nextHandlers);
   const playerName = name?.trim() || 'Spiller 1';
   state.myPlayerId = 'p1';
@@ -200,7 +178,7 @@ export function startLocalGame({ name, handlers: nextHandlers } = {}) {
     { id: 'p2', name: 'Spiller 2' },
     { id: 'p3', name: 'Spiller 3' },
   ];
-  state.gameState = createInitialGameState(players);
+  state.gameState = createInitialGameState(players as Parameters<typeof createInitialGameState>[0]);
   emit('onGameStarted', state.gameState);
   emit('onGameState', state.gameState);
   notifyGameChanged();

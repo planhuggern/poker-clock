@@ -6,7 +6,8 @@
     "strict": true,
     "noEmit": true,
     "allowJs": true,
-    "checkJs": false
+    "checkJs": false,
+    "jsx": "react-jsx"
   },
   "include": [
     "poker-clock/src/**/*.js",
@@ -14,8 +15,10 @@
     "oslo-conquest/src/**/*.js",
     "oslo-conquest/src/**/*.jsx",
     "oslo-conquest/src/**/*.ts",
+    "oslo-conquest/src/**/*.tsx",
     "oslo-conquest/tests/**/*.js",
     "oslo-conquest/tests/**/*.jsx",
+    "oslo-conquest/tests/**/*.ts",
     "vite.config.js"
 ],
   "exclude": ["dist", "../server/public"]

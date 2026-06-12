@@ -1,9 +1,18 @@
-import { useEffect, useRef } from "react";
-import { createMapAdapter } from "./map.js";
+import { useEffect, useRef } from 'react';
+import { GameState } from '../game/types.js';
+import { createMapAdapter } from './map.js';
 
-export function MapView({ gameState, selectedTerritory, onSelectTerritory }) {
-  const containerRef = useRef(null);
-  const adapterRef = useRef(null);
+type MapAdapter = ReturnType<typeof createMapAdapter>;
+
+type Props = {
+  gameState: GameState | null;
+  selectedTerritory: string | null;
+  onSelectTerritory: (territoryId: string) => void;
+};
+
+export function MapView({ gameState, selectedTerritory, onSelectTerritory }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const adapterRef = useRef<MapAdapter | null>(null);
   const onSelectTerritoryRef = useRef(onSelectTerritory);
 
   useEffect(() => {

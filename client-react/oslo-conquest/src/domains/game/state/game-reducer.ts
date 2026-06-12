@@ -1,5 +1,5 @@
 import { produce, Draft } from 'immer';
-import { GameState, Player, LogEntry, Mission, Territory, Checkpoint, MapNode } from '../types.js';
+import { GameState, Player, LogEntry, Mission, Territory, Checkpoint, MapNode, GameModal } from '../types.js';
 import { ADJACENCY, DISTRICTS, MISSIONS, TERRITORIES } from '../model/game-data.js';
 
 // --- Types ---
@@ -19,40 +19,11 @@ type Action =
   | { type: 'pay_rent'; territoryId: string }
   | { type: 'end_turn' };
 
-type DiceModal = {
-  type: 'dice';
-  result: {
-    attackerDice: number[];
-    defenderDice: number[];
-    attackerName: string;
-    defenderName: string;
-    attackerWins: boolean;
-    attackerLost: number;
-    defenderLost: number;
-  };
-};
-
-type RentModal = {
-  type: 'rent';
-  territoryId: string;
-  rent: number;
-  territoryName: string;
-  canPay: boolean;
-};
-
-type WinModal = {
-  type: 'win';
-  player: Player;
-  mission: Pick<Mission, 'title' | 'emoji'>;
-};
-
-type Modal = DiceModal | RentModal | WinModal;
-
 type Event =
   | { type: 'log'; message: string; level?: string }
   | { type: 'send_state' }
   | { type: 'map_update' }
-  | { type: 'modal'; modal: Modal }
+  | { type: 'modal'; modal: GameModal }
   | { type: 'send_end_turn'; playerId: string };
 
 type CombatResult = {

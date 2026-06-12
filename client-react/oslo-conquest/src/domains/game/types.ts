@@ -15,6 +15,7 @@ export type Player = {
   diceUsed: number;
   eliminated: boolean;
   conquests: { [key: string]: number };
+  validMoves?: string[];
 }
 
 export type LogEntry = {
@@ -77,3 +78,54 @@ export type TerritoryState = {
   units: number;
   checkpoint?: string;
 }
+
+// --- Modal types (shared between game-reducer, state, App, GameUI) ---
+
+export type DiceModal = {
+  type: 'dice';
+  result: {
+    attackerDice: number[];
+    defenderDice: number[];
+    attackerName: string;
+    defenderName: string;
+    attackerWins: boolean;
+    attackerLost: number;
+    defenderLost: number;
+  };
+};
+
+export type RentModal = {
+  type: 'rent';
+  territoryId: string;
+  rent: number;
+  territoryName: string;
+  canPay: boolean;
+};
+
+export type WinModal = {
+  type: 'win';
+  player: Player;
+  mission: Pick<Mission, 'title' | 'emoji'>;
+};
+
+export type GameModal = DiceModal | RentModal | WinModal;
+
+// --- Websocket / lobby types ---
+
+export type RoomInfo = {
+  room: string;
+  playerCount: number;
+  maxPlayers: number;
+  started: boolean;
+  players?: string[];
+};
+
+export type Handlers = {
+  onConnectionChange?: (status: string) => void;
+  onLobbyStatus?: (message: string, isError?: boolean) => void;
+  onRooms?: (rooms: RoomInfo[]) => void;
+  onGameStarted?: (gameState: GameState) => void;
+  onGameState?: (gameState: GameState) => void;
+  onModal?: (modal: GameModal) => void;
+  onError?: (message: string) => void;
+};

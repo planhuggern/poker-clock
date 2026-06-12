@@ -1,18 +1,13 @@
 // Delt spilltilstand som alle moduler leser og skriver til.
 // Fordi ES-moduler eksporterer referanser, endres dette objektet live — ingen kopi.
-import { GameState } from '../types';
-
-interface Modal {
-  type: "createGame" | "joinGame" | "mission" | "gameOver";
-  props?: unknown;
-}
+import { GameState, GameModal } from '../types';
 
 interface State {
   gameState: GameState | null;
   myPlayerId: string | null;
   selectedTerritory: string | null;
   missionRevealed: boolean;
-  modal: Modal | null;
+  modal: GameModal | null;
   ws: WebSocket | null;
 }
 
