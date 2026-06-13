@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  connectWS, createGame, joinGame, refreshRooms,
+  connectWS, createGame, joinGame,
   sendAttack, sendChooseStartCheckpoint, sendEndTurn,
   sendMove, sendRollDice, sendGameState, startLocalGame,
 } from './transport/websocket/websocket.js';
@@ -113,19 +113,12 @@ export function App() {
     if (!requireLobbyFields()) return;
     createGame({ url: DEFAULT_WS_URL, name: playerName, room: effectiveRoomId, handlers });
     setMyPlayerId(state.myPlayerId);
-    handleRefreshRooms();
   }
 
   function handleJoinGame(): void {
     if (!requireLobbyFields()) return;
     joinGame({ url: DEFAULT_WS_URL, name: playerName, room: effectiveRoomId, handlers });
     setMyPlayerId(state.myPlayerId);
-    handleRefreshRooms();
-  }
-
-  function handleRefreshRooms(): void {
-    connectWS({ url: DEFAULT_WS_URL, handlers });
-    refreshRooms(handlers);
   }
 
   function handleSelectRoom(room: string): void {
@@ -173,7 +166,6 @@ export function App() {
             lobbyStatus={lobbyStatus}
             rooms={rooms}
             effectiveRoomId={effectiveRoomId}
-            handleRefreshRooms={handleRefreshRooms}
             handleSelectRoom={handleSelectRoom}
             handleStartLocalGame={handleStartLocalGame}
           />
@@ -228,18 +220,16 @@ type LobbyRoomsColumnProps = {
   lobbyStatus: LobbyStatus;
   rooms: RoomInfo[];
   effectiveRoomId: string;
-  handleRefreshRooms: () => void;
   handleSelectRoom: (room: string) => void;
   handleStartLocalGame: () => void;
 };
 
-function LobbyRoomsColumn({ lobbyStatus, rooms, effectiveRoomId, handleRefreshRooms, handleSelectRoom, handleStartLocalGame }: LobbyRoomsColumnProps) {
+function LobbyRoomsColumn({ lobbyStatus, rooms, effectiveRoomId, handleSelectRoom, handleStartLocalGame }: LobbyRoomsColumnProps) {
   return (
     <section className="lobby-column lobby-rooms-column">
       <div className={`lobby-status${lobbyStatus.isError ? ' error' : ''}`}>{lobbyStatus.message}</div>
       <div className="room-list-header">
         <label>Aktive rom</label>
-        <button className="text-btn" type="button" onClick={handleRefreshRooms}>Oppdater</button>
       </div>
       <div className="room-list">
         {rooms.length === 0 ? (

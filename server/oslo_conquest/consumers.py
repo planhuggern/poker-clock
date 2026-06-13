@@ -30,6 +30,8 @@ from .mvp import (
 # In-memory room storage: { room_id: latest_game_state }
 _rooms: dict[str, dict] = {}
 
+_LOBBY_GROUP = "oslo-conquest-lobby"
+
 
 class OsloConquestConsumer(AsyncWebsocketConsumer):
 
@@ -37,8 +39,11 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
         self.room: str | None = None
         self.player_id: str | None = None
         await self.accept()
+        await self.channel_layer.group_add(_LOBBY_GROUP, self.channel_name)
+        await self._send_room_list()
 
     async def disconnect(self, close_code: int) -> None:
+        await self.channel_layer.group_discard(_LOBBY_GROUP, self.channel_name)
         if self.room:
             await self.channel_layer.group_discard(
                 self._group_name(self.room),
@@ -81,6 +86,7 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
         await self._join_group(room)
         _rooms[room] = create_waiting_room(room, player)
         await self._broadcast(room, {"type": "game_state", "state": _rooms[room]})
+        await self._broadcast_room_list()
 
     async def _handle_join(self, data: dict) -> None:
         room = str(data.get("room") or "default")
@@ -97,6 +103,7 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
                 )
                 return
         await self._broadcast(room, {"type": "game_state", "state": _rooms[room]})
+        await self._broadcast_room_list()
 
     async def _handle_action(self, data: dict) -> None:
         if not self.room:
@@ -225,4 +232,10 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
             text_data=json.dumps(
                 {"type": "room_list", "rooms": summarize_rooms(_rooms)}
             )
+        )
+
+    async def _broadcast_room_list(self) -> None:
+        await self.channel_layer.group_send(
+            _LOBBY_GROUP,
+            {"type": "oslo.broadcast", "message": {"type": "room_list", "rooms": summarize_rooms(_rooms)}},
         )
