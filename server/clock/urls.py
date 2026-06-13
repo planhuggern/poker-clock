@@ -1,11 +1,9 @@
 from django.urls import path
-from .views import DevAuthView, GoogleCallbackView, GoogleLoginView
+from .views import DevAuthView
 from .player_views import MeView, PlayerListView, RegisterView
 from .tournament_views import TournamentDetailView, TournamentFinishView, TournamentListView
 
 urlpatterns = [
-    path("auth/google", GoogleLoginView.as_view(), name="auth-google"),
-    path("auth/google/callback", GoogleCallbackView.as_view(), name="auth-google-callback"),
     path("auth/dev", DevAuthView.as_view(), name="auth-dev"),
     # Player API
     path("clock/api/me/", MeView.as_view(), name="player-me"),

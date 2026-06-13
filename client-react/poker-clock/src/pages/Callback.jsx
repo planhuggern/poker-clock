@@ -7,7 +7,7 @@ export default function Callback() {
   const role = params.get("role");
 
   if (!token) {
-    return <Navigate to="/login?error=missing_token" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Lagre synkront (render-kode). I dev kan den rendres to ganger,

@@ -86,7 +86,7 @@ class Tournament(models.Model):
 
 
 class Player(models.Model):
-    """A user who has authenticated via OAuth and has a persistent profile."""
+    """A user who has authenticated and has a persistent profile."""
 
     username  = models.CharField(max_length=255, unique=True)
     nickname  = models.CharField(max_length=64, blank=True)

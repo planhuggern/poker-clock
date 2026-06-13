@@ -7,12 +7,6 @@
 
   "basePath": "",
 
-  "google": {
-    "clientID": "",
-    "clientSecret": "",
-    "callbackURL": "http://localhost:8000/auth/google/callback"
-  },
-
   "adminEmails": [
     "deg@example.com"
   ],

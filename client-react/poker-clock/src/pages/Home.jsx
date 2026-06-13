@@ -1,4 +1,4 @@
-﻿import { Navigate, useNavigate, useParams } from "react-router-dom";
+﻿import { useParams } from "react-router-dom";
 import { usePokerSocket } from "../lib/usePokerSocket";
 import { usePlayerApi } from "../lib/usePlayerApi";
 import ClockCard from "../components/ClockCard";
@@ -10,7 +10,6 @@ import TournamentHeader from "../components/TournamentHeader";
 
 
 export default function Home() {
-  const nav = useNavigate();
   const { tournamentId: tidParam } = useParams();
   const tournamentId = Number(tidParam) || 1;
 
@@ -29,19 +28,11 @@ export default function Home() {
   const isAdmin = !!(profile && snapshot?.tournament &&
     profile.username === snapshot.tournament.admin?.username);
 
-  if (!token) return <Navigate to="/login" replace />;
-
   const t = snapshot?.tournament;
   const levels = t?.levels ?? [];
   const players = snapshot?.players;
   const currentIndex = snapshot?.currentIndex ?? 0;
   const running = snapshot?.running;
-
-  const handleLogout = () => {
-    localStorage.removeItem("poker_token");
-    localStorage.removeItem("poker_role");
-    nav("/login", { replace: true });
-  };
 
   return (
     <main className="main-content">
@@ -52,7 +43,6 @@ export default function Home() {
         status={status}
         tournamentId={tournamentId}
         token={token}
-        onLogout={handleLogout}
       />
 
       {/* Clock */}

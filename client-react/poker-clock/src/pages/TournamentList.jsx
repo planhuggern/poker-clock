@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useTournamentApi } from "../lib/useTournamentApi";
 import { usePlayerApi } from "../lib/usePlayerApi";
 import TournamentCard from "./TournamentCard";
@@ -8,7 +8,6 @@ import ThemeSwitcher from "../components/ThemeSwitcher";
 
 
 export default function TournamentList() {
-  const nav   = useNavigate();
   const token = localStorage.getItem("poker_token");
   const role  = localStorage.getItem("poker_role") || "viewer";
   const isAdmin = role === "admin";
@@ -43,8 +42,6 @@ export default function TournamentList() {
 
   const [renaming, setRenaming] = useState(null); // { id, name }
   const [renamingError, setRenamingError] = useState("");
-
-  if (!token) return <Navigate to="/login" replace />;
 
   const active   = tournaments.filter(t => t.status !== "finished");
   const finished = tournaments.filter(t => t.status === "finished");
@@ -107,11 +104,6 @@ export default function TournamentList() {
             </button>
           )}
           <ThemeSwitcher />
-          <button className="btn btn-ghost btn-sm" onClick={() => {
-            localStorage.removeItem("poker_token");
-            localStorage.removeItem("poker_role");
-            nav("/login", { replace: true });
-          }}>Logg ut</button>
         </div>
       </div>
 

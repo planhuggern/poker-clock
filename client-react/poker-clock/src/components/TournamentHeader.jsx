@@ -7,7 +7,6 @@ export default function TournamentHeader({
   status,
   tournamentId,
   token,
-  onLogout,
 }) {
   return (
     <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
@@ -18,7 +17,6 @@ export default function TournamentHeader({
         <Link to="/" className="btn btn-ghost btn-sm">⬅ Turneringer</Link>
         <UserMenu token={token} />
         <ThemeSwitcher />
-        <button className="btn btn-ghost btn-sm" onClick={onLogout}>Logg ut</button>
       </div>
     </div>
   );

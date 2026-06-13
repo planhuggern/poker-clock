@@ -1,4 +1,4 @@
-import { Navigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { usePokerSocket } from "../lib/usePokerSocket";
 import ClockCard from "../components/ClockCard";
 import { fmtChips } from "../lib/clockFormat";
@@ -8,8 +8,6 @@ export default function Tv() {
   const { tournamentId: tidParam } = useParams();
   const tournamentId = Number(tidParam) || 1;
   const { status, snapshot } = usePokerSocket(token, tournamentId);
-
-  if (!token) return <Navigate to="/login" replace />;
 
   const t = snapshot?.tournament;
   const levels = t?.levels ?? [];
