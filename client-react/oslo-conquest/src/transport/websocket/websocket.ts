@@ -143,6 +143,13 @@ function nextPlayerId(): string {
   return 'p_' + Math.random().toString(36).slice(2, 10);
 }
 
+export function rejoinGame({ url, room, playerId, handlers: nextHandlers }: { url?: string; room: string; playerId: string; handlers?: Handlers }): void {
+  setHandlers(nextHandlers);
+  if (url) activeUrl = url.trim();
+  state.myPlayerId = playerId;
+  sendWS({ type: 'rejoin_game', room, playerId });
+}
+
 export function createGame({ url, name, room, handlers: nextHandlers }: { url?: string; name?: string; room?: string; handlers?: Handlers } = {}): boolean {
   setHandlers(nextHandlers);
   if (url) activeUrl = url.trim();

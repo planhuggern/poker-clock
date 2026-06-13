@@ -72,6 +72,8 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
             await self._handle_move(data)
         elif msg_type == "choose_start_checkpoint":
             await self._handle_choose_start_checkpoint(data)
+        elif msg_type == "rejoin_game":
+            await self._handle_rejoin(data)
         elif msg_type == "list_rooms":
             await self._handle_list_rooms()
         elif msg_type == "game_action":
@@ -197,6 +199,29 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
             {"type": "game_state", "state": _rooms[self.room]},
         )
 
+    async def _handle_rejoin(self, data: dict) -> None:
+        room = str(data.get("room") or "")
+        player_id = str(data.get("playerId") or "")
+        if room not in _rooms:
+            await self.send(text_data=json.dumps(
+                {"type": "error", "message": f'Rom "{room}" finnes ikke lenger.'}
+            ))
+            await self._send_room_list()
+            return
+        game_state = _rooms[room]
+        player_ids = [p.get("id") for p in game_state.get("players", [])]
+        if player_id not in player_ids:
+            await self.send(text_data=json.dumps(
+                {"type": "error", "message": "Spiller ikke funnet i rom."}
+            ))
+            await self._send_room_list()
+            return
+        self.player_id = player_id
+        await self._join_group(room)
+        await self.send(text_data=json.dumps(
+            {"type": "game_state", "state": {**game_state, "started": True}}
+        ))
+
     async def _handle_list_rooms(self) -> None:
         await self._send_room_list()
 
@@ -237,5 +262,8 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
     async def _broadcast_room_list(self) -> None:
         await self.channel_layer.group_send(
             _LOBBY_GROUP,
-            {"type": "oslo.broadcast", "message": {"type": "room_list", "rooms": summarize_rooms(_rooms)}},
+            {
+                "type": "oslo.broadcast",
+                "message": {"type": "room_list", "rooms": summarize_rooms(_rooms)},
+            },
         )

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  connectWS, createGame, joinGame,
+  connectWS, createGame, joinGame, rejoinGame,
   sendAttack, sendChooseStartCheckpoint, sendEndTurn,
   sendMove, sendRollDice, sendGameState, startLocalGame,
 } from './transport/websocket/websocket.js';
@@ -73,7 +73,14 @@ export function App() {
   }), []);
 
   useEffect(() => {
-    if (!inGame) connectWS({ url: DEFAULT_WS_URL, handlers });
+    if (inGame) return;
+    const storedRoom = localStorage.getItem('oslo-conquest-active-room');
+    const storedPlayerId = localStorage.getItem('oslo-conquest-player-id');
+    if (storedRoom && storedPlayerId) {
+      rejoinGame({ url: DEFAULT_WS_URL, room: storedRoom, playerId: storedPlayerId, handlers });
+    } else {
+      connectWS({ url: DEFAULT_WS_URL, handlers });
+    }
   }, [handlers, inGame]);
 
   function handleReducerEvents(result: ReturnType<typeof reduceGameAction>): void {
@@ -118,12 +125,14 @@ export function App() {
     if (!requireLobbyFields()) return;
     createGame({ url: DEFAULT_WS_URL, name: playerName, room: effectiveRoomId, handlers });
     setMyPlayerId(state.myPlayerId);
+    localStorage.setItem('oslo-conquest-active-room', effectiveRoomId);
   }
 
   function handleJoinGame(): void {
     if (!requireLobbyFields()) return;
     joinGame({ url: DEFAULT_WS_URL, name: playerName, room: effectiveRoomId, handlers });
     setMyPlayerId(state.myPlayerId);
+    localStorage.setItem('oslo-conquest-active-room', effectiveRoomId);
   }
 
   function handleSelectRoom(room: string): void {
