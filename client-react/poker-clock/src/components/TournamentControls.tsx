@@ -1,3 +1,19 @@
+import type { Level } from "../lib/types";
+
+interface TournamentControlsProps {
+  isAdmin: boolean;
+  running: boolean;
+  pause: () => void;
+  start: () => void;
+  reset: () => void;
+  prev: () => void;
+  next: () => void;
+  currentIndex: number;
+  levels: Level[];
+  addTime: (seconds: number) => void;
+  jump: (index: number) => void;
+}
+
 export default function TournamentControls({
   isAdmin,
   running,
@@ -10,7 +26,7 @@ export default function TournamentControls({
   levels,
   addTime,
   jump,
-}) {
+}: TournamentControlsProps) {
   if (!isAdmin) {
     return <div className="text-xs opacity-40 mt-1 text-center">Kun host kan styre klokken.</div>;
   }

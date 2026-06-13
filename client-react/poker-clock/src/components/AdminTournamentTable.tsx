@@ -1,9 +1,35 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { Level, Snapshot, Tournament } from "../lib/types";
 
-function toRowsFromTournament(t) {
-  const levels = Array.isArray(t?.levels) ? t.levels : [];
+interface Row {
+  type: "level" | "break";
+  title: string;
+  minutes: string | number;
+  sb: string | number;
+  bb: string | number;
+  ante: string | number;
+}
+
+interface RowSettings {
+  buyIn: string;
+  rebuyAmount: string;
+  addOnAmount: string;
+  startingStack: string;
+}
+
+interface Preset {
+  name: string;
+  buyIn: number;
+  rebuyAmount: number;
+  addOnAmount: number;
+  startingStack: number;
+  levels: Level[];
+}
+
+function toRowsFromTournament(t: { levels?: Level[] } | null | undefined): Row[] {
+  const levels = Array.isArray(t?.levels) ? t!.levels : [];
   return levels.map((L) => ({
-    type: L.type === "break" ? "break" : "level",
+    type: L.type === "break" ? "break" as const : "level" as const,
     title: L.title ?? "",
     minutes: Math.max(1, Math.round((L.durationSeconds ?? L.seconds ?? 60) / 60)),
     sb: L.sb ?? 0,
@@ -12,7 +38,7 @@ function toRowsFromTournament(t) {
   }));
 }
 
-function toTournamentFromRows(name, rows, settings = {}) {
+function toTournamentFromRows(name: string, rows: Row[], settings: RowSettings = { buyIn: "0", rebuyAmount: "0", addOnAmount: "0", startingStack: "0" }): Omit<Tournament, "id" | "status" | "admin" | "playerCount"> {
   return {
     name: name || "Pokerturnering",
     buyIn:        Number(settings.buyIn)        || 0,
@@ -22,10 +48,10 @@ function toTournamentFromRows(name, rows, settings = {}) {
     levels: rows.map((r) => {
       const durationSeconds = Math.max(1, Number(r.minutes || 1)) * 60;
       if (r.type === "break") {
-        return { type: "break", title: r.title || "Pause", durationSeconds };
+        return { type: "break" as const, title: r.title || "Pause", durationSeconds };
       }
       return {
-        type: "level",
+        type: "level" as const,
         title: r.title || "",
         durationSeconds,
         sb: Number(r.sb || 0),
@@ -36,7 +62,7 @@ function toTournamentFromRows(name, rows, settings = {}) {
   };
 }
 
-function validate(rows) {
+function validate(rows: Row[]): string {
   if (!rows.length) return "Må ha minst én rad.";
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
@@ -47,22 +73,17 @@ function validate(rows) {
       return `Rad ${idx}: minutter må være > 0`;
 
     if (r.type === "level") {
-      const sb = Number(r.sb),
-        bb = Number(r.bb),
-        ante = Number(r.ante);
+      const sb = Number(r.sb), bb = Number(r.bb), ante = Number(r.ante);
       if (!Number.isFinite(sb) || sb < 0) return `Rad ${idx}: SB må være >= 0`;
       if (!Number.isFinite(bb) || bb <= 0) return `Rad ${idx}: BB må være > 0`;
-      if (!Number.isFinite(ante) || ante < 0)
-        return `Rad ${idx}: Ante må være >= 0`;
+      if (!Number.isFinite(ante) || ante < 0) return `Rad ${idx}: Ante må være >= 0`;
       if (sb > bb) return `Rad ${idx}: SB bør ikke være større enn BB`;
     }
   }
   return "";
 }
 
-// ─── Preset structures ────────────────────────────────────────────────────────
-
-const PRESETS = {
+const PRESETS: Record<string, Preset> = {
   quick: {
     name: "Hurtigturnering",
     buyIn: 100, rebuyAmount: 100, addOnAmount: 100, startingStack: 5000,
@@ -123,7 +144,16 @@ const PRESETS = {
   },
 };
 
-function applyPreset(key, setName, setRows, setBuyIn, setRebuyAmount, setAddOnAmount, setStartingStack, setDirty) {
+function applyPreset(
+  key: string,
+  setName: (v: string) => void,
+  setRows: (v: Row[]) => void,
+  setBuyIn: (v: string) => void,
+  setRebuyAmount: (v: string) => void,
+  setAddOnAmount: (v: string) => void,
+  setStartingStack: (v: string) => void,
+  setDirty: (v: boolean) => void,
+): void {
   const p = PRESETS[key];
   if (!p) return;
   setName(p.name);
@@ -135,10 +165,8 @@ function applyPreset(key, setName, setRows, setBuyIn, setRebuyAmount, setAddOnAm
   setDirty(true);
 }
 
-function downloadJson(filename, obj) {
-  const blob = new Blob([JSON.stringify(obj, null, 2)], {
-    type: "application/json",
-  });
+function downloadJson(filename: string, obj: unknown): void {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -149,21 +177,27 @@ function downloadJson(filename, obj) {
   URL.revokeObjectURL(url);
 }
 
-async function readJsonFile(file) {
+async function readJsonFile(file: File): Promise<unknown> {
   const text = await file.text();
   return JSON.parse(text);
+}
+
+interface AdminTournamentTableProps {
+  role: string;
+  snapshot: Snapshot | null;
+  updateTournament: (tournament: Partial<Tournament>) => void;
 }
 
 export default function AdminTournamentTable({
   role,
   snapshot,
   updateTournament,
-}) {
+}: AdminTournamentTableProps) {
   const isAdmin = role === "admin";
   const t = snapshot?.tournament;
 
   const [name, setName] = useState("");
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState<Row[]>([]);
   const [err, setErr] = useState("");
   const [dirty, setDirty] = useState(false);
   const [importMsg, setImportMsg] = useState("");
@@ -172,7 +206,6 @@ export default function AdminTournamentTable({
   const [addOnAmount, setAddOnAmount] = useState("200");
   const [startingStack, setStartingStack] = useState("10000");
 
-  // Når snapshot endrer seg fra server (f.eks. annen admin), sync inn – men ikke overskriv hvis admin redigerer
   useEffect(() => {
     if (!isAdmin || !t) return;
     if (dirty) return;
@@ -207,12 +240,12 @@ export default function AdminTournamentTable({
     ]);
   };
 
-  const delRow = (i) => {
+  const delRow = (i: number) => {
     setDirty(true);
     setRows((prev) => prev.filter((_, idx) => idx !== i));
   };
 
-  const move = (i, dir) => {
+  const move = (i: number, dir: number) => {
     setDirty(true);
     setRows((prev) => {
       const j = i + dir;
@@ -225,12 +258,11 @@ export default function AdminTournamentTable({
     });
   };
 
-  const setCell = (i, key, value) => {
+  const setCell = (i: number, key: keyof Row, value: string | number) => {
     setDirty(true);
     setRows((prev) => {
       const copy = prev.slice();
-      copy[i] = { ...copy[i], [key]: value };
-      // hvis bytter type til break, null ut blinds (kun kosmetisk)
+      copy[i] = { ...copy[i], [key]: value } as Row;
       if (key === "type" && value === "break") {
         copy[i].sb = 0;
         copy[i].bb = 0;
@@ -252,7 +284,6 @@ export default function AdminTournamentTable({
     <div className="mt-5">
       <h3>Admin: Rediger oppsett</h3>
 
-      {/* Presets */}
       <div className="flex gap-2 items-center flex-wrap mb-3">
         <label>Preset:</label>
         <select
@@ -272,13 +303,12 @@ export default function AdminTournamentTable({
         </select>
       </div>
 
-      {/* Tournament settings */}
       <div className="flex gap-3 flex-wrap mb-4 p-3 bg-base-300/50 rounded-xl border border-base-content/10">
         {[
-          { label: "Buy-in kr",   val: buyIn,         set: setBuyIn },
-          { label: "Rebuy kr",    val: rebuyAmount,   set: setRebuyAmount },
-          { label: "Add-on kr",   val: addOnAmount,   set: setAddOnAmount },
-          { label: "Startstack",  val: startingStack, set: setStartingStack },
+          { label: "Buy-in kr",  val: buyIn,         set: setBuyIn },
+          { label: "Rebuy kr",   val: rebuyAmount,   set: setRebuyAmount },
+          { label: "Add-on kr",  val: addOnAmount,   set: setAddOnAmount },
+          { label: "Startstack", val: startingStack, set: setStartingStack },
         ].map(({ label, val, set }) => (
           <label key={label}>
             {label}
@@ -297,10 +327,7 @@ export default function AdminTournamentTable({
         <label>Turneringsnavn:</label>
         <input
           value={name}
-          onChange={(e) => {
-            setDirty(true);
-            setName(e.target.value);
-          }}
+          onChange={(e) => { setDirty(true); setName(e.target.value); }}
           className="input editor-input--wide"
         />
 
@@ -322,10 +349,7 @@ export default function AdminTournamentTable({
           Eksport
         </button>
 
-        <label
-          className="editor-import-btn"
-          title="Importer oppsett fra JSON-fil"
-        >
+        <label className="editor-import-btn" title="Importer oppsett fra JSON-fil">
           Import
           <input
             type="file"
@@ -337,36 +361,26 @@ export default function AdminTournamentTable({
               if (!file) return;
 
               try {
-                const parsed = await readJsonFile(file);
+                const parsed = await readJsonFile(file) as Record<string, unknown>;
 
-                if (
-                  !parsed ||
-                  !Array.isArray(parsed.levels) ||
-                  parsed.levels.length === 0
-                ) {
+                if (!parsed || !Array.isArray(parsed.levels) || (parsed.levels as unknown[]).length === 0) {
                   throw new Error("JSON må ha levels[] med minst ett element");
                 }
 
                 const importedTournament = {
-                  name: parsed.name ?? "Pokerturnering",
-                  levels: parsed.levels,
+                  name: (parsed.name as string) ?? "Pokerturnering",
+                  levels: parsed.levels as Level[],
                 };
 
-                // Oppdater UI (så tabellen viser hva som ble importert)
                 setName(importedTournament.name);
                 setRows(toRowsFromTournament(importedTournament));
-
-                // Send direkte til server
                 updateTournament(importedTournament);
-
-                // Vi er “synket” med server nå
                 setDirty(false);
                 setErr("");
                 setImportMsg("Importert og sendt til server ✅");
               } catch (err) {
-                setImportMsg(`Import feilet: ${err?.message || "Ugyldig fil"}`);
+                setImportMsg(`Import feilet: ${(err as Error)?.message || "Ugyldig fil"}`);
               } finally {
-                // gjør at du kan importere samme fil igjen
                 e.target.value = "";
               }
             }}
@@ -375,17 +389,12 @@ export default function AdminTournamentTable({
 
         <button
           className="btn btn-ghost btn-sm"
-          onClick={() => {
-            setDirty(false);
-            setErr("");
-            setImportMsg("");
-          }}
+          onClick={() => { setDirty(false); setErr(""); setImportMsg(""); }}
         >
           Angre lokale endringer
         </button>
       </div>
 
-      {/* Levels table */}
       <div className="editor-table-wrap">
         <table className="editor-table">
           <thead>
@@ -482,9 +491,7 @@ export default function AdminTournamentTable({
         </table>
       </div>
 
-      {importMsg ? (
-        <div className="mt-2">{importMsg}</div>
-      ) : null}
+      {importMsg ? <div className="mt-2">{importMsg}</div> : null}
 
       <div className="flex gap-2 items-center mt-3 flex-wrap">
         <button
@@ -492,13 +499,9 @@ export default function AdminTournamentTable({
           disabled={!canApply}
           onClick={() => {
             const msg = validate(rows);
-            if (msg) {
-              setErr(msg);
-              return;
-            }
+            if (msg) { setErr(msg); return; }
             setErr("");
-            const tournament = toTournamentFromRows(name, rows, { buyIn, rebuyAmount, addOnAmount, startingStack });
-            updateTournament(tournament);
+            updateTournament(toTournamentFromRows(name, rows, { buyIn, rebuyAmount, addOnAmount, startingStack }));
             setDirty(false);
           }}
         >

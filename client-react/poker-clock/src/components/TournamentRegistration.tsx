@@ -1,11 +1,19 @@
 import { useState } from "react";
+import type { PlayerProfile } from "../lib/types";
+
+interface TournamentRegistrationProps {
+  isRegistered: boolean;
+  profile: PlayerProfile | null;
+  tournamentId: number;
+  register: (tournamentId?: number) => Promise<PlayerProfile>;
+}
 
 export default function TournamentRegistration({
   isRegistered,
   profile,
   tournamentId,
   register,
-}) {
+}: TournamentRegistrationProps) {
   const [registering, setRegistering] = useState(false);
   const [registerError, setRegisterError] = useState("");
 
@@ -29,7 +37,7 @@ export default function TournamentRegistration({
           try {
             await register(tournamentId);
           } catch (e) {
-            setRegisterError(e.message);
+            setRegisterError((e as Error).message);
           } finally {
             setRegistering(false);
           }

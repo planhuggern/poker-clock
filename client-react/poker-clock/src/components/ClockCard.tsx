@@ -1,12 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { fmtChips, fmtTime } from "../lib/clockFormat";
+import type { Snapshot } from "../lib/types";
 
-/**
- * Lokal klokke som teller ned 100 ms om gangen.
- * Server-ticks brukes kun til å korrigere dersom drift > 2 sek,
- * eller når klokka er stoppet (pause/start/level-bytte).
- */
-function useDisplayRemaining(snapshot) {
+function useDisplayRemaining(snapshot: Snapshot | null): number {
   const [display, setDisplay] = useState(snapshot?.timing?.remaining ?? 0);
   const localRef = useRef(snapshot?.timing?.remaining ?? 0);
   const snapshotRef = useRef(snapshot);
@@ -36,7 +32,12 @@ function useDisplayRemaining(snapshot) {
   return display;
 }
 
-export default function ClockCard({ snapshot, big = false }) {
+interface ClockCardProps {
+  snapshot: Snapshot | null;
+  big?: boolean;
+}
+
+export default function ClockCard({ snapshot, big = false }: ClockCardProps) {
   const remaining = useDisplayRemaining(snapshot);
 
   if (!snapshot) return <div className="clock-card">Venter på snapshot…</div>;
@@ -60,19 +61,15 @@ export default function ClockCard({ snapshot, big = false }) {
 
   return (
     <div className={cardClass}>
-
-      {/* Level header */}
       <div className="clock-level-header">
         {isBreak ? "☕ PAUSE" : `NIVÅ ${snapshot.currentIndex + 1}`}
         {lvl?.title ? <span className="clock-level-title">{lvl.title}</span> : null}
       </div>
 
-      {/* Big time */}
       <div className="clock-time">
         {fmtTime(remaining)}
       </div>
 
-      {/* Progress bar */}
       <div className="clock-progress-track">
         <div
           className="clock-progress-fill"
@@ -80,7 +77,6 @@ export default function ClockCard({ snapshot, big = false }) {
         />
       </div>
 
-      {/* Blinds row */}
       <div className="clock-blinds">
         {isBreak ? (
           <span>Pause: {fmtTime(total)}</span>
@@ -94,7 +90,6 @@ export default function ClockCard({ snapshot, big = false }) {
         )}
       </div>
 
-      {/* Next level preview */}
       {nextLvl && (
         <div className="clock-next">
           {nextLvl.type === "break"
@@ -104,7 +99,6 @@ export default function ClockCard({ snapshot, big = false }) {
         </div>
       )}
 
-      {/* Status */}
       <div className="clock-status-row">
         <span className={`clock-dot ${snapshot.running ? "running" : "paused"}`} />
         {snapshot.running ? "Kjører" : "Pause"}

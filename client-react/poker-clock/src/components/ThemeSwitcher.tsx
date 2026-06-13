@@ -8,14 +8,14 @@ const THEMES = [
   { value: "cyberpunk", label: "⚡ Cyberpunk" },
 ];
 
-function getStoredTheme() {
+function getStoredTheme(): string {
   return localStorage.getItem("poker_theme") || "night";
 }
 
 export default function ThemeSwitcher() {
   const [theme, setTheme] = useState(getStoredTheme);
 
-  function handleChange(e) {
+  function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const t = e.target.value;
     setTheme(t);
     localStorage.setItem("poker_theme", t);

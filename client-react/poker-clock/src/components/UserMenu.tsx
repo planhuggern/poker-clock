@@ -1,11 +1,11 @@
-﻿/**
- * UserMenu – avatar/nickname pill in the top-right corner.
- * Click → dropdown shows email + nickname + "Endre nickname" button.
- */
 import { useEffect, useRef, useState } from "react";
 import { usePlayerApi } from "../lib/usePlayerApi";
 
-export default function UserMenu({ token }) {
+interface UserMenuProps {
+  token: string | null;
+}
+
+export default function UserMenu({ token }: UserMenuProps) {
   const { profile, updateNickname } = usePlayerApi(token);
 
   const [open, setOpen] = useState(false);
@@ -14,13 +14,12 @@ export default function UserMenu({ token }) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  const menuRef = useRef(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
-    function handle(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
+    function handle(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpen(false);
         setEditing(false);
         setSaveError("");
@@ -36,7 +35,7 @@ export default function UserMenu({ token }) {
     setEditing(true);
   }
 
-  async function handleSave(e) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = inputVal.trim();
     if (!trimmed) { setSaveError("Nickname kan ikke være tomt."); return; }
@@ -48,7 +47,7 @@ export default function UserMenu({ token }) {
       setEditing(false);
       setOpen(false);
     } catch (err) {
-      setSaveError(err.message || "Noe gikk galt.");
+      setSaveError((err as Error).message || "Noe gikk galt.");
     } finally {
       setSaving(false);
     }
@@ -58,7 +57,6 @@ export default function UserMenu({ token }) {
 
   return (
     <div className="user-menu" ref={menuRef}>
-      {/* Trigger pill */}
       <button
         className="user-menu-trigger"
         onClick={() => { setOpen(v => !v); setEditing(false); setSaveError(""); }}
@@ -71,7 +69,6 @@ export default function UserMenu({ token }) {
         <span className="text-xs opacity-60 shrink-0">{open ? "▲" : "▼"}</span>
       </button>
 
-      {/* Dropdown */}
       {open && (
         <div className="user-menu-dropdown">
           <div className="pb-0.5">

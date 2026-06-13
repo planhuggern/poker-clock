@@ -1,11 +1,9 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTournamentApi } from "../lib/useTournamentApi";
 import { usePlayerApi } from "../lib/usePlayerApi";
 import TournamentCard from "./TournamentCard";
 import ThemeSwitcher from "../components/ThemeSwitcher";
-
-
 
 export default function TournamentList() {
   const [token] = useState(() => localStorage.getItem("poker_token"));
@@ -16,10 +14,10 @@ export default function TournamentList() {
     useTournamentApi(token);
 
   const { profile, register } = usePlayerApi(token);
-  const [registering, setRegistering] = useState(null); // tournament id being registered
+  const [registering, setRegistering] = useState<number | null>(null);
   const [registerError, setRegisterError] = useState("");
 
-  async function handleRegister(tournamentId) {
+  async function handleRegister(tournamentId: number) {
     if (profile?.activeTournamentId != null && profile.activeTournamentId !== tournamentId) {
       setRegisterError("Du er allerede påmeldt en annen turnering.");
       return;
@@ -29,7 +27,7 @@ export default function TournamentList() {
     try {
       await register(tournamentId);
     } catch (err) {
-      setRegisterError(err.message);
+      setRegisterError((err as Error).message);
     } finally {
       setRegistering(null);
     }
@@ -40,7 +38,7 @@ export default function TournamentList() {
   const [createError, setCreateError] = useState("");
   const [showForm, setShowForm] = useState(false);
 
-  const [renaming, setRenaming] = useState(null); // { id, name }
+  const [renaming, setRenaming] = useState<{ id: number; name: string } | null>(null);
   const [renamingError, setRenamingError] = useState("");
 
   const active   = tournaments.filter(t => t.status !== "finished");
@@ -48,7 +46,7 @@ export default function TournamentList() {
 
   const isInActiveTournament = profile?.activeTournamentId != null;
 
-  async function handleCreate(e) {
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (isInActiveTournament) { setCreateError("Du må melde deg av nåværende turnering først."); return; }
     const name = newName.trim();
@@ -60,14 +58,15 @@ export default function TournamentList() {
       setNewName("");
       setShowForm(false);
     } catch (err) {
-      setCreateError(err.message);
+      setCreateError((err as Error).message);
     } finally {
       setCreating(false);
     }
   }
 
-  async function handleRename(e) {
+  async function handleRename(e: React.FormEvent) {
     e.preventDefault();
+    if (!renaming) return;
     const name = renaming.name.trim();
     if (!name) { setRenamingError("Skriv inn et navn"); return; }
     setRenamingError("");
@@ -75,16 +74,16 @@ export default function TournamentList() {
       await renameTournament(renaming.id, name);
       setRenaming(null);
     } catch (err) {
-      setRenamingError(err.message);
+      setRenamingError((err as Error).message);
     }
   }
 
-  async function handleFinish(id) {
+  async function handleFinish(id: number) {
     if (!confirm("Avslutt denne turneringen?")) return;
     try {
       await finishTournament(id);
     } catch (err) {
-      alert(err.message);
+      alert((err as Error).message);
     }
   }
 
@@ -107,7 +106,6 @@ export default function TournamentList() {
         </div>
       </div>
 
-      {/* Create form */}
       {showForm && isAdmin && (
         <form className="flex items-center gap-2 mb-6 flex-wrap" onSubmit={handleCreate}>
           <input
@@ -124,7 +122,6 @@ export default function TournamentList() {
         </form>
       )}
 
-      {/* Rename modal */}
       {renaming && (
         <div className="fixed inset-0 bg-black/55 flex items-center justify-center z-[999]">
           <form className="bg-base-200 border border-base-content/15 rounded-xl p-6 min-w-[320px] flex flex-col gap-3" onSubmit={handleRename}>
@@ -132,7 +129,7 @@ export default function TournamentList() {
             <input
               className="input w-full"
               value={renaming.name}
-              onChange={e => setRenaming(r => ({ ...r, name: e.target.value }))}
+              onChange={e => setRenaming(r => r ? { ...r, name: e.target.value } : null)}
               maxLength={80}
               autoFocus
             />
@@ -149,7 +146,6 @@ export default function TournamentList() {
       {loading && <p className="opacity-45 italic">Laster turneringer…</p>}
       {error   && <p className="text-error text-sm m-0">Feil: {error}</p>}
 
-      {/* Active tournaments */}
       {active.length > 0 && (
         <section className="my-6">
           <h2 className="text-xs uppercase tracking-widest opacity-45 mb-3">Aktive turneringer</h2>
@@ -177,7 +173,6 @@ export default function TournamentList() {
         </p>
       )}
 
-      {/* Finished tournaments */}
       {finished.length > 0 && (
         <section className="my-6">
           <h2 className="text-xs uppercase tracking-widest opacity-45 mb-3">Avsluttede turneringer</h2>
@@ -191,4 +186,3 @@ export default function TournamentList() {
     </main>
   );
 }
-

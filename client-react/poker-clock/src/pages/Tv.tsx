@@ -6,7 +6,7 @@ import { fmtChips } from "../lib/clockFormat";
 
 export default function Tv() {
   const [token] = useState(() => localStorage.getItem("poker_token"));
-  const { tournamentId: tidParam } = useParams();
+  const { tournamentId: tidParam } = useParams<{ tournamentId: string }>();
   const tournamentId = Number(tidParam) || 1;
   const { status, snapshot } = usePokerSocket(token, tournamentId);
 
@@ -17,8 +17,6 @@ export default function Tv() {
 
   return (
     <div className="tv-layout">
-
-      {/* Left: level list */}
       <aside className="tv-levels">
         <div className="tv-levels-title">{t?.name ?? "Pokerturnering"}</div>
         <div className="tv-levels-list">
@@ -45,7 +43,6 @@ export default function Tv() {
         </div>
       </aside>
 
-      {/* Center: clock */}
       <main className="tv-clock">
         <ClockCard snapshot={snapshot} big />
         <div className="tv-conn-status">
@@ -54,7 +51,6 @@ export default function Tv() {
         </div>
       </main>
 
-      {/* Right: players + prize */}
       <aside className="tv-players">
         {players && players.registered > 0 ? (
           <>
@@ -92,7 +88,6 @@ export default function Tv() {
           </div>
         )}
       </aside>
-
     </div>
   );
 }

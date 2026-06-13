@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { usePokerSocket } from "../lib/usePokerSocket";
 import { usePlayerApi } from "../lib/usePlayerApi";
@@ -9,9 +9,8 @@ import TournamentControls from "../components/TournamentControls";
 import TournamentPlayersPanel from "../components/TournamentPlayersPanel";
 import TournamentHeader from "../components/TournamentHeader";
 
-
 export default function Home() {
-  const { tournamentId: tidParam } = useParams();
+  const { tournamentId: tidParam } = useParams<{ tournamentId: string }>();
   const tournamentId = Number(tidParam) || 1;
 
   const [token] = useState(() => localStorage.getItem("poker_token"));
@@ -33,12 +32,10 @@ export default function Home() {
   const levels = t?.levels ?? [];
   const players = snapshot?.players;
   const currentIndex = snapshot?.currentIndex ?? 0;
-  const running = snapshot?.running;
+  const running = snapshot?.running ?? false;
 
   return (
     <main className="main-content">
-
-      {/* Header */}
       <TournamentHeader
         title={t?.name}
         status={status}
@@ -46,10 +43,8 @@ export default function Home() {
         token={token}
       />
 
-      {/* Clock */}
       <ClockCard snapshot={snapshot} />
 
-      {/* Registration */}
       <TournamentRegistration
         isRegistered={isRegistered}
         profile={profile}
@@ -57,7 +52,6 @@ export default function Home() {
         register={register}
       />
 
-      {/* Clock controls */}
       <TournamentControls
         isAdmin={isAdmin}
         running={running}
@@ -72,7 +66,6 @@ export default function Home() {
         jump={jump}
       />
 
-      {/* Players panel */}
       <TournamentPlayersPanel
         isAdmin={isAdmin}
         players={players}
@@ -83,13 +76,11 @@ export default function Home() {
         tournament={t}
       />
 
-      {/* Tournament editor */}
       <AdminTournamentTable
         role={role}
         snapshot={snapshot}
         updateTournament={updateTournament}
       />
-
     </main>
   );
 }

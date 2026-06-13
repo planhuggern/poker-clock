@@ -1,27 +1,34 @@
-import React from "react";
 import { Link } from "react-router-dom";
+import type { TournamentItem } from "../lib/types";
 
-
-const STATUS_LABEL = {
+const STATUS_LABEL: Record<string, string> = {
   pending:  "Venter",
   running:  "Pågår",
   finished: "Avsluttet",
 };
 
-const STATUS_BADGE = {
+const STATUS_BADGE: Record<string, string> = {
   pending:  "badge-ghost",
   running:  "badge-success",
   finished: "badge-neutral",
 };
 
+interface TournamentCardProps {
+  t: TournamentItem;
+  isAdmin: boolean;
+  onRename?: () => void;
+  onFinish?: () => void;
+  isRegistered?: boolean;
+  isBlockedByOther?: boolean;
+  onRegister?: () => void;
+  registering?: boolean;
+}
 
-function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlockedByOther, onRegister, registering }) {
+function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlockedByOther, onRegister, registering }: TournamentCardProps) {
   return (
     <div className="tournament-card">
       <div className="flex justify-between items-center">
-        <span
-          className={`badge badge-sm ${STATUS_BADGE[t.status] ?? 'badge-ghost'}`}
-        >
+        <span className={`badge badge-sm ${STATUS_BADGE[t.status] ?? "badge-ghost"}`}>
           {STATUS_LABEL[t.status] ?? t.status}
         </span>
         {isAdmin && (
@@ -38,7 +45,7 @@ function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlocke
 
       <div className="text-sm opacity-55 flex gap-4">
         <span>{t.playerCount} spiller{t.playerCount !== 1 ? "e" : ""}</span>
-        {t.buyIn > 0 && <span>Buy-in: {t.buyIn} kr</span>}
+        {(t.buyIn ?? 0) > 0 && <span>Buy-in: {t.buyIn} kr</span>}
       </div>
 
       {t.status !== "finished" && (

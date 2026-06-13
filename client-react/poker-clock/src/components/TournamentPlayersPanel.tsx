@@ -1,5 +1,16 @@
 import { useState } from "react";
 import { fmtChips } from "../lib/clockFormat";
+import type { Players, Tournament } from "../lib/types";
+
+interface TournamentPlayersPanelProps {
+  isAdmin: boolean;
+  players: Players | undefined;
+  setPlayers: (patch: Partial<Players>) => void;
+  bustout: () => void;
+  rebuy: () => void;
+  addOn: () => void;
+  tournament: Tournament | undefined;
+}
 
 export default function TournamentPlayersPanel({
   isAdmin,
@@ -9,13 +20,11 @@ export default function TournamentPlayersPanel({
   rebuy,
   addOn,
   tournament,
-}) {
+}: TournamentPlayersPanelProps) {
   const [editingPlayers, setEditingPlayers] = useState(false);
   const [playerInput, setPlayerInput] = useState("");
 
-  if (!isAdmin) {
-    return null;
-  }
+  if (!isAdmin) return null;
 
   return (
     <div className="bg-base-300/60 rounded-2xl border border-base-content/10 p-4 mb-4">
@@ -76,7 +85,7 @@ export default function TournamentPlayersPanel({
         </div>
         {(players?.prizePool ?? 0) > 0 && (
           <div className="bg-yellow-400/10 border border-yellow-400/25 rounded-xl p-2 flex flex-col gap-0.5">
-            <div className="text-lg font-bold">{players.prizePool.toLocaleString("no-NO")}</div>
+            <div className="text-lg font-bold">{players!.prizePool.toLocaleString("no-NO")}</div>
             <div className="text-xs opacity-50">kr premier</div>
           </div>
         )}

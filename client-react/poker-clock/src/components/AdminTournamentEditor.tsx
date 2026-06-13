@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
+import type { Snapshot, Tournament } from "../lib/types";
 
-export default function AdminTournamentEditor({ role, snapshot, updateTournament }) {
+interface AdminTournamentEditorProps {
+  role: string;
+  snapshot: Snapshot | null;
+  updateTournament: (tournament: Partial<Tournament>) => void;
+}
+
+export default function AdminTournamentEditor({ role, snapshot, updateTournament }: AdminTournamentEditorProps) {
   const isAdmin = role === "admin";
   const tournament = snapshot?.tournament;
 
   const [text, setText] = useState("");
   const [err, setErr] = useState("");
 
-  // Når snapshot endres (f.eks. noen andre admin endrer), oppdater editor
   useEffect(() => {
     if (!isAdmin || !tournament) return;
     setText(JSON.stringify(tournament, null, 2));
@@ -50,16 +56,14 @@ export default function AdminTournamentEditor({ role, snapshot, updateTournament
           onClick={() => {
             setErr("");
             try {
-              const t = JSON.parse(text);
+              const parsed = JSON.parse(text) as Record<string, unknown>;
 
-              // Minimal validering (samme som server forventer)
-              if (!t || !Array.isArray(t.levels) || t.levels.length === 0) {
+              if (!parsed || !Array.isArray(parsed.levels) || (parsed.levels as unknown[]).length === 0) {
                 throw new Error("Må ha levels[] med minst ett element");
               }
 
-              // Konverter durationMinutes til seconds hvis det finnes
-              if (Array.isArray(t.levels)) {
-                t.levels = t.levels.map(lvl => {
+              if (Array.isArray(parsed.levels)) {
+                parsed.levels = (parsed.levels as Record<string, unknown>[]).map(lvl => {
                   if (typeof lvl.durationMinutes === "number") {
                     lvl.seconds = lvl.durationMinutes * 60;
                   } else if (typeof lvl.durationSeconds === "number") {
@@ -68,9 +72,9 @@ export default function AdminTournamentEditor({ role, snapshot, updateTournament
                   return lvl;
                 });
               }
-              updateTournament(t);
+              updateTournament(parsed as Partial<Tournament>);
             } catch (e) {
-              setErr(e?.message || "Ugyldig JSON");
+              setErr((e as Error)?.message || "Ugyldig JSON");
             }
           }}
         >
