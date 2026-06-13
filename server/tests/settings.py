@@ -9,6 +9,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "channels",
     "clock",
+    "players",
 ]
 DATABASES = {
     "default": {

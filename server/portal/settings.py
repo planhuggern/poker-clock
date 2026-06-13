@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "channels",
     # ── Apper ──
+    "players.apps.PlayersConfig",       # guest/player identity foundation
     "clock.apps.ClockConfig",           # poker-clock
     "oslo_conquest.apps.OsloConquestConfig",  # oslo-conquest
     "trading.apps.TradingConfig",       # trading – REST API for finansdata
@@ -103,18 +104,33 @@ ASGI_APPLICATION = "portal.asgi.application"
 
 
 # ── Database ──────────────────────────────────────────────────────────────────
+#
+# Priority:
+#   1. DATABASE_URL env var  → any engine (Postgres, SQLite, …) via dj-database-url
+#   2. SQLITE_FILE env var   → explicit SQLite path (legacy / VPS compat)
+#   3. config.json sqlite_file key
+#   4. BASE_DIR / "db.sqlite3" (safe default for dev and new installs)
 
-_sqlite_file = os.environ.get("SQLITE_FILE") or CONFIG.get("sqlite_file", "./data/pokerclock.sqlite")
-_sqlite_path = Path(_sqlite_file)
-if not _sqlite_path.is_absolute():
-    _sqlite_path = BASE_DIR / _sqlite_path
+_database_url = os.environ.get("DATABASE_URL")
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": _sqlite_path,
+if _database_url:
+    import dj_database_url
+    DATABASES = {"default": dj_database_url.config(default=_database_url, conn_max_age=600)}
+else:
+    _sqlite_file = (
+        os.environ.get("SQLITE_FILE")
+        or CONFIG.get("sqlite_file")
+        or "db.sqlite3"
+    )
+    _sqlite_path = Path(_sqlite_file)
+    if not _sqlite_path.is_absolute():
+        _sqlite_path = BASE_DIR / _sqlite_path
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": _sqlite_path,
+        }
     }
-}
 
 
 # ── Channels ──────────────────────────────────────────────────────────────────
