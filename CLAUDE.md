@@ -20,6 +20,27 @@ Preferred feature workflow:
 
 ---
 
+# Feature trigger
+
+When the user's message contains any of these words or phrases (Norwegian or English), ALWAYS invoke the `/feature` skill before doing anything else — do not start implementing directly:
+
+- implementer, implementere, implement
+- lag, lage, lag en, lage en
+- bygg, bygge, bygg en, bygge en
+- legg til, legg til en
+- opprett, opprett en
+- skriv, skriv en (when referring to a feature, not a single file edit)
+- add, create, build (when referring to a new feature or capability)
+
+Do not invoke `/feature` for:
+- bug fixes,
+- one-line edits,
+- configuration changes,
+- refactoring of existing code,
+- questions or explanations.
+
+---
+
 # Claude Runtime Guidance
 
 If the runtime supports sub-agents:
