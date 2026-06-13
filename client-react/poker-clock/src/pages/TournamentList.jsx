@@ -8,8 +8,8 @@ import ThemeSwitcher from "../components/ThemeSwitcher";
 
 
 export default function TournamentList() {
-  const token = localStorage.getItem("poker_token");
-  const role  = localStorage.getItem("poker_role") || "viewer";
+  const [token] = useState(() => localStorage.getItem("poker_token"));
+  const [role]  = useState(() => localStorage.getItem("poker_role") || "viewer");
   const isAdmin = role === "admin";
 
   const { tournaments, loading, error, createTournament, renameTournament, finishTournament } =

@@ -1,4 +1,5 @@
-﻿import { useParams } from "react-router-dom";
+﻿import { useState } from "react";
+import { useParams } from "react-router-dom";
 import { usePokerSocket } from "../lib/usePokerSocket";
 import { usePlayerApi } from "../lib/usePlayerApi";
 import ClockCard from "../components/ClockCard";
@@ -13,8 +14,8 @@ export default function Home() {
   const { tournamentId: tidParam } = useParams();
   const tournamentId = Number(tidParam) || 1;
 
-  const token = localStorage.getItem("poker_token");
-  const role = localStorage.getItem("poker_role") || "viewer";
+  const [token] = useState(() => localStorage.getItem("poker_token"));
+  const [role] = useState(() => localStorage.getItem("poker_role") || "viewer");
 
   const { profile, register } = usePlayerApi(token);
   const isRegistered = profile?.activeTournamentId === tournamentId;

@@ -14,8 +14,9 @@ from django.views import View
 
 def _sign_token(username: str, role: str) -> str:
     secret = settings.CONFIG.get("jwtSecret", "")
+    now = int(time.time())
     return pyjwt.encode(
-        {"username": username, "role": role, "iat": int(time.time()), "exp": int(time.time()) + 12 * 3600},
+        {"username": username, "role": role, "iat": now, "exp": now + 12 * 3600},
         secret,
         algorithm="HS256",
     )
@@ -29,11 +30,6 @@ def _client_redirect_base() -> str:
     same_origin = client_origin and server_origin and client_origin == server_origin
     origin = "" if same_origin else client_origin.rstrip("/")
     return f"{origin}{base_path}"
-
-
-def _role_for_email(email: str) -> str:
-    admins = [e.lower() for e in settings.CONFIG.get("adminEmails", [])]
-    return "admin" if email.lower() in admins else "viewer"
 
 
 # ── Views ─────────────────────────────────────────────────────────────────────

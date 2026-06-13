@@ -1,20 +1,21 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function Callback() {
   const { search } = useLocation();
-  const params = new URLSearchParams(search);
-  const token = params.get("token");
-  const role = params.get("role");
+  const navigate = useNavigate();
 
-  if (!token) {
-    return <Navigate to="/" replace />;
-  }
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const token = params.get("token");
+    const role = params.get("role");
 
-  // Lagre synkront (render-kode). I dev kan den rendres to ganger,
-  // men det er idempotent: setItem med samme verdi er helt OK.
-  localStorage.setItem("poker_token", token);
-  if (role) localStorage.setItem("poker_role", role);
+    if (token) {
+      localStorage.setItem("poker_token", token);
+      if (role) localStorage.setItem("poker_role", role);
+    }
+    navigate("/", { replace: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // (valgfritt) Rydd URL: ved å navigere bort forsvinner query uansett
-  return <Navigate to="/" replace />;
+  return null;
 }
