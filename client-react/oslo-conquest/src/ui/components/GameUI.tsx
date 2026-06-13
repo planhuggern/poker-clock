@@ -75,8 +75,9 @@ export function GameUI({
 
 function HUD({ dispatchGameAction }: { dispatchGameAction: (a: Action) => void }) {
   const currentPlayer = getCurrentPlayer();
+  const myTurn = isMyTurn();
   const showMvpRollButton = Boolean(
-    isMvpGame() && isMyTurn() &&
+    isMvpGame() && myTurn &&
     state.gameState?.phase === 'playing' &&
     currentPlayer?.position !== null &&
     currentPlayer?.diceRoll === null,
@@ -106,7 +107,7 @@ function HUD({ dispatchGameAction }: { dispatchGameAction: (a: Action) => void }
           🎲 Kast terning
         </button>
       )}
-      <button className="btn" style={{ width: 'auto', padding: '6px 16px', fontSize: '0.75rem' }} type="button" onClick={() => dispatchGameAction({ type: 'end_turn' })}>
+      <button className="btn" style={{ width: 'auto', padding: '6px 16px', fontSize: '0.75rem' }} type="button" disabled={isMvpGame() && !myTurn} onClick={() => dispatchGameAction({ type: 'end_turn' })}>
         Avslutt tur →
       </button>
     </div>
@@ -122,9 +123,28 @@ function TurnIndicator() {
     ? (currentPlayer.diceRoll !== null ? ` | Terning: ${currentPlayer.diceRoll} (trekk tilgjengelig)` : '')
     : (currentPlayer.diceRoll !== null ? ` | Terning: ${currentPlayer.diceRoll} (brukt: ${currentPlayer.diceUsed})` : '');
 
+  if (!isMvpGame()) {
+    return (
+      <div id="turn-indicator">
+        <span style={{ color: currentPlayer.color }}>●</span> {currentPlayer.name}s tur{round}{diceText}
+      </div>
+    );
+  }
+
+  const myPlayer = state.gameState?.players.find((player) => player.id === state.myPlayerId) ?? null;
+  if (!myPlayer) return null;
+
+  const turnText = isMyTurn()
+    ? `Din tur${round}${diceText}`
+    : `Venter på ${currentPlayer.name}${round}`;
+
   return (
     <div id="turn-indicator">
-      <span style={{ color: currentPlayer.color }}>●</span> {currentPlayer.name}s tur{round}{diceText}
+      <div className="identity-line">
+        <span style={{ color: myPlayer.color }}>●</span> Du er {myPlayer.name}
+        {myPlayer.colorName ? <span className="identity-side">{myPlayer.colorName}</span> : null}
+      </div>
+      <div className={`turn-status${isMyTurn() ? ' my-turn' : ''}`}>{turnText}</div>
     </div>
   );
 }
@@ -173,11 +193,20 @@ type PlayerWithValidMoves = Player & { validMoves?: string[] };
 function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action) => void }) {
   const currentPlayer = getCurrentPlayer() as PlayerWithValidMoves | null;
   const isMvpSetup = Boolean(isMvpGame() && state.gameState?.phase === 'setup');
+  const myTurn = isMyTurn();
 
   if (isMvpSetup) {
     const selectedCheckpointName = currentPlayer?.position
       ? CHECKPOINTS[currentPlayer.position.replace('_cp', '')]?.name ?? currentPlayer.position
       : null;
+    if (!myTurn) {
+      return (
+        <div id="action-content">
+          <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>Venter på {currentPlayer?.name ?? 'motspiller'}.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '8px' }}>Du kan klikke i kartet for å se, men kan ikke velge startcheckpoint før det er din tur.</p>
+        </div>
+      );
+    }
     return (
       <div id="action-content">
         <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>Klikk direkte på checkpoint i kartet for å flytte startbrikken.</p>
@@ -191,11 +220,16 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
   if (!state.selectedTerritory) {
     return (
       <div id="action-content">
-        <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>Velg et område på kartet</p>
+        <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
+          {isMvpGame() && !myTurn ? `Venter på ${currentPlayer?.name ?? 'motspiller'}.` : 'Velg et område på kartet'}
+        </p>
         {isMvpGame() ? (
           <div style={{ marginTop: '12px' }}>
-            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'roll_dice' })} disabled={!isMyTurn() || currentPlayer?.diceRoll !== null}>🎲 Kast terning</button>
-            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'end_turn' })} disabled={!isMyTurn()}>Avslutt tur</button>
+            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'roll_dice' })} disabled={!myTurn || currentPlayer?.diceRoll !== null}>🎲 Kast terning</button>
+            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'end_turn' })} disabled={!myTurn}>Avslutt tur</button>
+            {!myTurn && (
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Du kan fortsatt inspisere kartet.</div>
+            )}
           </div>
         ) : <RollDicePrompt dispatchGameAction={dispatchGameAction} />}
       </div>
@@ -211,12 +245,12 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
   const territory = isCheckpoint ? null : node as Territory;
   const district = territory ? DISTRICTS[territory.district] : null;
   const validMoves = currentPlayer?.validMoves ?? [];
-  const canMvpMove = Boolean(isMvpGame() && isMyTurn() && currentPlayer?.diceRoll !== null && validMoves.includes(node.id));
+  const canMvpMove = Boolean(isMvpGame() && myTurn && currentPlayer?.diceRoll !== null && validMoves.includes(node.id));
   const selectedNeighbors = (ADJACENCY as Record<string, string[]>)[node.id] ?? [];
   const mvpAttackFrom = isMvpGame()
     ? selectedNeighbors.find((id) => state.gameState!.territories[id]?.owner === currentPlayer?.side) ?? null
     : null;
-  const canMvpAttack = Boolean(isMvpGame() && isMyTurn() && !isCheckpoint && territoryState.owner !== currentPlayer?.side && mvpAttackFrom);
+  const canMvpAttack = Boolean(isMvpGame() && myTurn && !isCheckpoint && territoryState.owner !== currentPlayer?.side && mvpAttackFrom);
 
   return (
     <div id="action-content">
@@ -250,11 +284,14 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
       <div className="action-buttons">
         {isMvpGame() ? (
           <>
-            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'roll_dice' })} disabled={!isMyTurn() || currentPlayer?.diceRoll !== null}>🎲 Kast terning</button>
+            {!myTurn && (
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Venter på {currentPlayer?.name ?? 'motspiller'}. Du kan inspisere, men ikke handle.</div>
+            )}
+            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'roll_dice' })} disabled={!myTurn || currentPlayer?.diceRoll !== null}>🎲 Kast terning</button>
             <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'move_to_territory', territoryId: node.id })} disabled={!canMvpMove}>🚶 Flytt hit</button>
             <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'invade_territory', territoryId: node.id, fromTerritoryId: mvpAttackFrom })} disabled={!canMvpAttack}>⚔ Angrip område</button>
-            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'end_turn' })} disabled={!isMyTurn()}>Avslutt tur</button>
-            {isMyTurn() && currentPlayer?.diceRoll !== null && (
+            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'end_turn' })} disabled={!myTurn}>Avslutt tur</button>
+            {myTurn && currentPlayer?.diceRoll !== null && (
               <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Gyldige trekk: {validMoves.length}</div>
             )}
           </>

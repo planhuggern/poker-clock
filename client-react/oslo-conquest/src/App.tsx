@@ -15,6 +15,13 @@ function isServerAuthoritativeGame(gameState: GameState | null): boolean {
   return Boolean(gameState?.players?.some((p) => p.side));
 }
 
+function isMyServerTurn(gameState: GameState | null, playerId: string | null): boolean {
+  if (!gameState?.activePlayer || !playerId) return false;
+  return gameState.players.some((player) => (
+    player.id === playerId && player.side === gameState.activePlayer
+  ));
+}
+
 type LobbyStatus = { message: string; isError: boolean };
 
 export function App() {
@@ -99,6 +106,7 @@ export function App() {
     if (!gameState) return;
 
     if (isServerAuthoritativeGame(gameState)) {
+      if (!isMyServerTurn(gameState, myPlayerId)) return;
       if (action.type === 'choose_start_checkpoint') sendChooseStartCheckpoint(action.checkpointTerritoryId as string);
       if (action.type === 'roll_dice') sendRollDice();
       if (action.type === 'move_to_territory') sendMove(action.territoryId as string);
