@@ -117,6 +117,8 @@ export type RoomInfo = {
   playerCount: number;
   maxPlayers: number;
   started: boolean;
+  ownerId?: string | null;
+  playerIds?: string[];
   players?: string[];
 };
 

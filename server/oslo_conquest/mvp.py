@@ -65,6 +65,23 @@ def find_player_by_id(room_state: dict, player_id: str | None) -> dict | None:
     )
 
 
+def find_room_with_player(
+    rooms: dict[str, dict],
+    player_id: str | None,
+    *,
+    exclude_room: str | None = None,
+) -> str | None:
+    if not player_id:
+        return None
+
+    for room_id, room_state in rooms.items():
+        if room_id == exclude_room:
+            continue
+        if find_player_by_id(room_state, player_id):
+            return room_id
+    return None
+
+
 def start_game(room_state: dict) -> dict:
     territories = {}
     for territory_id in TERRITORY_IDS:
@@ -400,6 +417,7 @@ def summarize_rooms(rooms: dict[str, dict]) -> list[dict]:
     for room_id, room_state in sorted(rooms.items()):
         players = room_state.get("players", [])
         started = bool(room_state.get("started"))
+        player_ids = [str(p.get("id", "")) for p in players]
         summaries.append(
             {
                 "room": room_id,
@@ -410,6 +428,8 @@ def summarize_rooms(rooms: dict[str, dict]) -> list[dict]:
                 "status": (
                     "started" if started or len(players) >= MAX_PLAYERS else "waiting"
                 ),
+                "ownerId": player_ids[0] if player_ids else None,
+                "playerIds": player_ids,
                 "players": [p.get("name", "Ukjent") for p in players],
             }
         )

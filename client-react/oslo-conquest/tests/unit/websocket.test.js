@@ -9,7 +9,7 @@ import {
   sendChooseStartCheckpoint,
   sendMove,
   sendRollDice,
-} from '../../src/transport/websocket/websocket.js';
+} from '../../src/transport/websocket/websocket.ts';
 
 class FakeWebSocket {
   static OPEN = 1;
@@ -67,14 +67,17 @@ describe('websocket lobby commands', () => {
   it('rapporterer dice-resultat som modal-event uten imperative UI', () => {
     const onModal = vi.fn();
     const gameState = { players: [], territories: {}, started: true };
-    const dice = { attackerDice: [6], defenderDice: [1], attackerWins: true };
+    const dice = {
+      type: 'dice',
+      result: { attackerDice: [6], defenderDice: [1], attackerWins: true },
+    };
 
     connectWS({ url: 'ws://localhost:8000/ws/oslo-conquest/', handlers: { onModal } });
     FakeWebSocket.instances[0].onmessage({
       data: JSON.stringify({ type: 'action_result', state: gameState, dice }),
     });
 
-    expect(onModal).toHaveBeenCalledWith({ type: 'dice', result: dice });
+    expect(onModal).toHaveBeenCalledWith(dice);
   });
 
   it('rapporterer tilkoblingsfeil via callbacks', () => {

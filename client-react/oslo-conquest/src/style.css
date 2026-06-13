@@ -119,6 +119,25 @@ input:focus, select:focus { border-color: var(--gold); }
 .btn:hover { background: var(--gold); color: var(--bg); }
 .btn.primary { background: var(--gold); color: var(--bg); }
 .btn.primary:hover { background: var(--gold-light); }
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn:disabled:hover {
+  background: transparent;
+  color: var(--gold);
+}
+.btn.primary:disabled:hover {
+  background: var(--gold);
+  color: var(--bg);
+}
+
+.lobby-help {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.35;
+  margin: 2px 0 8px;
+}
 
 .divider {
   border: none;

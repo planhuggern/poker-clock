@@ -22,6 +22,7 @@ from .mvp import (
     choose_start_checkpoint,
     create_waiting_room,
     end_turn,
+    find_room_with_player,
     move,
     roll_dice,
     summarize_rooms,
@@ -85,6 +86,10 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
         room = str(data.get("room") or "default")
         player = data.get("player") or {}
         self.player_id = str(player.get("id") or "")
+        existing_room = find_room_with_player(_rooms, self.player_id)
+        if existing_room:
+            await self._send_existing_room_error(existing_room)
+            return
         await self._join_group(room)
         _rooms[room] = create_waiting_room(room, player)
         await self._broadcast(room, {"type": "game_state", "state": _rooms[room]})
@@ -94,6 +99,14 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
         room = str(data.get("room") or "default")
         player = data.get("player") or {}
         self.player_id = str(player.get("id") or "")
+        existing_room = find_room_with_player(
+            _rooms,
+            self.player_id,
+            exclude_room=room,
+        )
+        if existing_room:
+            await self._send_existing_room_error(existing_room)
+            return
         await self._join_group(room)
         if room not in _rooms:
             _rooms[room] = create_waiting_room(room, player)
@@ -251,6 +264,14 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
             self._group_name(room),
             {"type": "oslo.broadcast", "message": message},
         )
+
+    async def _send_existing_room_error(self, room: str) -> None:
+        await self.send(text_data=json.dumps(
+            {
+                "type": "error",
+                "message": f'Du er allerede med i rom "{room}".',
+            }
+        ))
 
     async def _send_room_list(self) -> None:
         await self.send(

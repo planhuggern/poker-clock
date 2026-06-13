@@ -39,6 +39,10 @@ export function App() {
   }, [rooms]);
 
   const effectiveRoomId = roomId.trim() || suggestedRoomId;
+  const existingPlayerRoom = useMemo(() => {
+    if (!myPlayerId) return null;
+    return rooms.find((room) => room.playerIds?.includes(myPlayerId)) ?? null;
+  }, [myPlayerId, rooms]);
 
   useEffect(() => {
     if (playerName.trim() === '') {
@@ -121,8 +125,15 @@ export function App() {
     return true;
   }
 
+  function blockIfPlayerAlreadyInRoom(): boolean {
+    if (!existingPlayerRoom) return false;
+    setLobbyStatus({ message: `Du er allerede med i rom "${existingPlayerRoom.room}".`, isError: true });
+    return true;
+  }
+
   function handleCreateGame(): void {
     if (!requireLobbyFields()) return;
+    if (blockIfPlayerAlreadyInRoom()) return;
     createGame({ url: DEFAULT_WS_URL, name: playerName, room: effectiveRoomId, handlers });
     setMyPlayerId(state.myPlayerId);
     localStorage.setItem('oslo-conquest-active-room', effectiveRoomId);
@@ -130,6 +141,7 @@ export function App() {
 
   function handleJoinGame(): void {
     if (!requireLobbyFields()) return;
+    if (blockIfPlayerAlreadyInRoom()) return;
     joinGame({ url: DEFAULT_WS_URL, name: playerName, room: effectiveRoomId, handlers });
     setMyPlayerId(state.myPlayerId);
     localStorage.setItem('oslo-conquest-active-room', effectiveRoomId);
@@ -173,6 +185,7 @@ export function App() {
             roomId={roomId}
             suggestedRoomId={suggestedRoomId}
             setRoomId={setRoomId}
+            existingPlayerRoom={existingPlayerRoom}
             handleCreateGame={handleCreateGame}
             handleJoinGame={handleJoinGame}
           />
@@ -205,11 +218,14 @@ type LobbyConnectionColumnProps = {
   roomId: string;
   suggestedRoomId: string;
   setRoomId: (id: string) => void;
+  existingPlayerRoom: RoomInfo | null;
   handleCreateGame: () => void;
   handleJoinGame: () => void;
 };
 
-function LobbyConnectionColumn({ connectionStatus, playerName, setPlayerName, roomId, suggestedRoomId, setRoomId, handleCreateGame, handleJoinGame }: LobbyConnectionColumnProps) {
+function LobbyConnectionColumn({ connectionStatus, playerName, setPlayerName, roomId, suggestedRoomId, setRoomId, existingPlayerRoom, handleCreateGame, handleJoinGame }: LobbyConnectionColumnProps) {
+  const roomBlocked = Boolean(existingPlayerRoom);
+
   return (
     <section className="lobby-column">
       <div className="ws-status">
@@ -224,8 +240,11 @@ function LobbyConnectionColumn({ connectionStatus, playerName, setPlayerName, ro
         <label htmlFor="room-id">Rom-ID</label>
         <input type="text" id="room-id" value={roomId} placeholder={suggestedRoomId} maxLength={20} onInput={(e) => setRoomId(e.currentTarget.value)} />
       </div>
-      <button className="btn primary" type="button" onClick={handleCreateGame}>Opprett spill</button>
-      <button className="btn" type="button" onClick={handleJoinGame}>Bli med i spill</button>
+      {existingPlayerRoom ? (
+        <p className="lobby-help">Du er allerede med i rom "{existingPlayerRoom.room}".</p>
+      ) : null}
+      <button className="btn primary" type="button" disabled={roomBlocked} onClick={handleCreateGame}>Opprett spill</button>
+      <button className="btn" type="button" disabled={roomBlocked} onClick={handleJoinGame}>Bli med i spill</button>
     </section>
   );
 }

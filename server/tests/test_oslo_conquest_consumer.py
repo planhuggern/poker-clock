@@ -4,19 +4,45 @@ from channels.testing import WebsocketCommunicator
 from oslo_conquest.consumers import OsloConquestConsumer, _rooms
 
 
+async def connect_consumer():
+    communicator = WebsocketCommunicator(
+        OsloConquestConsumer.as_asgi(),
+        "/ws/oslo-conquest/",
+    )
+    connected, _ = await communicator.connect()
+    assert connected
+    initial_message = await communicator.receive_json_from()
+    assert initial_message["type"] == "room_list"
+    return communicator
+
+
+async def receive_type(communicator, message_type: str):
+    for _ in range(10):
+        message = await communicator.receive_json_from()
+        if message["type"] == message_type:
+            return message
+    raise AssertionError(f"Expected websocket message type {message_type!r}")
+
+
+async def receive_non_room_list(communicator):
+    for _ in range(10):
+        message = await communicator.receive_json_from()
+        if message["type"] != "room_list":
+            return message
+    raise AssertionError("Expected non-room_list websocket message")
+
+
 def ws_roundtrip(messages):
     async def run():
-        communicator = WebsocketCommunicator(
-            OsloConquestConsumer.as_asgi(),
-            "/ws/oslo-conquest/",
-        )
-        connected, _ = await communicator.connect()
-        assert connected
+        communicator = await connect_consumer()
 
         responses = []
         for message in messages:
             await communicator.send_json_to(message)
-            responses.append(await communicator.receive_json_from())
+            if message["type"] == "list_rooms":
+                responses.append(await receive_type(communicator, "room_list"))
+            else:
+                responses.append(await receive_non_room_list(communicator))
 
         await communicator.disconnect()
         return responses
@@ -32,22 +58,22 @@ async def _complete_setup_round(first, second):
     await first.send_json_to(
         {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lørenskog_cp"}
     )
-    await first.receive_json_from()
-    await second.receive_json_from()
+    await receive_non_room_list(first)
+    await receive_non_room_list(second)
 
     await first.send_json_to({"type": "end_turn"})
-    await first.receive_json_from()
-    await second.receive_json_from()
+    await receive_non_room_list(first)
+    await receive_non_room_list(second)
 
     await second.send_json_to(
         {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
     )
-    await first.receive_json_from()
-    await second.receive_json_from()
+    await receive_non_room_list(first)
+    await receive_non_room_list(second)
 
     await second.send_json_to({"type": "end_turn"})
-    await first.receive_json_from()
-    await second.receive_json_from()
+    await receive_non_room_list(first)
+    await receive_non_room_list(second)
 
 
 def test_create_game_assigns_red_player():
@@ -70,21 +96,19 @@ def test_create_game_assigns_red_player():
 
 def test_second_player_starts_game_with_initial_territories():
     async def run():
-        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        assert (await first.connect())[0]
-        assert (await second.connect())[0]
+        first = await connect_consumer()
+        second = await connect_consumer()
 
         await first.send_json_to(
             {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
         )
-        await first.receive_json_from()
+        await receive_non_room_list(first)
 
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
         )
-        first_snapshot = await first.receive_json_from()
-        second_snapshot = await second.receive_json_from()
+        first_snapshot = await receive_non_room_list(first)
+        second_snapshot = await receive_non_room_list(second)
 
         await first.disconnect()
         await second.disconnect()
@@ -139,28 +163,129 @@ def test_third_player_is_rejected_without_changing_room_state():
     assert [p["id"] for p in _rooms["oslo-1"]["players"]] == ["p1", "p2"]
 
 
+def test_player_cannot_create_second_waiting_room():
+    ws_roundtrip(
+        [
+            {
+                "type": "create_game",
+                "room": "oslo-1",
+                "player": {"id": "p1", "name": "Ola"},
+            }
+        ]
+    )
+
+    responses = ws_roundtrip(
+        [
+            {
+                "type": "create_game",
+                "room": "oslo-2",
+                "player": {"id": "p1", "name": "Ola"},
+            }
+        ]
+    )
+
+    assert responses[0] == {
+        "type": "error",
+        "message": 'Du er allerede med i rom "oslo-1".',
+    }
+    assert sorted(_rooms.keys()) == ["oslo-1"]
+
+
+def test_player_cannot_create_room_when_already_in_started_game():
+    ws_roundtrip(
+        [
+            {
+                "type": "create_game",
+                "room": "oslo-1",
+                "player": {"id": "p1", "name": "Ola"},
+            }
+        ]
+    )
+    ws_roundtrip(
+        [
+            {
+                "type": "join_game",
+                "room": "oslo-1",
+                "player": {"id": "p2", "name": "Kari"},
+            }
+        ]
+    )
+
+    responses = ws_roundtrip(
+        [
+            {
+                "type": "create_game",
+                "room": "oslo-2",
+                "player": {"id": "p1", "name": "Ola"},
+            }
+        ]
+    )
+
+    assert responses[0] == {
+        "type": "error",
+        "message": 'Du er allerede med i rom "oslo-1".',
+    }
+    assert sorted(_rooms.keys()) == ["oslo-1"]
+    assert _rooms["oslo-1"]["started"] is True
+
+
+def test_player_cannot_join_second_room():
+    ws_roundtrip(
+        [
+            {
+                "type": "create_game",
+                "room": "oslo-1",
+                "player": {"id": "p1", "name": "Ola"},
+            }
+        ]
+    )
+    ws_roundtrip(
+        [
+            {
+                "type": "create_game",
+                "room": "oslo-2",
+                "player": {"id": "p2", "name": "Kari"},
+            }
+        ]
+    )
+
+    responses = ws_roundtrip(
+        [
+            {
+                "type": "join_game",
+                "room": "oslo-2",
+                "player": {"id": "p1", "name": "Ola"},
+            }
+        ]
+    )
+
+    assert responses[0] == {
+        "type": "error",
+        "message": 'Du er allerede med i rom "oslo-1".',
+    }
+    assert [p["id"] for p in _rooms["oslo-2"]["players"]] == ["p2"]
+
+
 def test_active_player_can_end_turn():
     async def run():
-        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        assert (await first.connect())[0]
-        assert (await second.connect())[0]
+        first = await connect_consumer()
+        second = await connect_consumer()
 
         await first.send_json_to(
             {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
         )
-        await first.receive_json_from()
+        await receive_non_room_list(first)
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
         )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
 
         await _complete_setup_round(first, second)
 
         await first.send_json_to({"type": "end_turn"})
-        first_snapshot = await first.receive_json_from()
-        second_snapshot = await second.receive_json_from()
+        first_snapshot = await receive_non_room_list(first)
+        second_snapshot = await receive_non_room_list(second)
 
         await first.disconnect()
         await second.disconnect()
@@ -173,25 +298,23 @@ def test_active_player_can_end_turn():
 
 def test_non_active_player_cannot_end_turn():
     async def run():
-        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        assert (await first.connect())[0]
-        assert (await second.connect())[0]
+        first = await connect_consumer()
+        second = await connect_consumer()
 
         await first.send_json_to(
             {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
         )
-        await first.receive_json_from()
+        await receive_non_room_list(first)
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
         )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
 
         await _complete_setup_round(first, second)
 
         await second.send_json_to({"type": "end_turn"})
-        error = await second.receive_json_from()
+        error = await receive_non_room_list(second)
 
         await first.disconnect()
         await second.disconnect()
@@ -203,26 +326,24 @@ def test_non_active_player_cannot_end_turn():
 
 def test_active_player_can_attack_with_deterministic_mvp_rules():
     async def run():
-        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        assert (await first.connect())[0]
-        assert (await second.connect())[0]
+        first = await connect_consumer()
+        second = await connect_consumer()
 
         await first.send_json_to(
             {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
         )
-        await first.receive_json_from()
+        await receive_non_room_list(first)
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
         )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
 
         await _complete_setup_round(first, second)
 
         await first.send_json_to({"type": "attack", "fromTerritoryId": "t0a", "toTerritoryId": "t1"})
-        first_snapshot = await first.receive_json_from()
-        second_snapshot = await second.receive_json_from()
+        first_snapshot = await receive_non_room_list(first)
+        second_snapshot = await receive_non_room_list(second)
 
         await first.disconnect()
         await second.disconnect()
@@ -240,25 +361,23 @@ def test_active_player_can_attack_with_deterministic_mvp_rules():
 
 def test_attack_rejects_non_neighbor_territories():
     async def run():
-        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        assert (await first.connect())[0]
-        assert (await second.connect())[0]
+        first = await connect_consumer()
+        second = await connect_consumer()
 
         await first.send_json_to(
             {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
         )
-        await first.receive_json_from()
+        await receive_non_room_list(first)
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
         )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
 
         await _complete_setup_round(first, second)
 
         await first.send_json_to({"type": "attack", "fromTerritoryId": "t0a", "toTerritoryId": "t35"})
-        error = await first.receive_json_from()
+        error = await receive_non_room_list(first)
 
         await first.disconnect()
         await second.disconnect()
@@ -269,26 +388,24 @@ def test_attack_rejects_non_neighbor_territories():
 
 def test_active_player_can_roll_dice_and_get_valid_moves():
     async def run():
-        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        assert (await first.connect())[0]
-        assert (await second.connect())[0]
+        first = await connect_consumer()
+        second = await connect_consumer()
 
         await first.send_json_to(
             {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
         )
-        await first.receive_json_from()
+        await receive_non_room_list(first)
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
         )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
 
         await _complete_setup_round(first, second)
 
         await first.send_json_to({"type": "roll_dice"})
-        first_snapshot = await first.receive_json_from()
-        second_snapshot = await second.receive_json_from()
+        first_snapshot = await receive_non_room_list(first)
+        second_snapshot = await receive_non_room_list(second)
 
         await first.disconnect()
         await second.disconnect()
@@ -306,32 +423,30 @@ def test_active_player_can_roll_dice_and_get_valid_moves():
 
 def test_active_player_can_move_to_territory_in_valid_moves():
     async def run():
-        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        assert (await first.connect())[0]
-        assert (await second.connect())[0]
+        first = await connect_consumer()
+        second = await connect_consumer()
 
         await first.send_json_to(
             {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
         )
-        await first.receive_json_from()
+        await receive_non_room_list(first)
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
         )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
 
         await _complete_setup_round(first, second)
 
         await first.send_json_to({"type": "roll_dice"})
-        first_after_roll = await first.receive_json_from()
-        await second.receive_json_from()
+        first_after_roll = await receive_non_room_list(first)
+        await receive_non_room_list(second)
         red = next(player for player in first_after_roll["state"]["players"] if player["side"] == "red")
         destination = red["validMoves"][0]
 
         await first.send_json_to({"type": "move", "toTerritoryId": destination})
-        first_after_move = await first.receive_json_from()
-        second_after_move = await second.receive_json_from()
+        first_after_move = await receive_non_room_list(first)
+        second_after_move = await receive_non_room_list(second)
 
         await first.disconnect()
         await second.disconnect()
@@ -347,29 +462,27 @@ def test_active_player_can_move_to_territory_in_valid_moves():
 
 def test_move_rejects_territory_outside_valid_moves():
     async def run():
-        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        assert (await first.connect())[0]
-        assert (await second.connect())[0]
+        first = await connect_consumer()
+        second = await connect_consumer()
 
         await first.send_json_to(
             {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
         )
-        await first.receive_json_from()
+        await receive_non_room_list(first)
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
         )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
 
         await _complete_setup_round(first, second)
 
         await first.send_json_to({"type": "roll_dice"})
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
 
         await first.send_json_to({"type": "move", "toTerritoryId": "lørenskog_cp"})
-        error = await first.receive_json_from()
+        error = await receive_non_room_list(first)
 
         await first.disconnect()
         await second.disconnect()
@@ -383,20 +496,18 @@ def test_move_rejects_territory_outside_valid_moves():
 
 def test_move_requires_dice_roll_without_changing_state():
     async def run():
-        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        assert (await first.connect())[0]
-        assert (await second.connect())[0]
+        first = await connect_consumer()
+        second = await connect_consumer()
 
         await first.send_json_to(
             {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
         )
-        await first.receive_json_from()
+        await receive_non_room_list(first)
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
         )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
 
         await _complete_setup_round(first, second)
         original_position = next(
@@ -404,7 +515,7 @@ def test_move_requires_dice_roll_without_changing_state():
         )["position"]
 
         await first.send_json_to({"type": "move", "toTerritoryId": "t0a"})
-        error = await first.receive_json_from()
+        error = await receive_non_room_list(first)
 
         await first.disconnect()
         await second.disconnect()
@@ -420,33 +531,31 @@ def test_move_requires_dice_roll_without_changing_state():
 
 def test_non_active_player_cannot_move_after_active_player_rolls():
     async def run():
-        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        assert (await first.connect())[0]
-        assert (await second.connect())[0]
+        first = await connect_consumer()
+        second = await connect_consumer()
 
         await first.send_json_to(
             {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
         )
-        await first.receive_json_from()
+        await receive_non_room_list(first)
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
         )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
 
         await _complete_setup_round(first, second)
 
         await first.send_json_to({"type": "roll_dice"})
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
 
         blue_before = next(
             player for player in _rooms["oslo-1"]["players"] if player["side"] == "blue"
         )["position"]
 
         await second.send_json_to({"type": "move", "toTerritoryId": "t0a"})
-        error = await second.receive_json_from()
+        error = await receive_non_room_list(second)
 
         await first.disconnect()
         await second.disconnect()
@@ -460,26 +569,24 @@ def test_non_active_player_cannot_move_after_active_player_rolls():
 
 def test_player_can_choose_start_checkpoint_before_roll():
     async def run():
-        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        assert (await first.connect())[0]
-        assert (await second.connect())[0]
+        first = await connect_consumer()
+        second = await connect_consumer()
 
         await first.send_json_to(
             {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
         )
-        await first.receive_json_from()
+        await receive_non_room_list(first)
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
         )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
 
         await first.send_json_to(
             {"type": "choose_start_checkpoint", "checkpointTerritoryId": "lysaker_cp"}
         )
-        first_snapshot = await first.receive_json_from()
-        second_snapshot = await second.receive_json_from()
+        first_snapshot = await receive_non_room_list(first)
+        second_snapshot = await receive_non_room_list(second)
 
         await first.disconnect()
         await second.disconnect()
@@ -496,23 +603,21 @@ def test_player_can_choose_start_checkpoint_before_roll():
 
 def test_roll_dice_requires_start_checkpoint_selection():
     async def run():
-        first = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        second = WebsocketCommunicator(OsloConquestConsumer.as_asgi(), "/ws/oslo-conquest/")
-        assert (await first.connect())[0]
-        assert (await second.connect())[0]
+        first = await connect_consumer()
+        second = await connect_consumer()
 
         await first.send_json_to(
             {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
         )
-        await first.receive_json_from()
+        await receive_non_room_list(first)
         await second.send_json_to(
             {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
         )
-        await first.receive_json_from()
-        await second.receive_json_from()
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
 
         await first.send_json_to({"type": "roll_dice"})
-        error = await first.receive_json_from()
+        error = await receive_non_room_list(first)
 
         await first.disconnect()
         await second.disconnect()
@@ -591,6 +696,8 @@ def test_list_rooms_includes_waiting_room_summary():
                 "started": False,
                 "phase": "waiting",
                 "status": "waiting",
+                "ownerId": "p1",
+                "playerIds": ["p1"],
                 "players": ["Ola"],
             }
         ],
