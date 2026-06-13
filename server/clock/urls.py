@@ -1,9 +1,10 @@
-from django.urls import path
+from django.urls import include, path
 from .views import DevAuthView
 from .player_views import MeView, PlayerListView, RegisterView
 from .tournament_views import TournamentDetailView, TournamentFinishView, TournamentListView
 
 urlpatterns = [
+    path("", include("players.urls")),           # guest auth: /auth/guest/, /auth/refresh/
     path("auth/dev", DevAuthView.as_view(), name="auth-dev"),
     # Player API
     path("clock/api/me/", MeView.as_view(), name="player-me"),

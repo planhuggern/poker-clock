@@ -2,7 +2,7 @@
 Minimal Django settings used only during testing.
 State-module tests don't touch the DB, so we use an in-memory SQLite.
 """
-SECRET_KEY = "test-secret-key"
+SECRET_KEY = "test-secret-key-long-enough-for-hs256-minimum-32-bytes"
 DEBUG = True
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
