@@ -18,7 +18,7 @@ function isServerAuthoritativeGame(gameState: GameState | null): boolean {
 type LobbyStatus = { message: string; isError: boolean };
 
 export function App() {
-  const [playerName, setPlayerName] = useState('');
+  const [playerName, setPlayerName] = useState(() => localStorage.getItem('oslo-conquest-player-name') ?? '');
   const [roomId, setRoomId] = useState('');
   const [suggestedRoomId, setSuggestedRoomId] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
@@ -26,7 +26,7 @@ export function App() {
   const [rooms, setRooms] = useState<RoomInfo[]>([]);
   const [inGame, setInGame] = useState(false);
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(() => localStorage.getItem('oslo-conquest-player-id'));
   const [selectedTerritory, setSelectedTerritory] = useState<string | null>(null);
   const [modal, setModal] = useState<GameModal | null>(null);
   const [missionRevealed, setMissionRevealed] = useState(false);
@@ -47,6 +47,11 @@ export function App() {
       setPlayerName(`${adjectives[Math.floor(Math.random() * adjectives.length)]} ${nouns[Math.floor(Math.random() * nouns.length)]}`);
     }
   }, []);
+
+  useEffect(() => {
+    if (playerName.trim()) localStorage.setItem('oslo-conquest-player-name', playerName);
+    if (myPlayerId) localStorage.setItem('oslo-conquest-player-id', myPlayerId);
+  }, [playerName, myPlayerId]);
 
   useEffect(() => {
     state.gameState = gameState;
