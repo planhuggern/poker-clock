@@ -1,14 +1,12 @@
-import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { usePokerSocket } from "../lib/usePokerSocket";
 import ClockCard from "../components/ClockCard";
 import { fmtChips } from "../lib/clockFormat";
 
 export default function Tv() {
-  const [token] = useState(() => localStorage.getItem("poker_token"));
   const { tournamentId: tidParam } = useParams<{ tournamentId: string }>();
   const tournamentId = Number(tidParam) || 1;
-  const { status, snapshot } = usePokerSocket(token, tournamentId);
+  const { status, snapshot } = usePokerSocket(tournamentId);
 
   const t = snapshot?.tournament;
   const levels = t?.levels ?? [];

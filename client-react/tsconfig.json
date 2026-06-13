@@ -7,9 +7,13 @@
     "noEmit": true,
     "allowJs": true,
     "checkJs": false,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "paths": {
+      "@shared/*": ["./shared/*"]
+    }
   },
   "include": [
+    "shared/**/*.ts",
     "portal/src/**/*.ts",
     "portal/src/**/*.tsx",
     "trading/src/**/*.ts",

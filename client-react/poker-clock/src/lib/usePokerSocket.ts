@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Players, Snapshot, Tournament } from "./types";
+import { getAccessToken, refreshAccessToken } from "@shared/auth/authClient.js";
 
 const SERVER_ORIGIN = import.meta.env.VITE_SERVER_URL
   || globalThis.location?.origin
@@ -21,7 +22,7 @@ function buildWsUrl(token: string, tournamentId: number): string {
 
 const RECONNECT_DELAY_MS = [1000, 2000, 4000, 8000, 15000];
 
-export function usePokerSocket(token: string | null, tournamentId = 1) {
+export function usePokerSocket(tournamentId = 1) {
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [error, setError] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -32,15 +33,30 @@ export function usePokerSocket(token: string | null, tournamentId = 1) {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!token) return;
     unmountedRef.current = false;
 
-    function connect() {
+    function scheduleReconnect() {
+      const delay = RECONNECT_DELAY_MS[Math.min(attemptsRef.current, RECONNECT_DELAY_MS.length - 1)];
+      attemptsRef.current += 1;
+      reconnectTimerRef.current = setTimeout(() => { void connect(); }, delay);
+    }
+
+    async function connect() {
       if (unmountedRef.current) return;
       setStatus("connecting");
       setError(null);
 
-      const ws = new WebSocket(buildWsUrl(token!, tournamentId));
+      let token: string;
+      try {
+        token = await getAccessToken();
+      } catch {
+        // Auth failed — retry after backoff
+        if (unmountedRef.current) return;
+        scheduleReconnect();
+        return;
+      }
+
+      const ws = new WebSocket(buildWsUrl(token, tournamentId));
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -74,32 +90,32 @@ export function usePokerSocket(token: string | null, tournamentId = 1) {
         setError("WebSocket error");
       };
 
-      ws.onclose = (evt: CloseEvent) => {
+      ws.onclose = async (evt: CloseEvent) => {
         if (unmountedRef.current) return;
         if (evt.code === 4001) {
-          setStatus("error");
-          setError("invalid token");
-          localStorage.removeItem("poker_token");
-          localStorage.removeItem("poker_role");
+          // Token rejected — try refreshing once before giving up
+          try {
+            await refreshAccessToken();
+            void connect();
+          } catch {
+            setStatus("error");
+            setError("invalid token");
+          }
           return;
         }
         setStatus("disconnected");
-        const delay = RECONNECT_DELAY_MS[
-          Math.min(attemptsRef.current, RECONNECT_DELAY_MS.length - 1)
-        ];
-        attemptsRef.current += 1;
-        reconnectTimerRef.current = setTimeout(connect, delay);
+        scheduleReconnect();
       };
     }
 
-    connect();
+    void connect();
 
     return () => {
       unmountedRef.current = true;
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       wsRef.current?.close();
     };
-  }, [token, tournamentId]);
+  }, [tournamentId]);
 
   const api = useMemo(() => {
     const send = (type: string, extra: Record<string, unknown> = {}) => {

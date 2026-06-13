@@ -1,10 +1,7 @@
-import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { usePokerSocket } from "../lib/usePokerSocket";
-import { usePlayerApi } from "../lib/usePlayerApi";
 import ClockCard from "../components/ClockCard";
 import AdminTournamentTable from "../components/AdminTournamentTable";
-import TournamentRegistration from "../components/TournamentRegistration";
 import TournamentControls from "../components/TournamentControls";
 import TournamentPlayersPanel from "../components/TournamentPlayersPanel";
 import TournamentHeader from "../components/TournamentHeader";
@@ -13,20 +10,11 @@ export default function Home() {
   const { tournamentId: tidParam } = useParams<{ tournamentId: string }>();
   const tournamentId = Number(tidParam) || 1;
 
-  const [token] = useState(() => localStorage.getItem("poker_token"));
-  const [role] = useState(() => localStorage.getItem("poker_role") || "viewer");
-
-  const { profile, register } = usePlayerApi(token);
-  const isRegistered = profile?.activeTournamentId === tournamentId;
-
   const {
     status, snapshot,
     start, pause, reset, next, prev, jump,
     updateTournament, addTime, setPlayers, rebuy, addOn, bustout,
-  } = usePokerSocket(token, tournamentId);
-
-  const isAdmin = !!(profile && snapshot?.tournament &&
-    profile.username === snapshot.tournament.admin?.username);
+  } = usePokerSocket(tournamentId);
 
   const t = snapshot?.tournament;
   const levels = t?.levels ?? [];
@@ -40,20 +28,12 @@ export default function Home() {
         title={t?.name}
         status={status}
         tournamentId={tournamentId}
-        token={token}
       />
 
       <ClockCard snapshot={snapshot} />
 
-      <TournamentRegistration
-        isRegistered={isRegistered}
-        profile={profile}
-        tournamentId={tournamentId}
-        register={register}
-      />
-
       <TournamentControls
-        isAdmin={isAdmin}
+        isAdmin
         running={running}
         pause={pause}
         start={start}
@@ -67,7 +47,7 @@ export default function Home() {
       />
 
       <TournamentPlayersPanel
-        isAdmin={isAdmin}
+        isAdmin
         players={players}
         setPlayers={setPlayers}
         bustout={bustout}
@@ -77,7 +57,6 @@ export default function Home() {
       />
 
       <AdminTournamentTable
-        role={role}
         snapshot={snapshot}
         updateTournament={updateTournament}
       />

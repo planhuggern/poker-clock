@@ -7,6 +7,7 @@ import {
 import { GameUI } from './ui/components/GameUI.js';
 import { notifyGameChanged, state } from './domains/game/state/state.js';
 import { GameState, GameModal, Handlers, RoomInfo } from './domains/game/types.js';
+import { getCurrentPlayer } from '@shared/auth/authClient.js';
 
 const DEFAULT_WS_URL = 'ws://localhost:8000/ws/oslo-conquest/';
 
@@ -32,7 +33,9 @@ export function App() {
   const [rooms, setRooms] = useState<RoomInfo[]>([]);
   const [inGame, setInGame] = useState(false);
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [myPlayerId, setMyPlayerId] = useState<string | null>(() => localStorage.getItem('oslo-conquest-player-id'));
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(
+    () => localStorage.getItem('oslo-conquest-player-id') ?? getCurrentPlayer()?.id ?? null,
+  );
   const [selectedTerritory, setSelectedTerritory] = useState<string | null>(null);
   const [modal, setModal] = useState<GameModal | null>(null);
   const [missionRevealed, setMissionRevealed] = useState(false);

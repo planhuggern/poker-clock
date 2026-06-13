@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Level, Snapshot, Tournament } from "../lib/types";
 
 interface Row {
@@ -183,17 +183,14 @@ async function readJsonFile(file: File): Promise<unknown> {
 }
 
 interface AdminTournamentTableProps {
-  role: string;
   snapshot: Snapshot | null;
   updateTournament: (tournament: Partial<Tournament>) => void;
 }
 
 export default function AdminTournamentTable({
-  role,
   snapshot,
   updateTournament,
 }: AdminTournamentTableProps) {
-  const isAdmin = role === "admin";
   const t = snapshot?.tournament;
 
   const [name, setName] = useState("");
@@ -207,15 +204,14 @@ export default function AdminTournamentTable({
   const [startingStack, setStartingStack] = useState("10000");
 
   useEffect(() => {
-    if (!isAdmin || !t) return;
-    if (dirty) return;
+    if (!t || dirty) return;
     setName(t.name ?? "Pokerturnering");
     setRows(toRowsFromTournament(t));
     setBuyIn(String(t.buyIn ?? 200));
     setRebuyAmount(String(t.rebuyAmount ?? 200));
     setAddOnAmount(String(t.addOnAmount ?? 200));
     setStartingStack(String(t.startingStack ?? 10000));
-  }, [isAdmin, t, dirty]);
+  }, [t, dirty]);
 
   const addLevel = () => {
     setDirty(true);
@@ -273,12 +269,7 @@ export default function AdminTournamentTable({
     });
   };
 
-  const canApply = useMemo(
-    () => isAdmin && rows.length > 0,
-    [isAdmin, rows.length],
-  );
-
-  if (!isAdmin) return null;
+  const canApply = rows.length > 0;
 
   return (
     <div className="mt-5">

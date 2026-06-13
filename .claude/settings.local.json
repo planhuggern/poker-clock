@@ -17,7 +17,10 @@
       "Skill(simplify)",
       "PowerShell(cd \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\client-react\" && npm run *)",
       "PowerShell(cd \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\server\" && .\\.venv\\Scripts\\pytest*)",
-      "PowerShell(cd \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\server\" && .venv\\Scripts\\pytest*)"
+      "PowerShell(cd \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\server\" && .venv\\Scripts\\pytest*)",
+      "PowerShell(cd C:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\client-react && npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch 'node_modules' })",
+      "PowerShell(cd C:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\client-react && npx tsc --noEmit 2>&1 | Where-Object { $_ -match 'oslo-conquest' -and $_ -notmatch 'node_modules' })",
+      "PowerShell(cd C:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\client-react && npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch 'node_modules' -and $_ -match '\\\\.tsx?|\\\\.js' } | Select-Object -First 10)"
     ]
   }
 }

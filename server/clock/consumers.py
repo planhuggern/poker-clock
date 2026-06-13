@@ -44,13 +44,8 @@ def _schedule_save(tournament_id: int, ms: int = 250) -> None:
 
 
 def _verify_token(token: str) -> dict | None:
-    import jwt as pyjwt
-    from django.conf import settings
-    secret = settings.CONFIG.get("jwtSecret", "")
-    try:
-        return pyjwt.decode(token, secret, algorithms=["HS256"])
-    except Exception:
-        return None
+    from players.jwt import decode_token
+    return decode_token(token)
 
 
 class ClockConsumer(AsyncWebsocketConsumer):
@@ -77,7 +72,7 @@ class ClockConsumer(AsyncWebsocketConsumer):
             await self.close(code=4001)
             return
 
-        self.user = payload  # {"username": ..., "role": ...}
+        self.player_id: str = payload["player_id"]
 
         # Make sure the tournament state is loaded
         try:
@@ -310,19 +305,9 @@ class ClockConsumer(AsyncWebsocketConsumer):
     #  Helpers 
 
     async def _require_admin(self) -> bool:
-        # Allow the tournament's host (admin) to control the clock
-        from .models import Tournament
-        user = getattr(self, "user", {})
-        username = user.get("username")
-        try:
-            tournament = Tournament.objects.get(pk=self.tournament_id)
-        except Tournament.DoesNotExist:
-            await self.send_json({"type": "error_msg", "message": "Turnering ikke funnet."})
-            return False
-        if tournament.admin and tournament.admin.username == username:
-            return True
-        await self.send_json({"type": "error_msg", "message": "Ikke autorisert (kun host kan styre klokken)."})
-        return False
+        # All authenticated users are admins for now.
+        # TODO: re-introduce role-based access when players.Player auth is fully integrated.
+        return True
 
     async def _broadcast_snapshot(self) -> None:
         await self._broadcast({"type": "snapshot", **gs.get_snapshot(tournament_id=self.tournament_id)})

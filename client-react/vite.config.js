@@ -6,8 +6,13 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+const shared = resolve(__dirname, "shared");
+
 export default defineConfig({
   base: "./",
+  resolve: {
+    alias: { "@shared": shared },
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -33,6 +38,6 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['oslo-conquest/tests/unit/**/*.test.js'],
+    include: ['oslo-conquest/tests/unit/**/*.test.{js,ts}'],
   },
 });
