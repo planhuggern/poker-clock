@@ -20,6 +20,7 @@ type LobbyStatus = { message: string; isError: boolean };
 export function App() {
   const [playerName, setPlayerName] = useState('');
   const [roomId, setRoomId] = useState('');
+  const [suggestedRoomId, setSuggestedRoomId] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [lobbyStatus, setLobbyStatus] = useState<LobbyStatus>({ message: '', isError: false });
   const [rooms, setRooms] = useState<RoomInfo[]>([]);
@@ -30,12 +31,14 @@ export function App() {
   const [modal, setModal] = useState<GameModal | null>(null);
   const [missionRevealed, setMissionRevealed] = useState(false);
 
-  if (roomId === '' || roomId.startsWith('oslo-')) {
-    const largestNumber = rooms
+  useEffect(() => {
+    const largest = rooms
       .map((room) => { const m = room.room.match(/^oslo-(\d+)$/); return m ? parseInt(m[1], 10) : 0; })
       .reduce((max, n) => Math.max(max, n), 0);
-    setRoomId(`oslo-${largestNumber + 1}`);
-  }
+    setSuggestedRoomId(`oslo-${largest + 1}`);
+  }, [rooms]);
+
+  const effectiveRoomId = roomId.trim() || suggestedRoomId;
 
   useEffect(() => {
     if (playerName.trim() === '') {
@@ -99,7 +102,7 @@ export function App() {
   }
 
   function requireLobbyFields(): boolean {
-    if (!playerName.trim() || !roomId.trim()) {
+    if (!playerName.trim() || !effectiveRoomId) {
       setLobbyStatus({ message: 'Fyll inn navn og rom-ID', isError: true });
       return false;
     }
@@ -108,13 +111,13 @@ export function App() {
 
   function handleCreateGame(): void {
     if (!requireLobbyFields()) return;
-    createGame({ url: DEFAULT_WS_URL, name: playerName, room: roomId, handlers });
+    createGame({ url: DEFAULT_WS_URL, name: playerName, room: effectiveRoomId, handlers });
     setMyPlayerId(state.myPlayerId);
   }
 
   function handleJoinGame(): void {
     if (!requireLobbyFields()) return;
-    joinGame({ url: DEFAULT_WS_URL, name: playerName, room: roomId, handlers });
+    joinGame({ url: DEFAULT_WS_URL, name: playerName, room: effectiveRoomId, handlers });
     setMyPlayerId(state.myPlayerId);
   }
 
@@ -159,6 +162,7 @@ export function App() {
             playerName={playerName}
             setPlayerName={setPlayerName}
             roomId={roomId}
+            suggestedRoomId={suggestedRoomId}
             setRoomId={setRoomId}
             handleCreateGame={handleCreateGame}
             handleJoinGame={handleJoinGame}
@@ -166,7 +170,7 @@ export function App() {
           <LobbyRoomsColumn
             lobbyStatus={lobbyStatus}
             rooms={rooms}
-            roomId={roomId}
+            effectiveRoomId={effectiveRoomId}
             handleRefreshRooms={handleRefreshRooms}
             handleSelectRoom={handleSelectRoom}
             handleStartLocalGame={handleStartLocalGame}
@@ -191,12 +195,13 @@ type LobbyConnectionColumnProps = {
   playerName: string;
   setPlayerName: (name: string) => void;
   roomId: string;
+  suggestedRoomId: string;
   setRoomId: (id: string) => void;
   handleCreateGame: () => void;
   handleJoinGame: () => void;
 };
 
-function LobbyConnectionColumn({ connectionStatus, playerName, setPlayerName, roomId, setRoomId, handleCreateGame, handleJoinGame }: LobbyConnectionColumnProps) {
+function LobbyConnectionColumn({ connectionStatus, playerName, setPlayerName, roomId, suggestedRoomId, setRoomId, handleCreateGame, handleJoinGame }: LobbyConnectionColumnProps) {
   return (
     <section className="lobby-column">
       <div className="ws-status">
@@ -209,7 +214,7 @@ function LobbyConnectionColumn({ connectionStatus, playerName, setPlayerName, ro
       </div>
       <div className="form-group">
         <label htmlFor="room-id">Rom-ID</label>
-        <input type="text" id="room-id" value={roomId} maxLength={20} onInput={(e) => setRoomId(e.currentTarget.value)} />
+        <input type="text" id="room-id" value={roomId} placeholder={suggestedRoomId} maxLength={20} onInput={(e) => setRoomId(e.currentTarget.value)} />
       </div>
       <button className="btn primary" type="button" onClick={handleCreateGame}>Opprett spill</button>
       <button className="btn" type="button" onClick={handleJoinGame}>Bli med i spill</button>
@@ -220,13 +225,13 @@ function LobbyConnectionColumn({ connectionStatus, playerName, setPlayerName, ro
 type LobbyRoomsColumnProps = {
   lobbyStatus: LobbyStatus;
   rooms: RoomInfo[];
-  roomId: string;
+  effectiveRoomId: string;
   handleRefreshRooms: () => void;
   handleSelectRoom: (room: string) => void;
   handleStartLocalGame: () => void;
 };
 
-function LobbyRoomsColumn({ lobbyStatus, rooms, roomId, handleRefreshRooms, handleSelectRoom, handleStartLocalGame }: LobbyRoomsColumnProps) {
+function LobbyRoomsColumn({ lobbyStatus, rooms, effectiveRoomId, handleRefreshRooms, handleSelectRoom, handleStartLocalGame }: LobbyRoomsColumnProps) {
   return (
     <section className="lobby-column lobby-rooms-column">
       <div className={`lobby-status${lobbyStatus.isError ? ' error' : ''}`}>{lobbyStatus.message}</div>
@@ -239,7 +244,7 @@ function LobbyRoomsColumn({ lobbyStatus, rooms, roomId, handleRefreshRooms, hand
           <div className="room-empty">Ingen aktive rom</div>
         ) : rooms.map((room) => {
           const unavailable = room.started || room.playerCount >= room.maxPlayers;
-          const selected = room.room === roomId;
+          const selected = room.room === effectiveRoomId;
           return (
             <button className={`room-card${selected ? ' selected' : ''}`} type="button" key={room.room} disabled={unavailable} onClick={() => handleSelectRoom(room.room)}>
               <div className="room-main">
