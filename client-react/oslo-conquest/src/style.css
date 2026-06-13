@@ -255,11 +255,6 @@ input:focus, select:focus { border-color: var(--gold); }
   margin-top: 4px;
 }
 
-.local-game-btn {
-  border-color: #556;
-  color: #aaa;
-}
-
 @media (max-width: 760px) {
   #lobby {
     align-items: flex-start;

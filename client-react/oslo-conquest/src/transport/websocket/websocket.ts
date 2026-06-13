@@ -1,5 +1,4 @@
 import { notifyGameChanged, state } from '../../domains/game/state/state.js';
-import { createInitialGameState } from '../../domains/game/state/game-state.js';
 import { GameState, GameModal, Handlers, RoomInfo } from '../../domains/game/types.js';
 
 let pendingMessage: object | null = null;
@@ -110,10 +109,6 @@ export function sendWS(msg: object): boolean {
   return false;
 }
 
-export function sendGameState(nextState: GameState = state.gameState!): void {
-  sendWS({ type: 'game_action', state: nextState });
-}
-
 export function sendEndTurn(playerId?: string): void {
   sendWS({ type: 'end_turn', playerId: playerId ?? state.myPlayerId });
 }
@@ -173,21 +168,5 @@ export function joinGame({ url, name, room, handlers: nextHandlers }: { url?: st
   state.myPlayerId = nextPlayerId();
   emit('onLobbyStatus', `Blir med i rom "${cleanRoom}"...`, false);
   sendWS({ type: 'join_game', room: cleanRoom, player: { id: state.myPlayerId, name: cleanName } });
-  return true;
-}
-
-export function startLocalGame({ name, handlers: nextHandlers }: { name?: string; handlers?: Handlers } = {}): boolean {
-  setHandlers(nextHandlers);
-  const playerName = name?.trim() || 'Spiller 1';
-  state.myPlayerId = 'p1';
-  const players = [
-    { id: 'p1', name: playerName },
-    { id: 'p2', name: 'Spiller 2' },
-    { id: 'p3', name: 'Spiller 3' },
-  ];
-  state.gameState = createInitialGameState(players as Parameters<typeof createInitialGameState>[0]);
-  emit('onGameStarted', state.gameState);
-  emit('onGameState', state.gameState);
-  notifyGameChanged();
   return true;
 }

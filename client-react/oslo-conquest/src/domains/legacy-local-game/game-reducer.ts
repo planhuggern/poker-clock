@@ -1,6 +1,14 @@
 import { produce, Draft } from 'immer';
-import { GameState, Player, LogEntry, Mission, Territory, Checkpoint, MapNode, GameModal } from '../types.js';
-import { ADJACENCY, DISTRICTS, MISSIONS, TERRITORIES } from '../model/game-data.js';
+import { GameState, Player, LogEntry, Mission, Territory, Checkpoint, MapNode, GameModal } from '../game/types.js';
+import { ADJACENCY, DISTRICTS, MISSIONS, TERRITORIES } from '../game/model/game-data.js';
+
+/**
+ * Legacy local-game reducer.
+ *
+ * This is not used by the current Oslo Conquest app. The active product flow is
+ * server-authoritative over WebSocket. Keep this module only as reference code
+ * for the older local prototype rules.
+ */
 
 // --- Types ---
 

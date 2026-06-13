@@ -7,7 +7,6 @@ Message protocol:
   Client → Server:
     { "type": "create_game", "room": "oslo-1", "player": { "id": "p1", "name": "Ola" } }
     { "type": "join_game",   "room": "oslo-1", "player": { "id": "p2", "name": "Kari" } }
-    { "type": "game_action", "state": { ...full gameState... } }
 
   Server → Client:
     { "type": "game_state", "state": { ...full gameState... } }
@@ -77,8 +76,6 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
             await self._handle_rejoin(data)
         elif msg_type == "list_rooms":
             await self._handle_list_rooms()
-        elif msg_type == "game_action":
-            await self._handle_action(data)
 
     # ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -119,20 +116,6 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
                 return
         await self._broadcast(room, {"type": "game_state", "state": _rooms[room]})
         await self._broadcast_room_list()
-
-    async def _handle_action(self, data: dict) -> None:
-        if not self.room:
-            return
-        if _rooms.get(self.room, {}).get("activePlayer"):
-            await self.send(
-                text_data=json.dumps(
-                    {"type": "error", "message": "Serveren styrer MVP-state"}
-                )
-            )
-            return
-        state = data.get("state") or {}
-        _rooms[self.room] = state
-        await self._broadcast(self.room, {"type": "game_state", "state": state})
 
     async def _handle_end_turn(self, data: dict) -> None:
         if not self.room or self.room not in _rooms:

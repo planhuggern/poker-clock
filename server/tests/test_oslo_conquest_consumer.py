@@ -629,44 +629,6 @@ def test_roll_dice_requires_start_checkpoint_selection():
     }
 
 
-def test_game_action_cannot_overwrite_mvp_state():
-    ws_roundtrip(
-        [
-            {
-                "type": "create_game",
-                "room": "oslo-1",
-                "player": {"id": "p1", "name": "Ola"},
-            }
-        ]
-    )
-    ws_roundtrip(
-        [
-            {
-                "type": "join_game",
-                "room": "oslo-1",
-                "player": {"id": "p2", "name": "Kari"},
-            }
-        ]
-    )
-
-    responses = ws_roundtrip(
-        [
-            {
-                "type": "join_game",
-                "room": "oslo-1",
-                "player": {"id": "p1", "name": "Ola"},
-            },
-            {
-                "type": "game_action",
-                "state": {"room": "oslo-1", "activePlayer": "blue"},
-            },
-        ]
-    )
-
-    assert responses[1] == {"type": "error", "message": "Serveren styrer MVP-state"}
-    assert _rooms["oslo-1"]["activePlayer"] == "red"
-
-
 def test_list_rooms_returns_empty_list_when_no_rooms_exist():
     responses = ws_roundtrip([{"type": "list_rooms"}])
 

@@ -2,10 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   connectWS, createGame, joinGame, rejoinGame,
   sendAttack, sendChooseStartCheckpoint, sendEndTurn,
-  sendMove, sendRollDice, sendGameState, startLocalGame,
+  sendMove, sendRollDice,
 } from './transport/websocket/websocket.js';
 import { GameUI } from './ui/components/GameUI.js';
-import { reduceGameAction } from './domains/game/state/game-reducer.js';
 import { notifyGameChanged, state } from './domains/game/state/state.js';
 import { GameState, GameModal, Handlers, RoomInfo } from './domains/game/types.js';
 
@@ -94,35 +93,16 @@ export function App() {
     }
   }, [handlers, inGame]);
 
-  function handleReducerEvents(result: ReturnType<typeof reduceGameAction>): void {
-    for (const event of result.events) {
-      if (event.type === 'modal') setModal(event.modal);
-      if (event.type === 'send_state') sendGameState(result.state);
-      if (event.type === 'send_end_turn') sendEndTurn(event.playerId);
-    }
-  }
-
   function dispatchGameAction(action: { type: string; [key: string]: unknown }): void {
     if (!gameState) return;
+    if (!isServerAuthoritativeGame(gameState)) return;
 
-    if (isServerAuthoritativeGame(gameState)) {
-      if (!isMyServerTurn(gameState, myPlayerId)) return;
-      if (action.type === 'choose_start_checkpoint') sendChooseStartCheckpoint(action.checkpointTerritoryId as string);
-      if (action.type === 'roll_dice') sendRollDice();
-      if (action.type === 'move_to_territory') sendMove(action.territoryId as string);
-      if (action.type === 'end_turn') sendEndTurn();
-      if (action.type === 'invade_territory') sendAttack(action.fromTerritoryId as string, action.territoryId as string);
-      return;
-    }
-
-    const result = reduceGameAction(
-      gameState,
-      { playerId: myPlayerId!, random: Math.random, now: () => new Date().toLocaleTimeString('no', { hour: '2-digit', minute: '2-digit' }) },
-      action as Parameters<typeof reduceGameAction>[2],
-    );
-    state.gameState = result.state;
-    setGameState(result.state);
-    handleReducerEvents(result);
+    if (!isMyServerTurn(gameState, myPlayerId)) return;
+    if (action.type === 'choose_start_checkpoint') sendChooseStartCheckpoint(action.checkpointTerritoryId as string);
+    if (action.type === 'roll_dice') sendRollDice();
+    if (action.type === 'move_to_territory') sendMove(action.territoryId as string);
+    if (action.type === 'end_turn') sendEndTurn();
+    if (action.type === 'invade_territory') sendAttack(action.fromTerritoryId as string, action.territoryId as string);
   }
 
   function requireLobbyFields(): boolean {
@@ -158,11 +138,6 @@ export function App() {
   function handleSelectRoom(room: string): void {
     setRoomId(room);
     setLobbyStatus({ message: `Valgt rom "${room}". Trykk "Bli med i spill".`, isError: false });
-  }
-
-  function handleStartLocalGame(): void {
-    startLocalGame({ name: playerName, handlers });
-    setMyPlayerId(state.myPlayerId);
   }
 
   if (inGame) {
@@ -202,7 +177,6 @@ export function App() {
             rooms={rooms}
             effectiveRoomId={effectiveRoomId}
             handleSelectRoom={handleSelectRoom}
-            handleStartLocalGame={handleStartLocalGame}
           />
         </div>
       </div>
@@ -262,10 +236,9 @@ type LobbyRoomsColumnProps = {
   rooms: RoomInfo[];
   effectiveRoomId: string;
   handleSelectRoom: (room: string) => void;
-  handleStartLocalGame: () => void;
 };
 
-function LobbyRoomsColumn({ lobbyStatus, rooms, effectiveRoomId, handleSelectRoom, handleStartLocalGame }: LobbyRoomsColumnProps) {
+function LobbyRoomsColumn({ lobbyStatus, rooms, effectiveRoomId, handleSelectRoom }: LobbyRoomsColumnProps) {
   return (
     <section className="lobby-column lobby-rooms-column">
       <div className={`lobby-status${lobbyStatus.isError ? ' error' : ''}`}>{lobbyStatus.message}</div>
@@ -291,8 +264,6 @@ function LobbyRoomsColumn({ lobbyStatus, rooms, effectiveRoomId, handleSelectRoo
           );
         })}
       </div>
-      <hr className="divider" />
-      <button className="btn local-game-btn" type="button" onClick={handleStartLocalGame}>Spill lokalt (testing)</button>
     </section>
   );
 }
