@@ -12,6 +12,8 @@
   "include": [
     "portal/src/**/*.ts",
     "portal/src/**/*.tsx",
+    "trading/src/**/*.ts",
+    "trading/src/**/*.tsx",
     "poker-clock/src/**/*.js",
     "poker-clock/src/**/*.jsx",
     "oslo-conquest/src/**/*.js",

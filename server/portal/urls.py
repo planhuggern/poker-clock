@@ -80,7 +80,7 @@ if _base:
         re_path(r"^assets/(?P<asset_path>.+)$", _public_asset_view),
         *register_spa(_base, "clock.urls"),
         *register_spa("oslo-conquest", "oslo_conquest.urls"),
-        path("trading/", include("trading.urls")),
+        *register_spa("trading", "trading.urls"),
     ]
 else:
     # Dev / root hosting: clock-API tilgjengelig uten prefix (React kjører på :8081)
@@ -90,5 +90,5 @@ else:
         re_path(r"^assets/(?P<asset_path>.+)$", _public_asset_view),
         *_clock_urls,
         *register_spa("oslo-conquest", "oslo_conquest.urls"),
-        path("trading/", include("trading.urls")),
+        *register_spa("trading", "trading.urls"),
     ]
