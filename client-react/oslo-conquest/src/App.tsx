@@ -113,12 +113,14 @@ export function App() {
     if (!requireLobbyFields()) return;
     createGame({ url: DEFAULT_WS_URL, name: playerName, room: effectiveRoomId, handlers });
     setMyPlayerId(state.myPlayerId);
+    handleRefreshRooms();
   }
 
   function handleJoinGame(): void {
     if (!requireLobbyFields()) return;
     joinGame({ url: DEFAULT_WS_URL, name: playerName, room: effectiveRoomId, handlers });
     setMyPlayerId(state.myPlayerId);
+    handleRefreshRooms();
   }
 
   function handleRefreshRooms(): void {
