@@ -11,8 +11,8 @@ register_spa(base, api_module) gir:
   - /  <base>/ws/...    →  WebSocket (håndteres av ASGI-lagret, ikke Django URL)
   - /  <base>/*         →  React SPA (server/public/<base>/index.html)
 """
-from pathlib import Path
 import mimetypes
+from pathlib import Path
 
 from django.conf import settings
 from django.http import FileResponse, HttpRequest, HttpResponse
@@ -20,22 +20,10 @@ from django.urls import include, path, re_path
 
 
 def _home_view(request: HttpRequest) -> HttpResponse:
-    from django.template.loader import render_to_string
-    if settings.DEBUG:
-        clock_url = "http://localhost:8081/"
-        oslo_url = "http://localhost:8081/oslo-conquest/"
-        trading_url = "http://localhost:8000/trading/"
-    else:
-        base = settings.BASE_PATH.strip("/")
-        clock_url = f"/{base}/" if base else "/"
-        oslo_url = "/oslo-conquest/"
-        trading_url = "/trading/"
-    html = render_to_string("home.html", {
-        "clock_url": clock_url,
-        "oslo_url": oslo_url,
-        "trading_url": trading_url,
-    }, request=request)
-    return HttpResponse(html, content_type="text/html")
+    index = Path(settings.BASE_DIR) / "public" / "index.html"
+    if index.exists():
+        return FileResponse(open(index, "rb"), content_type="text/html")
+    return HttpResponse("Portal not built. Run: npm run build", status=503)
 
 
 def _spa_view(app_name: str):
@@ -57,7 +45,8 @@ def _public_asset_view(request: HttpRequest, asset_path: str) -> HttpResponse:
         return HttpResponse("Asset not found", status=404)
 
     content_type, _ = mimetypes.guess_type(asset.name)
-    return FileResponse(open(asset, "rb"), content_type=content_type or "application/octet-stream")
+    fallback = "application/octet-stream"
+    return FileResponse(open(asset, "rb"), content_type=content_type or fallback)
 
 
 def register_spa(base: str, api_module: str) -> list:
