@@ -13,9 +13,20 @@ import time
 import threading
 from urllib.parse import parse_qs
 
+from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from . import state as gs
+
+
+@database_sync_to_async
+def _get_host_id(tournament_id: int) -> str | None:
+    from .models import Tournament
+    try:
+        row = Tournament.objects.values("host_id").get(pk=tournament_id)
+        return str(row["host_id"]) if row["host_id"] is not None else None
+    except Tournament.DoesNotExist:
+        return None
 
 #  Debounced save helpers 
 
@@ -81,6 +92,9 @@ class ClockConsumer(AsyncWebsocketConsumer):
             await self.close(code=4004)
             return
 
+        host_id = await _get_host_id(self.tournament_id)
+        self._is_host: bool = host_id == self.player_id
+
         await self.channel_layer.group_add(self._group, self.channel_name)
         await self.accept()
         await self.send_json({"type": "snapshot", **gs.get_snapshot(tournament_id=self.tournament_id)})
@@ -103,7 +117,7 @@ class ClockConsumer(AsyncWebsocketConsumer):
             await self.send_json({"type": "snapshot", **gs.get_snapshot(tournament_id=tid)})
 
         elif msg_type == "admin_start":
-            if not await self._require_admin():
+            if not await self._require_host():
                 return
             now_ms = time.time() * 1000
 
@@ -121,7 +135,7 @@ class ClockConsumer(AsyncWebsocketConsumer):
                 await self._broadcast({"type": "play_sound", "soundType": "start"})
 
         elif msg_type == "admin_pause":
-            if not await self._require_admin():
+            if not await self._require_host():
                 return
             now_ms = time.time() * 1000
 
@@ -141,7 +155,7 @@ class ClockConsumer(AsyncWebsocketConsumer):
                 await self._broadcast({"type": "play_sound", "soundType": "pause"})
 
         elif msg_type == "admin_reset_level":
-            if not await self._require_admin():
+            if not await self._require_host():
                 return
             now_ms = time.time() * 1000
 
@@ -155,7 +169,7 @@ class ClockConsumer(AsyncWebsocketConsumer):
             await self._broadcast({"type": "play_sound", "soundType": "reset_level"})
 
         elif msg_type == "admin_next":
-            if not await self._require_admin():
+            if not await self._require_host():
                 return
             now_ms = time.time() * 1000
 
@@ -175,7 +189,7 @@ class ClockConsumer(AsyncWebsocketConsumer):
                 await self._broadcast({"type": "play_sound", "soundType": "level_advance"})
 
         elif msg_type == "admin_prev":
-            if not await self._require_admin():
+            if not await self._require_host():
                 return
             now_ms = time.time() * 1000
 
@@ -194,7 +208,7 @@ class ClockConsumer(AsyncWebsocketConsumer):
                 await self._broadcast({"type": "play_sound", "soundType": "level_back"})
 
         elif msg_type == "admin_jump":
-            if not await self._require_admin():
+            if not await self._require_host():
                 return
             index = data.get("index")
             now_ms = time.time() * 1000
@@ -219,7 +233,7 @@ class ClockConsumer(AsyncWebsocketConsumer):
                 await self._broadcast({"type": "play_sound", "soundType": "level_jump"})
 
         elif msg_type == "admin_update_tournament":
-            if not await self._require_admin():
+            if not await self._require_host():
                 return
             tournament = data.get("tournament")
             now_ms = time.time() * 1000
@@ -252,7 +266,7 @@ class ClockConsumer(AsyncWebsocketConsumer):
             await self._broadcast_snapshot()
 
         elif msg_type == "admin_add_time":
-            if not await self._require_admin():
+            if not await self._require_host():
                 return
             now_ms = time.time() * 1000
             try:
@@ -264,7 +278,7 @@ class ClockConsumer(AsyncWebsocketConsumer):
             await self._broadcast_snapshot()
 
         elif msg_type == "admin_set_players":
-            if not await self._require_admin():
+            if not await self._require_host():
                 return
             patch = {k: data[k] for k in ("registered", "busted", "rebuyCount", "addOnCount") if k in data}
             gs.update_players(patch, tournament_id=tid)
@@ -272,7 +286,7 @@ class ClockConsumer(AsyncWebsocketConsumer):
             await self._broadcast_snapshot()
 
         elif msg_type == "admin_rebuy":
-            if not await self._require_admin():
+            if not await self._require_host():
                 return
             snap = gs.get_snapshot(tournament_id=tid)
             gs.update_players({"rebuyCount": snap["players"]["rebuyCount"] + 1}, tournament_id=tid)
@@ -280,7 +294,7 @@ class ClockConsumer(AsyncWebsocketConsumer):
             await self._broadcast_snapshot()
 
         elif msg_type == "admin_add_on":
-            if not await self._require_admin():
+            if not await self._require_host():
                 return
             snap = gs.get_snapshot(tournament_id=tid)
             gs.update_players({"addOnCount": snap["players"]["addOnCount"] + 1}, tournament_id=tid)
@@ -288,7 +302,7 @@ class ClockConsumer(AsyncWebsocketConsumer):
             await self._broadcast_snapshot()
 
         elif msg_type == "admin_bustout":
-            if not await self._require_admin():
+            if not await self._require_host():
                 return
             snap = gs.get_snapshot(tournament_id=tid)
             active = snap["players"]["active"]
@@ -304,10 +318,11 @@ class ClockConsumer(AsyncWebsocketConsumer):
 
     #  Helpers 
 
-    async def _require_admin(self) -> bool:
-        # All authenticated users are admins for now.
-        # TODO: re-introduce role-based access when players.Player auth is fully integrated.
-        return True
+    async def _require_host(self) -> bool:
+        if self._is_host:
+            return True
+        await self.send_json({"type": "error_msg", "message": "Admin-tilgang kreves"})
+        return False
 
     async def _broadcast_snapshot(self) -> None:
         await self._broadcast({"type": "snapshot", **gs.get_snapshot(tournament_id=self.tournament_id)})

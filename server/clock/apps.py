@@ -49,12 +49,9 @@ def _boot() -> None:
             )
 
         # Load every non-finished tournament into memory and start tick threads
-        active = Tournament.objects.select_related('admin').exclude(status=Tournament.STATUS_FINISHED)
+        active = Tournament.objects.exclude(status=Tournament.STATUS_FINISHED)
         for t in active:
             gs.init_state(t.state_json or None, tournament_id=t.id)
-            if t.admin:
-                admin_info = {"username": t.admin.username, "nickname": t.admin.nickname or ""}
-                gs.with_state(lambda s, info=admin_info: s["tournament"].update({"admin": info}), tournament_id=t.id)
             start_tick_thread(tournament_id=t.id)
     except Exception as exc:
         # DB may not be ready yet (e.g. first migrate run or test collection)
