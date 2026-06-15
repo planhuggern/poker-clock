@@ -28,7 +28,8 @@
       "PowerShell(npm install *)",
       "PowerShell(npx vitest run 2>&1 | Select-Object -Last 30)",
       "PowerShell(npx vitest run 2>&1 | Select-Object -Last 20)",
-      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 25)"
+      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 25)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\client-react\\\\src\" -Recurse -File | Select-Object -First 30 | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\\", \"\"\\) })"
     ]
   }
 }
