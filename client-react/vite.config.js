@@ -37,7 +37,12 @@ export default defineConfig({
     },
   },
   test: {
+    globals: true,
     environment: 'node',
-    include: ['oslo-conquest/tests/unit/**/*.test.{js,ts}'],
+    include: [
+      'oslo-conquest/tests/unit/**/*.test.{js,ts}',
+      'poker-clock/tests/**/*.test.{js,ts,tsx}',
+    ],
+    setupFiles: ['./poker-clock/tests/setup.ts'],
   },
 });

@@ -20,7 +20,15 @@
       "PowerShell(cd \"c:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\server\" && .venv\\Scripts\\pytest*)",
       "PowerShell(cd C:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\client-react && npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch 'node_modules' })",
       "PowerShell(cd C:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\client-react && npx tsc --noEmit 2>&1 | Where-Object { $_ -match 'oslo-conquest' -and $_ -notmatch 'node_modules' })",
-      "PowerShell(cd C:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\client-react && npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch 'node_modules' -and $_ -match '\\\\.tsx?|\\\\.js' } | Select-Object -First 10)"
+      "PowerShell(cd C:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\client-react && npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch 'node_modules' -and $_ -match '\\\\.tsx?|\\\\.js' } | Select-Object -First 10)",
+      "PowerShell(npm test *)",
+      "PowerShell(npm run *)",
+      "PowerShell(npx vitest run --root client-react 2>&1 | Select-Object -Last 40)",
+      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 40)",
+      "PowerShell(npm install *)",
+      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 30)",
+      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 20)",
+      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 25)"
     ]
   }
 }

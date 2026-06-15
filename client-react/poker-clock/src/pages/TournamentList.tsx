@@ -1,37 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTournamentApi } from "../lib/useTournamentApi";
-import { usePlayerApi } from "../lib/usePlayerApi";
 import TournamentCard from "./TournamentCard";
 import ThemeSwitcher from "../components/ThemeSwitcher";
+import UserMenu from "../components/UserMenu";
 
 export default function TournamentList() {
-  const [token] = useState(() => localStorage.getItem("poker_token"));
-  const [role]  = useState(() => localStorage.getItem("poker_role") || "viewer");
-  const isAdmin = role === "admin";
-
   const { tournaments, loading, error, createTournament, renameTournament, finishTournament } =
-    useTournamentApi(token);
-
-  const { profile, register } = usePlayerApi(token);
-  const [registering, setRegistering] = useState<number | null>(null);
-  const [registerError, setRegisterError] = useState("");
-
-  async function handleRegister(tournamentId: number) {
-    if (profile?.activeTournamentId != null && profile.activeTournamentId !== tournamentId) {
-      setRegisterError("Du er allerede påmeldt en annen turnering.");
-      return;
-    }
-    setRegistering(tournamentId);
-    setRegisterError("");
-    try {
-      await register(tournamentId);
-    } catch (err) {
-      setRegisterError((err as Error).message);
-    } finally {
-      setRegistering(null);
-    }
-  }
+    useTournamentApi();
 
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -44,11 +20,8 @@ export default function TournamentList() {
   const active   = tournaments.filter(t => t.status !== "finished");
   const finished = tournaments.filter(t => t.status === "finished");
 
-  const isInActiveTournament = profile?.activeTournamentId != null;
-
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (isInActiveTournament) { setCreateError("Du må melde deg av nåværende turnering først."); return; }
     const name = newName.trim();
     if (!name) { setCreateError("Skriv inn et turneringsnavn"); return; }
     setCreating(true);
@@ -92,21 +65,18 @@ export default function TournamentList() {
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
         <h1 className="m-0">🃏 Turneringer</h1>
         <div className="flex items-center gap-3 flex-wrap">
-          {isAdmin && (
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => setShowForm(f => !f)}
-              disabled={isInActiveTournament && !showForm}
-              title={isInActiveTournament ? "Du må melde deg av nåværende turnering først" : undefined}
-            >
-              {showForm ? "✕ Avbryt" : "+ Ny turnering"}
-            </button>
-          )}
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => setShowForm(f => !f)}
+          >
+            {showForm ? "✕ Avbryt" : "+ Ny turnering"}
+          </button>
+          <UserMenu />
           <ThemeSwitcher />
         </div>
       </div>
 
-      {showForm && isAdmin && (
+      {showForm && (
         <form className="flex items-center gap-2 mb-6 flex-wrap" onSubmit={handleCreate}>
           <input
             className="input"
@@ -115,7 +85,7 @@ export default function TournamentList() {
             placeholder="Turneringsnavn…"
             maxLength={80}
           />
-          <button className="btn btn-primary btn-sm" disabled={creating || isInActiveTournament} type="submit">
+          <button className="btn btn-primary btn-sm" disabled={creating} type="submit">
             {creating ? "Oppretter…" : "Opprett"}
           </button>
           {createError && <p className="text-error text-sm m-0">{createError}</p>}
@@ -142,7 +112,6 @@ export default function TournamentList() {
         </div>
       )}
 
-      {registerError && <p className="text-error text-sm m-0" style={{marginBottom: "0.5rem"}}>Påmelding feilet: {registerError}</p>}
       {loading && <p className="opacity-45 italic">Laster turneringer…</p>}
       {error   && <p className="text-error text-sm m-0">Feil: {error}</p>}
 
@@ -154,13 +123,8 @@ export default function TournamentList() {
               <TournamentCard
                 key={t.id}
                 t={t}
-                isAdmin={isAdmin}
                 onRename={() => setRenaming({ id: t.id, name: t.name })}
                 onFinish={() => handleFinish(t.id)}
-                isRegistered={profile?.activeTournamentId === t.id}
-                isBlockedByOther={profile?.activeTournamentId != null && profile.activeTournamentId !== t.id}
-                onRegister={() => handleRegister(t.id)}
-                registering={registering === t.id}
               />
             ))}
           </div>
@@ -168,9 +132,7 @@ export default function TournamentList() {
       )}
 
       {active.length === 0 && !loading && (
-        <p className="opacity-45 italic">
-          Ingen aktive turneringer.{isAdmin ? " Opprett en ny ovenfor." : ""}
-        </p>
+        <p className="opacity-45 italic">Ingen aktive turneringer.</p>
       )}
 
       {finished.length > 0 && (
@@ -178,7 +140,7 @@ export default function TournamentList() {
           <h2 className="text-xs uppercase tracking-widest opacity-45 mb-3">Avsluttede turneringer</h2>
           <div className="tournament-grid">
             {finished.map(t => (
-              <TournamentCard key={t.id} t={t} isAdmin={false} />
+              <TournamentCard key={t.id} t={t} />
             ))}
           </div>
         </section>

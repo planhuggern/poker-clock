@@ -15,23 +15,18 @@ const STATUS_BADGE: Record<string, string> = {
 
 interface TournamentCardProps {
   t: TournamentItem;
-  isAdmin: boolean;
   onRename?: () => void;
   onFinish?: () => void;
-  isRegistered?: boolean;
-  isBlockedByOther?: boolean;
-  onRegister?: () => void;
-  registering?: boolean;
 }
 
-function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlockedByOther, onRegister, registering }: TournamentCardProps) {
+function TournamentCard({ t, onRename, onFinish }: TournamentCardProps) {
   return (
     <div className="tournament-card">
       <div className="flex justify-between items-center">
         <span className={`badge badge-sm ${STATUS_BADGE[t.status] ?? "badge-ghost"}`}>
           {STATUS_LABEL[t.status] ?? t.status}
         </span>
-        {isAdmin && (
+        {(onRename || onFinish) && (
           <div className="flex gap-1">
             <button className="btn btn-ghost btn-xs" onClick={onRename}>✏️</button>
             {t.status !== "finished" && (
@@ -59,19 +54,6 @@ function TournamentCard({ t, isAdmin, onRename, onFinish, isRegistered, isBlocke
         </div>
       )}
 
-      {t.status !== "finished" && onRegister && (
-        isRegistered ? (
-          <div className="text-sm text-success font-semibold mt-1">✅ Du er påmeldt</div>
-        ) : isBlockedByOther ? null : (
-          <button
-            className="btn btn-success btn-sm"
-            onClick={onRegister}
-            disabled={registering}
-          >
-            {registering ? "Melder på…" : "+ Meld meg på"}
-          </button>
-        )
-      )}
     </div>
   );
 }

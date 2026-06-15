@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { TournamentItem } from "./types";
+import { getAccessToken } from "@shared/auth/authClient.js";
 
 const SERVER_ORIGIN =
   import.meta.env.VITE_SERVER_URL || globalThis.location?.origin || "http://localhost:8000";
@@ -11,13 +12,17 @@ function apiUrl(path: string): string {
   return `${SERVER_ORIGIN}${basePath}${path}`;
 }
 
-function authHeaders(token: string | null): Record<string, string> {
+async function authHeaders(): Promise<Record<string, string>> {
   const h: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) h["Authorization"] = `Bearer ${token}`;
+  try {
+    h["Authorization"] = `Bearer ${await getAccessToken()}`;
+  } catch {
+    // No token available — send request without auth header
+  }
   return h;
 }
 
-export function useTournamentApi(token: string | null, status = "") {
+export function useTournamentApi(status = "") {
   const [tournaments, setTournaments] = useState<TournamentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +33,7 @@ export function useTournamentApi(token: string | null, status = "") {
     try {
       const qs = status ? `?status=${encodeURIComponent(status)}` : "";
       const res = await fetch(apiUrl(`/clock/api/tournaments/${qs}`), {
-        headers: authHeaders(token),
+        headers: await authHeaders(),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setTournaments(await res.json() as TournamentItem[]);
@@ -37,7 +42,7 @@ export function useTournamentApi(token: string | null, status = "") {
     } finally {
       setLoading(false);
     }
-  }, [token, status]);
+  }, [status]);
 
   useEffect(() => { void fetchList(); }, [fetchList]);
 
@@ -46,7 +51,7 @@ export function useTournamentApi(token: string | null, status = "") {
     if (stateJson) body.state_json = stateJson;
     const res = await fetch(apiUrl("/clock/api/tournaments/"), {
       method: "POST",
-      headers: authHeaders(token),
+      headers: await authHeaders(),
       body: JSON.stringify(body),
     });
     if (!res.ok) {
@@ -56,12 +61,12 @@ export function useTournamentApi(token: string | null, status = "") {
     const created = await res.json() as TournamentItem;
     await fetchList();
     return created;
-  }, [token, fetchList]);
+  }, [fetchList]);
 
   const renameTournament = useCallback(async (id: number, name: string): Promise<void> => {
     const res = await fetch(apiUrl(`/clock/api/tournaments/${id}/`), {
       method: "PATCH",
-      headers: authHeaders(token),
+      headers: await authHeaders(),
       body: JSON.stringify({ name }),
     });
     if (!res.ok) {
@@ -69,19 +74,19 @@ export function useTournamentApi(token: string | null, status = "") {
       throw new Error(err.error || `HTTP ${res.status}`);
     }
     await fetchList();
-  }, [token, fetchList]);
+  }, [fetchList]);
 
   const finishTournament = useCallback(async (id: number): Promise<void> => {
     const res = await fetch(apiUrl(`/clock/api/tournaments/${id}/finish/`), {
       method: "POST",
-      headers: authHeaders(token),
+      headers: await authHeaders(),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
       throw new Error(err.error || `HTTP ${res.status}`);
     }
     await fetchList();
-  }, [token, fetchList]);
+  }, [fetchList]);
 
   return {
     tournaments,
