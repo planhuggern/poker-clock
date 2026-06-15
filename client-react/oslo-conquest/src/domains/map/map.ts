@@ -21,6 +21,10 @@ const mapData = rawMapData as unknown as MapData;
 
 export const TERRITORY_POS = mapData.TERRITORY_POS;
 
+const PIECE_POS: Record<string, [number, number]> = Object.fromEntries(
+  Object.entries(mapData._rawTerritories).map(([id, pts]) => [id, polygonCentroid(pts as [number, number][])]),
+);
+
 const CHECKPOINT_POS: Record<string, [number, number]> = {
   lørenskog: [852, 160],
   lysaker: [58, 270],
@@ -35,11 +39,28 @@ type TooltipWidget = { group: G; box: Rect; title: Text; district: Text; owner: 
 type UpdateOptions = { gameState?: GameState | null; selectedTerritory?: string | null };
 export type MapAdapter = { update: (opts?: UpdateOptions) => void; fit: () => void; destroy: () => void };
 
-function centroid(pts: [number, number][]): [number, number] {
-  return [
-    Math.round(pts.reduce((sum, p) => sum + p[0], 0) / pts.length),
-    Math.round(pts.reduce((sum, p) => sum + p[1], 0) / pts.length),
-  ];
+function polygonCentroid(pts: [number, number][]): [number, number] {
+  const n = pts.length;
+  let area = 0;
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0; i < n; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[(i + 1) % n];
+    const cross = x0 * y1 - x1 * y0;
+    area += cross;
+    cx += (x0 + x1) * cross;
+    cy += (y0 + y1) * cross;
+  }
+  area /= 2;
+  if (Math.abs(area) < 1e-10) {
+    return [
+      Math.round(pts.reduce((s, p) => s + p[0], 0) / n),
+      Math.round(pts.reduce((s, p) => s + p[1], 0) / n),
+    ];
+  }
+  const f = 1 / (6 * area);
+  return [Math.round(cx * f), Math.round(cy * f)];
 }
 
 function addDefs(draw: Svg): void {
@@ -120,7 +141,7 @@ export function createMapAdapter(
   if (mapData.specialShapes.oslofjorden) {
     draw.path(mapData.specialShapes.oslofjorden).fill('#0f2540').opacity(0.92);
     draw.path(mapData.specialShapes.oslofjorden).fill('url(#water-pat)').opacity(0.5);
-    const [fjx, fjy] = centroid(mapData._rawSpecial.oslofjorden);
+    const [fjx, fjy] = polygonCentroid(mapData._rawSpecial.oslofjorden);
     draw.text('OSLOFJORDEN').attr({
       x: fjx, y: fjy, 'font-family': 'Georgia,serif', 'font-size': 11,
       fill: 'rgba(100,160,220,0.35)', 'letter-spacing': 3, 'text-anchor': 'middle',
@@ -131,7 +152,7 @@ export function createMapAdapter(
     const shape = mapData.specialShapes[sid];
     if (!shape) continue;
     draw.path(shape).fill('#0d1a0d').opacity(0.85);
-    const [lx, ly] = centroid(mapData._rawSpecial[sid]);
+    const [lx, ly] = polygonCentroid(mapData._rawSpecial[sid]);
     draw.text(label).attr({
       x: lx, y: ly, 'font-family': 'Georgia,serif', 'font-size': 10,
       fill: 'rgba(80,140,80,0.4)', 'letter-spacing': 2, 'text-anchor': 'middle',
@@ -149,7 +170,7 @@ export function createMapAdapter(
     districtNodes.set(districtId, districtPath);
     const rawPts = mapData._rawDistricts[districtId];
     if (rawPts) {
-      const [lx, ly] = centroid(rawPts);
+      const [lx, ly] = polygonCentroid(rawPts);
       districtGroup.text(districtInfo?.name?.split(' ')[0] ?? districtId).attr({ class: 'district-label', x: lx, y: ly });
     }
   }
@@ -322,7 +343,7 @@ export function createMapAdapter(
       const position = player.position;
       if (!position) { playerPieces.get(player.id)?.group.hide(); continue; }
 
-      let coords: [number, number] | undefined = TERRITORY_POS[position];
+      let coords: [number, number] | undefined = PIECE_POS[position] ?? TERRITORY_POS[position];
       if (!coords && position.endsWith('_cp')) {
         coords = CHECKPOINT_POS[position.replace('_cp', '')];
       }
