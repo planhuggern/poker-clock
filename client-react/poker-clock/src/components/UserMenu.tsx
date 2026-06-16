@@ -1,7 +1,7 @@
-import { getCurrentPlayer } from "@shared/auth/authClient.js";
+import { useCurrentPlayer } from "@shared/auth/useCurrentPlayer.js";
 
 export default function UserMenu() {
-  const player = getCurrentPlayer();
+  const player = useCurrentPlayer();
   const displayName = player?.display_name ?? "Gjest";
 
   return (

@@ -26,6 +26,24 @@ let _accessToken: string | null = null;
 let _tokenExpiresAt = 0;
 let _player: Player | null = null;
 
+// ── Pub/sub ───────────────────────────────────────────────────────────────────
+
+type PlayerListener = (player: Player | null) => void;
+const _listeners = new Set<PlayerListener>();
+
+function _notify(): void {
+  _listeners.forEach(fn => fn(_player));
+}
+
+/**
+ * Subscribe to player state changes.
+ * Returns an unsubscribe function.
+ */
+export function subscribe(listener: PlayerListener): () => void {
+  _listeners.add(listener);
+  return () => _listeners.delete(listener);
+}
+
 // ── API base ──────────────────────────────────────────────────────────────────
 
 // In dev, the backend runs on a different port than the frontend (8000 vs 8081).
@@ -81,6 +99,7 @@ export async function guestLogin(): Promise<Player> {
   _player = data.player;
   localStorage.setItem(REFRESH_KEY, data.refresh);
   localStorage.setItem(PLAYER_KEY, JSON.stringify(data.player));
+  _notify();
   return data.player;
 }
 
@@ -131,6 +150,7 @@ export function logoutLocalOnly(): void {
   _accessToken = null;
   _tokenExpiresAt = 0;
   _player = null;
+  _notify();
 }
 
 /**
