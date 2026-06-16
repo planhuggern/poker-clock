@@ -13,16 +13,19 @@ vi.mock('@shared/auth/authClient.js', () => ({
 }));
 
 import { useCurrentPlayer } from '../../shared/auth/useCurrentPlayer.js';
-import { getCurrentPlayer } from '@shared/auth/authClient.js';
+import { getCurrentPlayer, subscribe } from '@shared/auth/authClient.js';
 
 function notifyListeners(player: unknown) {
   _listeners.forEach(fn => fn(player));
 }
 
 beforeEach(() => {
-  vi.resetAllMocks();
   _listeners.clear();
   vi.mocked(getCurrentPlayer).mockReturnValue(null);
+  vi.mocked(subscribe).mockImplementation((listener: (p: unknown) => void) => {
+    _listeners.add(listener);
+    return () => _listeners.delete(listener);
+  });
 });
 
 describe('useCurrentPlayer', () => {
