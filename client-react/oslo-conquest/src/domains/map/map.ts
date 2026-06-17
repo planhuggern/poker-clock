@@ -313,7 +313,7 @@ export function createMapAdapter(
         nodes.poly.attr({ fill: owner.color, 'fill-opacity': fullDistrict ? 0.85 : 0.40, stroke: owner.color, filter: '' });
       } else {
         const districtColor = DISTRICTS[(territory as Territory).district]?.color ?? '#1a1a2a';
-        nodes.poly.attr({ fill: districtColor, 'fill-opacity': 0.75, stroke: 'rgba(201,168,76,0.5)', filter: '' });
+        nodes.poly.attr({ fill: districtColor, 'fill-opacity': 0.25, stroke: 'rgba(201,168,76,0.5)', filter: '' });
       }
 
       nodes.units?.text(String(territoryState?.units ?? 0));
