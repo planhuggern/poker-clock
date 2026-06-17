@@ -318,7 +318,8 @@ export function createMapAdapter(
 
       const owner = findPlayer(territoryState?.owner);
       if (owner) {
-        nodes.poly.attr({ fill: owner.color, 'fill-opacity': 0.85, stroke: owner.color, filter: '' });
+        const fullDistrict = districtFullOwner.get((territory as Territory).district) === territoryState?.owner;
+        nodes.poly.attr({ fill: owner.color, 'fill-opacity': 0.85, stroke: owner.color, filter: fullDistrict ? 'url(#sel-glow)' : '' });
       } else {
         const districtColor = DISTRICTS[(territory as Territory).district]?.color ?? '#1a1a2a';
         nodes.poly.attr({ fill: districtColor, 'fill-opacity': 0.25, stroke: 'rgba(201,168,76,0.5)', filter: '' });
@@ -341,17 +342,6 @@ export function createMapAdapter(
       }
     }
 
-    for (const [districtId, districtInfo] of Object.entries(DISTRICTS)) {
-      const districtPath = districtNodes.get(districtId);
-      if (!districtPath) continue;
-      const fullOwner = districtFullOwner.get(districtId);
-      if (fullOwner) {
-        const owner = findPlayer(fullOwner);
-        districtPath.attr({ fill: owner?.color ?? districtInfo.color, 'fill-opacity': 0.30, filter: 'url(#sel-glow)' });
-      } else {
-        districtPath.attr({ fill: districtInfo.color, 'fill-opacity': 0.12, filter: '' });
-      }
-    }
 
     for (const player of currentGameState.players ?? []) {
       const position = player.position;
