@@ -164,7 +164,7 @@ export function createMapAdapter(
     const districtInfo = DISTRICTS[districtId];
     const districtPath = districtGroup.path(pathD).attr({
       id: `district-${districtId}`, class: 'svg-district',
-      fill: districtInfo?.color ?? '#1a1a2a', 'fill-opacity': 0.75,
+      fill: districtInfo?.color ?? '#1a1a2a', 'fill-opacity': 0.12,
       stroke: '#2a3a2a', 'stroke-width': 1.5,
     });
     districtNodes.set(districtId, districtPath);
