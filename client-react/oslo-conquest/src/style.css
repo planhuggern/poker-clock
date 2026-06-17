@@ -323,7 +323,10 @@ input:focus, select:focus { border-color: var(--gold); }
 .district-label {
   font-family: 'Cinzel Decorative', serif;
   font-size: 8px;
-  fill: rgba(255,255,255,0.22);
+  fill: rgba(255,255,255,0.85);
+  stroke: rgba(0,0,0,0.75);
+  stroke-width: 2.5px;
+  paint-order: stroke fill;
   letter-spacing: 1.5px;
   pointer-events: none;
   text-anchor: middle;
