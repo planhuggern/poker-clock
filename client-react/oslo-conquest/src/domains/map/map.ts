@@ -278,6 +278,15 @@ export function createMapAdapter(
     const activePlayer = currentGameState.players?.find((p) => p.side === currentGameState!.activePlayer);
     const reachable = new Set<string>(activePlayer?.validMoves ?? []);
 
+    const districtFullOwner = new Map<string, string>();
+    for (const districtId of Object.keys(DISTRICTS)) {
+      const dTerrs = TERRITORIES.filter((t): t is Territory => t.type === 'territory' && t.district === districtId);
+      const ownerId = dTerrs[0] && currentGameState.territories[dTerrs[0].id]?.owner;
+      if (ownerId && dTerrs.every((t) => currentGameState!.territories[t.id]?.owner === ownerId)) {
+        districtFullOwner.set(districtId, ownerId);
+      }
+    }
+
     for (const territory of TERRITORIES) {
       const nodes = territoryNodes.get(territory.id);
       if (!nodes) continue;
@@ -300,9 +309,11 @@ export function createMapAdapter(
 
       const owner = findPlayerByOwner(territoryState?.owner);
       if (owner) {
-        nodes.poly.attr({ fill: owner.color, 'fill-opacity': 0.55, stroke: owner.color, filter: '' });
+        const fullDistrict = districtFullOwner.get((territory as Territory).district) === territoryState?.owner;
+        nodes.poly.attr({ fill: owner.color, 'fill-opacity': fullDistrict ? 0.85 : 0.40, stroke: owner.color, filter: '' });
       } else {
-        nodes.poly.attr({ fill: '#1a1a2a', 'fill-opacity': 0.6, stroke: 'rgba(201,168,76,0.5)', filter: '' });
+        const districtColor = DISTRICTS[(territory as Territory).district]?.color ?? '#1a1a2a';
+        nodes.poly.attr({ fill: districtColor, 'fill-opacity': 0.75, stroke: 'rgba(201,168,76,0.5)', filter: '' });
       }
 
       nodes.units?.text(String(territoryState?.units ?? 0));
@@ -322,22 +333,6 @@ export function createMapAdapter(
       }
     }
 
-    for (const [districtId, districtInfo] of Object.entries(DISTRICTS)) {
-      const territories = TERRITORIES.filter((t): t is Territory => t.type === 'territory' && t.district === districtId);
-      const districtPath = districtNodes.get(districtId);
-      if (!districtPath) continue;
-
-      const ownerIds = [...new Set(territories
-        .map((t) => currentGameState!.territories[t.id]?.owner)
-        .filter((o): o is string => Boolean(o)))];
-
-      if (ownerIds.length === 1 && territories.every((t) => currentGameState!.territories[t.id]?.owner === ownerIds[0])) {
-        const owner = findPlayerByOwner(ownerIds[0]);
-        districtPath.attr({ fill: owner?.color ?? '#1a1a2a', 'fill-opacity': 0.4 });
-      } else {
-        districtPath.attr({ fill: districtInfo?.color ?? '#1a1a2a', 'fill-opacity': 0.75 });
-      }
-    }
 
     for (const player of currentGameState.players ?? []) {
       const position = player.position;
