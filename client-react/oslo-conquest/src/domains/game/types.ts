@@ -16,6 +16,7 @@ export type Player = {
   eliminated: boolean;
   conquests: { [key: string]: number };
   validMoves?: string[];
+  nextCheckpoint?: string | null;
 }
 
 export type LogEntry = {

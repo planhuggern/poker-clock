@@ -63,7 +63,7 @@ export function GameUI({
   return (
     <>
       <HUD dispatchGameAction={dispatchGameAction} />
-      <MapView gameState={gameState} selectedTerritory={selectedTerritory} onSelectTerritory={handleSelectTerritory} />
+      <MapView gameState={gameState} selectedTerritory={selectedTerritory} onSelectTerritory={handleSelectTerritory} localPlayerId={myPlayerId} />
       <TurnIndicator />
       <CheckpointBar />
       <LogPanel />

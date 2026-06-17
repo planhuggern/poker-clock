@@ -5,6 +5,8 @@ import random
 from .board import ADJACENCY, CHECKPOINT_IDS, START_TERRITORIES, TERRITORY_IDS
 
 PLAYER_SIDES = ("red", "blue")
+CHECKPOINT_SEQUENCE = ("lysaker_cp", "kolbotn_cp", "lørenskog_cp")
+_CP_DISPLAY_NAMES = {"lysaker_cp": "Lysaker", "kolbotn_cp": "Kolbotn", "lørenskog_cp": "Lørenskog"}
 MAX_PLAYERS = len(PLAYER_SIDES)
 PLAYER_COLORS = {
     "red": "#c0392b",
@@ -36,6 +38,9 @@ def assign_player(player: dict, side: str) -> dict:
         "movesRemaining": 0,
         "validMoves": [],
         "setupConfirmed": False,
+        "money": 2000,
+        "units": 10,
+        "nextCheckpoint": None,
     }
 
 
@@ -235,6 +240,8 @@ def choose_start_checkpoint(
     player["movesRemaining"] = 0
     player["validMoves"] = []
     player["setupConfirmed"] = False
+    idx = CHECKPOINT_SEQUENCE.index(checkpoint_id)
+    player["nextCheckpoint"] = CHECKPOINT_SEQUENCE[(idx + 1) % len(CHECKPOINT_SEQUENCE)]
     room_state.setdefault("log", []).insert(
         0,
         log_entry(f"{player['name']} flyttet startbrikken til {checkpoint_id}"),
@@ -280,6 +287,18 @@ def move(
         0,
         log_entry(f"{player['name']} flyttet til {destination}"),
     )
+
+    if destination in CHECKPOINT_IDS and destination == player.get("nextCheckpoint"):
+        player["money"] = player.get("money", 0) + 500
+        player["units"] = player.get("units", 0) + 3
+        idx = CHECKPOINT_SEQUENCE.index(destination)
+        player["nextCheckpoint"] = CHECKPOINT_SEQUENCE[(idx + 1) % len(CHECKPOINT_SEQUENCE)]
+        next_name = _CP_DISPLAY_NAMES.get(player["nextCheckpoint"], player["nextCheckpoint"])
+        room_state["log"].insert(
+            0,
+            log_entry(f"{player['name']} innkasserte checkpoint-bonus! Neste: {next_name}"),
+        )
+
     return room_state, None
 
 

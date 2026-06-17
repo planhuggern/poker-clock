@@ -36,7 +36,7 @@ type PanState = { active: boolean; hasMoved: boolean; startX: number; startY: nu
 type TerritoryNode = { group: G; poly: Path; units: Text | null };
 type PlayerPiece = { group: G; outer: Circle; inner: Circle; label: Text };
 type TooltipWidget = { group: G; box: Rect; title: Text; district: Text; owner: Text };
-type UpdateOptions = { gameState?: GameState | null; selectedTerritory?: string | null };
+type UpdateOptions = { gameState?: GameState | null; selectedTerritory?: string | null; localPlayerId?: string | null };
 export type MapAdapter = { update: (opts?: UpdateOptions) => void; fit: () => void; destroy: () => void };
 
 function polygonCentroid(pts: [number, number][]): [number, number] {
@@ -146,6 +146,7 @@ export function createMapAdapter(
   const playerPieces = new Map<string, PlayerPiece>();
   let currentGameState: GameState | null = null;
   let currentSelectedTerritory: string | null = null;
+  let currentLocalPlayerId: string | null = null;
 
   addDefs(draw);
   draw.rect(MAP_W, MAP_H).fill('#0d1520');
@@ -288,9 +289,10 @@ export function createMapAdapter(
     tooltip.group.transform({ translateX: position.x, translateY: position.y });
   }
 
-  function update({ gameState = currentGameState, selectedTerritory = currentSelectedTerritory }: UpdateOptions = {}): void {
+  function update({ gameState = currentGameState, selectedTerritory = currentSelectedTerritory, localPlayerId = currentLocalPlayerId }: UpdateOptions = {}): void {
     currentGameState = gameState ?? null;
     currentSelectedTerritory = selectedTerritory ?? null;
+    currentLocalPlayerId = localPlayerId ?? null;
     if (!currentGameState) return;
 
     const findPlayer = (owner: string | null | undefined) =>
@@ -317,13 +319,33 @@ export function createMapAdapter(
       const isReachable = reachable.has(territory.id);
 
       if (territory.type === 'checkpoint') {
+        const localPlayer = currentLocalPlayerId
+          ? currentGameState.players.find(p => p.id === currentLocalPlayerId) ?? null
+          : null;
+        const nextCp = localPlayer?.nextCheckpoint ?? null;
+        const isNext = nextCp !== null && territory.id === nextCp;
+        const isDimmed = nextCp !== null && !isNext;
+
         if (isSelected) nodes.group.addClass('selected');
         else nodes.group.removeClass('selected');
+
         nodes.poly.attr({
-          fill: isSelected ? 'rgba(255,232,150,0.42)' : 'rgba(255,232,150,0.28)',
-          stroke: isSelected ? 'rgba(255,215,0,0.95)' : '#ffd700',
-          'stroke-width': isSelected ? 2.4 : 1.8,
-          filter: isSelected ? 'url(#sel-glow)' : '',
+          fill: isSelected
+            ? 'rgba(255,232,150,0.42)'
+            : isNext
+              ? 'rgba(255,232,150,0.55)'
+              : isDimmed
+                ? 'rgba(255,232,150,0.08)'
+                : 'rgba(255,232,150,0.28)',
+          stroke: isSelected
+            ? 'rgba(255,215,0,0.95)'
+            : isNext
+              ? 'rgba(255,215,0,1.0)'
+              : isDimmed
+                ? 'rgba(255,215,0,0.2)'
+                : '#ffd700',
+          'stroke-width': isSelected ? 2.4 : isNext ? 2.2 : 1.8,
+          filter: isSelected ? 'url(#sel-glow)' : isNext ? 'url(#sel-glow)' : '',
         });
         continue;
       }

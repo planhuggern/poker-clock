@@ -8,9 +8,10 @@ type Props = {
   gameState: GameState | null;
   selectedTerritory: string | null;
   onSelectTerritory: (territoryId: string) => void;
+  localPlayerId?: string | null;
 };
 
-export function MapView({ gameState, selectedTerritory, onSelectTerritory }: Props) {
+export function MapView({ gameState, selectedTerritory, onSelectTerritory, localPlayerId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const adapterRef = useRef<MapAdapter | null>(null);
   const onSelectTerritoryRef = useRef(onSelectTerritory);
@@ -33,8 +34,8 @@ export function MapView({ gameState, selectedTerritory, onSelectTerritory }: Pro
   }, []);
 
   useEffect(() => {
-    adapterRef.current?.update({ gameState, selectedTerritory });
-  }, [gameState, selectedTerritory]);
+    adapterRef.current?.update({ gameState, selectedTerritory, localPlayerId });
+  }, [gameState, selectedTerritory, localPlayerId]);
 
   return <div id="map-container" ref={containerRef} />;
 }

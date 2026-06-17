@@ -629,6 +629,125 @@ def test_roll_dice_requires_start_checkpoint_selection():
     }
 
 
+def test_choose_start_checkpoint_sets_next_checkpoint():
+    async def run():
+        first = await connect_consumer()
+        second = await connect_consumer()
+
+        await first.send_json_to(
+            {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
+        )
+        await receive_non_room_list(first)
+        await second.send_json_to(
+            {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
+
+        await first.send_json_to(
+            {"type": "choose_start_checkpoint", "checkpointTerritoryId": "kolbotn_cp"}
+        )
+        snapshot = await receive_non_room_list(first)
+        await receive_non_room_list(second)
+
+        await first.disconnect()
+        await second.disconnect()
+        return snapshot
+
+    snapshot = async_to_sync(run)()
+    red = next(p for p in snapshot["state"]["players"] if p["side"] == "red")
+    assert red["position"] == "kolbotn_cp"
+    assert red["nextCheckpoint"] == "lørenskog_cp"
+
+
+def test_landing_on_next_checkpoint_awards_bonus_and_advances_sequence():
+    async def run():
+        first = await connect_consumer()
+        second = await connect_consumer()
+
+        await first.send_json_to(
+            {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
+        )
+        await receive_non_room_list(first)
+        await second.send_json_to(
+            {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
+
+        await _complete_setup_round(first, second)
+
+        # red starts at lørenskog_cp → nextCheckpoint = lysaker_cp
+        # Place red adjacent to lysaker_cp and pre-fill validMoves
+        red = next(p for p in _rooms["oslo-1"]["players"] if p["side"] == "red")
+        money_before = red["money"]
+        units_before = red["units"]
+        red["position"] = "t17"
+        red["diceRoll"] = 1
+        red["movesRemaining"] = 1
+        red["validMoves"] = ["lysaker_cp"]
+
+        await first.send_json_to({"type": "move", "toTerritoryId": "lysaker_cp"})
+        snapshot = await receive_non_room_list(first)
+        await receive_non_room_list(second)
+
+        await first.disconnect()
+        await second.disconnect()
+        return snapshot, money_before, units_before
+
+    snapshot, money_before, units_before = async_to_sync(run)()
+    red = next(p for p in snapshot["state"]["players"] if p["side"] == "red")
+    assert red["position"] == "lysaker_cp"
+    assert red["money"] == money_before + 500
+    assert red["units"] == units_before + 3
+    assert red["nextCheckpoint"] == "kolbotn_cp"
+    assert any("Kolbotn" in entry["msg"] or "kolbotn" in entry["msg"] for entry in snapshot["state"]["log"])
+
+
+def test_landing_on_non_next_checkpoint_awards_no_bonus():
+    async def run():
+        first = await connect_consumer()
+        second = await connect_consumer()
+
+        await first.send_json_to(
+            {"type": "create_game", "room": "oslo-1", "player": {"id": "p1", "name": "Ola"}}
+        )
+        await receive_non_room_list(first)
+        await second.send_json_to(
+            {"type": "join_game", "room": "oslo-1", "player": {"id": "p2", "name": "Kari"}}
+        )
+        await receive_non_room_list(first)
+        await receive_non_room_list(second)
+
+        await _complete_setup_round(first, second)
+
+        # red starts at lørenskog_cp → nextCheckpoint = lysaker_cp
+        # Move to kolbotn_cp which is NOT red's next checkpoint
+        red = next(p for p in _rooms["oslo-1"]["players"] if p["side"] == "red")
+        money_before = red["money"]
+        units_before = red["units"]
+        next_cp_before = red["nextCheckpoint"]
+        red["position"] = "t34"
+        red["diceRoll"] = 1
+        red["movesRemaining"] = 1
+        red["validMoves"] = ["kolbotn_cp"]
+
+        await first.send_json_to({"type": "move", "toTerritoryId": "kolbotn_cp"})
+        snapshot = await receive_non_room_list(first)
+        await receive_non_room_list(second)
+
+        await first.disconnect()
+        await second.disconnect()
+        return snapshot, money_before, units_before, next_cp_before
+
+    snapshot, money_before, units_before, next_cp_before = async_to_sync(run)()
+    red = next(p for p in snapshot["state"]["players"] if p["side"] == "red")
+    assert red["position"] == "kolbotn_cp"
+    assert red["money"] == money_before
+    assert red["units"] == units_before
+    assert red["nextCheckpoint"] == next_cp_before
+
+
 def test_list_rooms_returns_empty_list_when_no_rooms_exist():
     responses = ws_roundtrip([{"type": "list_rooms"}])
 
