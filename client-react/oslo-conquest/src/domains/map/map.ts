@@ -77,6 +77,18 @@ function addDefs(draw: Svg): void {
         <feGaussianBlur stdDeviation="4" result="blur"/>
         <feComposite in="SourceGraphic" in2="blur" operator="over"/>
       </filter>
+      <filter id="district-glow" x="-90%" y="-90%" width="280%" height="280%">
+        <feGaussianBlur stdDeviation="10" result="blur"/>
+        <feColorMatrix in="blur" type="hueRotate" values="0" result="rainbow">
+          <animate attributeName="values" from="0" to="360" dur="4s" repeatCount="indefinite"/>
+        </feColorMatrix>
+        <feGaussianBlur in="rainbow" stdDeviation="4" result="rainbow-soft"/>
+        <feMerge>
+          <feMergeNode in="rainbow-soft"/>
+          <feMergeNode in="rainbow"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
     </defs>
   `);
 }
@@ -319,7 +331,7 @@ export function createMapAdapter(
       const owner = findPlayer(territoryState?.owner);
       if (owner) {
         const fullDistrict = districtFullOwner.get((territory as Territory).district) === territoryState?.owner;
-        nodes.poly.attr({ fill: owner.color, 'fill-opacity': 0.85, stroke: owner.color, filter: fullDistrict ? 'url(#sel-glow)' : '' });
+        nodes.poly.attr({ fill: owner.color, 'fill-opacity': 0.85, stroke: owner.color, filter: fullDistrict ? 'url(#district-glow)' : '' });
       } else {
         const districtColor = DISTRICTS[(territory as Territory).district]?.color ?? '#1a1a2a';
         nodes.poly.attr({ fill: districtColor, 'fill-opacity': 0.25, stroke: 'rgba(201,168,76,0.5)', filter: '' });
