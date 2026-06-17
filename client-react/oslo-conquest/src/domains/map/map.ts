@@ -160,6 +160,7 @@ export function createMapAdapter(
   }
 
   const districtGroup = draw.group().attr({ id: 'district-layer' });
+  const districtLabelData: { text: string; x: number; y: number }[] = [];
   for (const [districtId, pathD] of Object.entries(mapData.districtShapes)) {
     const districtInfo = DISTRICTS[districtId];
     const districtPath = districtGroup.path(pathD).attr({
@@ -171,7 +172,7 @@ export function createMapAdapter(
     const rawPts = mapData._rawDistricts[districtId];
     if (rawPts) {
       const [lx, ly] = polygonCentroid(rawPts);
-      districtGroup.text(districtInfo?.name?.split(' ')[0] ?? districtId).attr({ class: 'district-label', x: lx, y: ly });
+      districtLabelData.push({ text: districtInfo?.name?.split(' ')[0] ?? districtId, x: lx, y: ly });
     }
   }
 
@@ -239,6 +240,11 @@ export function createMapAdapter(
   const borderGroup = draw.group().attr({ id: 'district-border-layer', 'pointer-events': 'none' });
   for (const pathD of Object.values(mapData.districtShapes)) {
     borderGroup.path(pathD).attr({ fill: 'none', stroke: '#3a4a3a', 'stroke-width': 1.8 });
+  }
+
+  const districtLabelGroup = draw.group().attr({ id: 'district-label-layer', 'pointer-events': 'none' });
+  for (const { text, x, y } of districtLabelData) {
+    districtLabelGroup.text(text).attr({ class: 'district-label', x, y });
   }
 
   const pieceLayer = draw.group().attr({ id: 'piece-layer', 'pointer-events': 'none' });
