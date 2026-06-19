@@ -4,11 +4,21 @@ import { state } from './state.js';
 
 export function getCurrentPlayer(): Player | null {
   const gameState = state.gameState;
-  if (!gameState) return null;
-  if (gameState.activePlayer) {
-    return gameState.players.find(p => p.side === gameState.activePlayer) || null;
+
+  if (!gameState) {
+    return null;
   }
-  return gameState.players[gameState.currentPlayerIdx] || null;
+
+  // TODO: MVP compatibility.
+  // Server/MVP state uses activePlayer together with player.side.
+  // The real game model should eventually use player.id only.
+  if (gameState.activePlayer) {
+    return gameState.players.find(
+      (player) => player.side === gameState.activePlayer
+    ) ?? null;
+  }
+
+  return gameState.players[gameState.currentPlayerIdx] ?? null;
 }
 
 export function isMyTurn(): boolean {

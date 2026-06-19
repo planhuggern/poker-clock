@@ -12,6 +12,8 @@ export type GamePhase = 'setup' | 'playing' | 'finished';
 export type Player = {
   id: PlayerId;
   name: string;
+  // TODO: MVP compatibility only.
+  // Old server/MVP marker. New game code should use `id`.
   side?: string;
   color: string;
   colorName: ColorName;
