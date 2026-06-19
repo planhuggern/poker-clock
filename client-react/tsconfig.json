@@ -8,6 +8,7 @@
     "allowJs": true,
     "checkJs": false,
     "jsx": "react-jsx",
+    "skipLibCheck": true,
     "paths": {
       "@shared/*": ["./shared/*"]
     }
@@ -28,6 +29,10 @@
     "oslo-conquest/tests/**/*.jsx",
     "oslo-conquest/tests/**/*.ts",
     "vite.config.js"
-],
-  "exclude": ["dist", "../server/public"]
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "../server/public"
+  ]
 }
