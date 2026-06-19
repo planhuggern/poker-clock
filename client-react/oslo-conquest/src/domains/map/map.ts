@@ -329,6 +329,8 @@ export function createMapAdapter(
         if (isSelected) nodes.group.addClass('selected');
         else nodes.group.removeClass('selected');
 
+        nodes.group.attr({ opacity: isDimmed ? 0.25 : 1 });
+
         nodes.poly.attr({
           fill: isSelected
             ? 'rgba(255,232,150,0.42)'
