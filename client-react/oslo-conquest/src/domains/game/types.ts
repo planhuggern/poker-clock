@@ -1,23 +1,34 @@
+// ID types. Makes it easier to change underlying type if needed,
+// and provides better readability.
+export type PlayerId = string;
+export type TerritoryId = string;
+export type DistrictId = string;
+export type CheckpointId = string;
+export type RoomId = string;
+export type ColorName = string;
+
+export type GamePhase = 'setup' | 'playing' | 'finished';
+
 export type Player = {
-  id: string;
+  id: PlayerId;
   name: string;
   side?: string;
   color: string;
-  colorName: string;
+  colorName: ColorName;
   money: number;
   units: number;
   mission: string;
-  target: string | null;
-  position: string;
-  checkpoints: { [key: string]: boolean };
+  target: PlayerId | null;
+  position: TerritoryId | CheckpointId | null;
+  checkpoints: Record<CheckpointId, boolean>;
   roundComplete: boolean;
   diceRoll: number | null;
   diceUsed: number;
   eliminated: boolean;
-  conquests: { [key: string]: number };
-  validMoves?: string[];
-  nextCheckpoint?: string | null;
-}
+  conquests: Record<TerritoryId, number>;
+  validMoves?: Array<TerritoryId | CheckpointId>;
+  nextCheckpoint?: CheckpointId | null;
+};
 
 export type LogEntry = {
   msg: string;
@@ -34,28 +45,28 @@ export type Mission = {
 };
 
 export type GameState = {
-  room?: string;
+  room?: RoomId;
   currentPlayerIdx: number;
   players: Player[];
-  territories: Record<string, TerritoryState>;
-  phase: 'setup' | 'playing' | 'finished';
+  territories: Record<TerritoryId, TerritoryState>;
+  phase: GamePhase;
   round: number;
   log: LogEntry[];
-  activePlayer?: string;
-  winner?: string;
-}
+  activePlayer?: PlayerId;
+  winner?: PlayerId;
+};
 
 export type District = {
   name: string;
   bonus: { money: number; units: number };
   color: string;
-}
+};
 
 export type Territory = {
   type: 'territory';
-  id: string;
+  id: TerritoryId;
   name: string;
-  district: string;
+  district: DistrictId;
   price: number;
   neutralUnits: number;
   x: number;
@@ -64,7 +75,7 @@ export type Territory = {
 
 export type Checkpoint = {
   type: 'checkpoint';
-  id: string;
+  id: CheckpointId;
   name: string;
   checkpoint: string;
   x: number;
@@ -73,13 +84,12 @@ export type Checkpoint = {
 
 export type MapNode = Territory | Checkpoint;
 
-
 export type TerritoryState = {
-  territoryId: string;
-  owner: string | null;
+  territoryId: TerritoryId;
+  owner: PlayerId | null;
   units: number;
-  checkpoint?: string;
-}
+  checkpoint?: CheckpointId | null;
+};
 
 // --- Modal types (shared between game-reducer, state, App, GameUI) ---
 
@@ -98,7 +108,7 @@ export type DiceModal = {
 
 export type RentModal = {
   type: 'rent';
-  territoryId: string;
+  territoryId: TerritoryId;
   rent: number;
   territoryName: string;
   canPay: boolean;
@@ -115,12 +125,12 @@ export type GameModal = DiceModal | RentModal | WinModal;
 // --- Websocket / lobby types ---
 
 export type RoomInfo = {
-  room: string;
+  room: RoomId;
   playerCount: number;
   maxPlayers: number;
   started: boolean;
-  ownerId?: string | null;
-  playerIds?: string[];
+  ownerId?: PlayerId | null;
+  playerIds?: PlayerId[];
   players?: string[];
 };
 
@@ -133,3 +143,11 @@ export type Handlers = {
   onModal?: (modal: GameModal) => void;
   onError?: (message: string) => void;
 };
+
+export function isTerritory(node: MapNode): node is Territory {
+  return node.type === 'territory';
+}
+
+export function isCheckpoint(node: MapNode): node is Checkpoint {
+  return node.type === 'checkpoint';
+}
