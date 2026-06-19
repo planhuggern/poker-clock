@@ -8,6 +8,7 @@ import { GameUI } from './ui/components/GameUI.js';
 import { notifyGameChanged, state } from './domains/game/state/state.js';
 import { GameState, GameModal, Handlers, RoomInfo } from './domains/game/types.js';
 import { getCurrentPlayer } from '@shared/auth/authClient.js';
+import { findPlayerByRef, playerMatchesRef } from './utils/player-utils.js';
 
 const SERVER_ORIGIN = import.meta.env.VITE_SERVER_URL
   || (typeof window !== 'undefined' ? window.location.origin : null)
@@ -15,15 +16,22 @@ const SERVER_ORIGIN = import.meta.env.VITE_SERVER_URL
 
 const DEFAULT_WS_URL = SERVER_ORIGIN.replace(/^https/, 'wss').replace(/^http/, 'ws') + '/ws/oslo-conquest/';
 
+//TODO remove calls to this function since all games are now server-authoritative.
 function isServerAuthoritativeGame(gameState: GameState | null): boolean {
   return Boolean(gameState?.players?.some((p) => p.side));
 }
 
-function isMyServerTurn(gameState: GameState | null, playerId: string | null): boolean {
-  if (!gameState?.activePlayer || !playerId) return false;
-  return gameState.players.some((player) => (
-    player.id === playerId && player.side === gameState.activePlayer
-  ));
+function isPlayerTurn(gameState: GameState | null, playerId: string | null): boolean {
+  if (!gameState?.activePlayer || !playerId) {
+    return false;
+  } 
+
+  const activePlayer = findPlayerByRef(
+    gameState.players, 
+    gameState.activePlayer
+  );
+
+  return activePlayer?.id === playerId;
 }
 
 type LobbyStatus = { message: string; isError: boolean };
@@ -90,11 +98,13 @@ export function App() {
       state.gameState = nextGameState;
       setGameState(nextGameState);
       if (nextGameState.winner && nextGameState.phase === 'finished') {
-        const winnerPlayer = nextGameState.players.find((p) => p.side === nextGameState.winner);
+        const winnerPlayer = findPlayerByRef(
+          nextGameState.players,
+          nextGameState.winner
+        );
+        
         if (winnerPlayer) {
-          const iAmWinner = nextGameState.players.some(
-            (p) => p.id === state.myPlayerId && p.side === nextGameState.winner,
-          );
+          const iAmWinner = winnerPlayer.id === state.myPlayerId;
           setModal({
             type: 'win',
             player: winnerPlayer,
@@ -131,7 +141,7 @@ export function App() {
       return;
     }
 
-    if (!isMyServerTurn(gameState, myPlayerId)) return;
+    if (!isPlayerTurn(gameState, myPlayerId)) return;
     if (action.type === 'choose_start_checkpoint') sendChooseStartCheckpoint(action.checkpointTerritoryId as string);
     if (action.type === 'roll_dice') sendRollDice();
     if (action.type === 'move_to_territory') sendMove(action.territoryId as string);

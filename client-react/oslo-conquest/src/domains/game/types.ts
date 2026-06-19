@@ -1,6 +1,8 @@
 // ID types. Makes it easier to change underlying type if needed,
 // and provides better readability.
 export type PlayerId = string;
+export type PlayerSide = string;
+export type PlayerRef = PlayerId | PlayerSide;
 export type TerritoryId = string;
 export type DistrictId = string;
 export type CheckpointId = string;
@@ -12,9 +14,10 @@ export type GamePhase = 'setup' | 'playing' | 'finished';
 export type Player = {
   id: PlayerId;
   name: string;
-  // TODO: MVP compatibility only.
-  // Old server/MVP marker. New game code should use `id`.
-  side?: string;
+// TODO: Server/MVP compatibility.
+// Server currently uses player.side as turn/winner marker.
+// New game code should use player.id.
+  side?: PlayerSide;
   color: string;
   colorName: ColorName;
   money: number;
@@ -54,8 +57,8 @@ export type GameState = {
   phase: GamePhase;
   round: number;
   log: LogEntry[];
-  activePlayer?: PlayerId;
-  winner?: PlayerId;
+  activePlayer?: PlayerRef;
+  winner?: PlayerRef;
 };
 
 export type District = {

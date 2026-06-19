@@ -7,6 +7,7 @@ import {
 import { findPlayerByOwner } from "../game/state/game-state.js";
 import { GameState, Territory, MapNode, Player } from "../game/types.js";
 import rawMapData from "./map.json";
+import { findPlayerByRef, playerMatchesRef } from "../../utils/player-utils.js";
 
 export const MAP_W = 900;
 export const MAP_H = 850;
@@ -437,27 +438,6 @@ export function createMapAdapter(
     tooltip.group.transform({ translateX: position.x, translateY: position.y });
   }
 
-  function playerMatchesRef(
-    player: Player,
-    playerRef: string | null | undefined,
-  ): boolean {
-    if (!playerRef) return false;
-
-    // TODO: MVP compatibility.
-    // `player.side` is an old MVP/server marker.
-    // New game code should eventually use `player.id` only.
-    return player.id === playerRef || player.side === playerRef;
-  }
-
-  function findPlayerByRef(
-    players: Player[],
-    playerRef: string | null | undefined,
-  ): Player | null {
-    return (
-      players.find((player) => playerMatchesRef(player, playerRef)) ?? null
-    );
-  }
-
   function update({
     gameState = currentGameState,
     selectedTerritory = currentSelectedTerritory,
@@ -467,13 +447,14 @@ export function createMapAdapter(
     currentSelectedTerritory = selectedTerritory ?? null;
     currentLocalPlayerId = localPlayerId ?? null;
     if (!currentGameState) return;
+    const renderGameState = currentGameState;
 
-    const findPlayer = (owner: string | null | undefined) =>
-      findPlayerByRef(currentGameState!.players, owner);
+    const findOwner = (owner: string | null | undefined) =>
+      findPlayerByRef(renderGameState.players, owner);
 
     const activePlayer = findPlayerByRef(
-      currentGameState.players,
-      currentGameState.activePlayer,
+      renderGameState.players,
+      renderGameState.activePlayer,
     );
     const reachable = new Set<string>(activePlayer?.validMoves ?? []);
 
@@ -484,11 +465,11 @@ export function createMapAdapter(
           t.type === "territory" && t.district === districtId,
       );
       const ownerId =
-        dTerrs[0] && currentGameState.territories[dTerrs[0].id]?.owner;
+        dTerrs[0] && renderGameState.territories[dTerrs[0].id]?.owner;
       if (
         ownerId &&
         dTerrs.every(
-          (t) => currentGameState!.territories[t.id]?.owner === ownerId,
+          (t) => renderGameState.territories[t.id]?.owner === ownerId,
         )
       ) {
         districtFullOwner.set(districtId, ownerId);
@@ -499,13 +480,13 @@ export function createMapAdapter(
       const nodes = territoryNodes.get(territory.id);
       if (!nodes) continue;
 
-      const territoryState = currentGameState.territories[territory.id];
+      const territoryState = renderGameState.territories[territory.id];
       const isSelected = currentSelectedTerritory === territory.id;
       const isReachable = reachable.has(territory.id);
 
       if (territory.type === "checkpoint") {
         const localPlayer = currentLocalPlayerId
-          ? (currentGameState.players.find(
+          ? (renderGameState.players.find(
               (p) => p.id === currentLocalPlayerId,
             ) ?? null)
           : null;
@@ -543,7 +524,7 @@ export function createMapAdapter(
         continue;
       }
 
-      const owner = findPlayer(territoryState?.owner);
+      const owner = findOwner(territoryState?.owner);
       if (owner) {
         const fullDistrict =
           districtFullOwner.get((territory as Territory).district) ===
@@ -592,7 +573,7 @@ export function createMapAdapter(
       }
     }
 
-    for (const player of currentGameState.players ?? []) {
+    for (const player of renderGameState.players ?? []) {
       const position = player.position;
       if (!position) {
         playerPieces.get(player.id)?.group.hide();
@@ -635,10 +616,10 @@ export function createMapAdapter(
       piece.group.center(coords[0], coords[1] - 12).show();
       piece.inner.attr({ fill: player.color ?? "#ddd" });
       piece.label.text((player.name ?? "?").slice(0, 1).toUpperCase());
+      const isActivePlayer  = playerMatchesRef(player, renderGameState.activePlayer);
       piece.outer.attr({
-        stroke:
-          player.side === currentGameState.activePlayer ? "#ffd700" : "#d7d7d7",
-        "stroke-width": player.side === currentGameState.activePlayer ? 2 : 1.2,
+        stroke: isActivePlayer ? "#ffd700" : "#d7d7d7",
+        "stroke-width": isActivePlayer ? 2 : 1.2,
       });
     }
   }

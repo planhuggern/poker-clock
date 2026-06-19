@@ -1,6 +1,7 @@
 import { produce, Draft } from 'immer';
 import { GameState, Player, LogEntry, Mission, Territory, Checkpoint, MapNode, GameModal } from '../game/types.js';
 import { ADJACENCY, DISTRICTS, MISSIONS, TERRITORIES } from '../game/model/game-data.js';
+import { findPlayerByRef } from '../../utils/player-utils.js';
 
 /**
  * Legacy local-game reducer.
@@ -78,12 +79,13 @@ export function reduceGameAction(
     events.push({ type: 'map_update' });
   }
 
-  if (action.type === 'end_turn' && isMvpGame(gameState)) {
+  if (action.type === 'end_turn') {
     if (!isMyTurn(gameState, context.playerId)) {
       const nextState = produce(gameState, (draft) => log(draft, 'Det er ikke din tur'));
       return { state: nextState, events };
     }
     events.push({ type: 'send_end_turn', playerId: context.playerId });
+    //endTurn(draft, cp, log, sendState);
     return { state: gameState, events };
   }
 
@@ -127,10 +129,6 @@ export function reduceGameAction(
     if (action.type === 'pay_rent') {
       payRent(draft, cp, action.territoryId, context, log, sendState, events);
       return;
-    }
-
-    if (action.type === 'end_turn') {
-      endTurn(draft, cp, log, sendState);
     }
   });
 
@@ -426,17 +424,13 @@ function rollDie(random = Math.random): number {
 function getCurrentPlayer(gameState: GameState | Draft<GameState>): Player | Draft<Player> | null {
   if (!gameState) return null;
   if (gameState.activePlayer) {
-    return gameState.players.find((p) => p.side === gameState.activePlayer) ?? null;
+    return findPlayerByRef(gameState.players, gameState.activePlayer) ?? null;
   }
   return gameState.players[gameState.currentPlayerIdx] ?? null;
 }
 
 function isMyTurn(gameState: GameState, playerId: string): boolean {
   return getCurrentPlayer(gameState)?.id === playerId;
-}
-
-function isMvpGame(gameState: GameState): boolean {
-  return Boolean(gameState?.activePlayer);
 }
 
 function isCheckpoint(territory: MapNode | undefined): territory is Checkpoint {
