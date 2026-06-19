@@ -9,7 +9,11 @@ import { notifyGameChanged, state } from './domains/game/state/state.js';
 import { GameState, GameModal, Handlers, RoomInfo } from './domains/game/types.js';
 import { getCurrentPlayer } from '@shared/auth/authClient.js';
 
-const DEFAULT_WS_URL = 'ws://localhost:8000/ws/oslo-conquest/';
+const SERVER_ORIGIN = import.meta.env.VITE_SERVER_URL
+  || (typeof window !== 'undefined' ? window.location.origin : null)
+  || 'http://localhost:8000';
+
+const DEFAULT_WS_URL = SERVER_ORIGIN.replace(/^https/, 'wss').replace(/^http/, 'ws') + '/ws/oslo-conquest/';
 
 function isServerAuthoritativeGame(gameState: GameState | null): boolean {
   return Boolean(gameState?.players?.some((p) => p.side));

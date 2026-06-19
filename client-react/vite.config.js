@@ -23,6 +23,9 @@ export default defineConfig({
     watch: {
       usePolling: true,
     },
+    proxy: {
+      '/ws': { target: 'http://localhost:8000', ws: true },
+    },
   },
   build: {
     outDir: resolve(__dirname, "../server/public"),
