@@ -7,6 +7,7 @@ import {
   joinGame,
   sendAttack,
   sendChooseStartCheckpoint,
+  sendForfeit,
   sendMove,
   sendRollDice,
 } from '../../src/transport/websocket/websocket.ts';
@@ -147,6 +148,19 @@ describe('websocket lobby commands', () => {
       type: 'choose_start_checkpoint',
       playerId: 'p1',
       checkpointTerritoryId: 'lysaker_cp',
+    });
+  });
+
+  it('sender forfeit-melding med spillerens id', () => {
+    state.myPlayerId = 'p1';
+    connectWS({ url: 'ws://localhost:8000/ws/oslo-conquest/' });
+    FakeWebSocket.instances[0].onopen();
+
+    sendForfeit();
+
+    expect(FakeWebSocket.instances[0].sent.at(-1)).toEqual({
+      type: 'forfeit',
+      playerId: 'p1',
     });
   });
 });

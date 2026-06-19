@@ -111,6 +111,20 @@ function HUD({ dispatchGameAction }: { dispatchGameAction: (a: Action) => void }
       <button className="btn" style={{ width: 'auto', padding: '6px 16px', fontSize: '0.75rem' }} type="button" disabled={isMvpGame() && !myTurn} onClick={() => dispatchGameAction({ type: 'end_turn' })}>
         Avslutt tur →
       </button>
+      {(state.gameState?.phase === 'playing' || state.gameState?.phase === 'setup') && (
+        <button
+          className="btn forfeit-btn"
+          style={{ width: 'auto', padding: '6px 16px', fontSize: '0.75rem' }}
+          type="button"
+          onClick={() => {
+            if (window.confirm('Er du sikker på at du vil gi opp?')) {
+              dispatchGameAction({ type: 'forfeit' });
+            }
+          }}
+        >
+          🏳️ Gi opp
+        </button>
+      )}
     </div>
   );
 }
@@ -308,7 +322,7 @@ function GameModalView({ clearModal, dispatchGameAction }: { clearModal: () => v
   if (!state.modal) return null;
   if (state.modal.type === 'dice') return <DiceModalView result={(state.modal as DiceModal).result} clearModal={clearModal} />;
   if (state.modal.type === 'rent') return <RentModalView modal={state.modal as RentModal} clearModal={clearModal} dispatchGameAction={dispatchGameAction} />;
-  if (state.modal.type === 'win') return <WinModalView modal={state.modal as WinModal} />;
+  if (state.modal.type === 'win') return <WinModalView modal={state.modal as WinModal} dispatchGameAction={dispatchGameAction} />;
   return null;
 }
 
@@ -335,14 +349,14 @@ function DiceModalView({ result, clearModal }: { result: DiceModal['result']; cl
   );
 }
 
-function WinModalView({ modal }: { modal: WinModal }) {
+function WinModalView({ modal, dispatchGameAction }: { modal: WinModal; dispatchGameAction: (a: Action) => void }) {
   return (
     <div className="modal-overlay">
       <div className="modal end-game-modal">
         <h2>🏆 Spillet er over!</h2>
         <div className="winner" style={{ color: modal.player.color }}>{modal.player.name} vinner!</div>
         <p>{modal.mission.emoji ?? ''} <strong>{modal.mission.title}</strong></p>
-        <button className="btn primary" type="button" onClick={() => location.reload()}>Nytt spill</button>
+        <button className="btn primary" type="button" onClick={() => dispatchGameAction({ type: 'return_to_lobby' })}>Returner til lobby</button>
       </div>
     </div>
   );

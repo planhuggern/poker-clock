@@ -42,6 +42,7 @@ export type GameState = {
   round: number;
   log: LogEntry[];
   activePlayer?: string;
+  winner?: string;
 }
 
 export type District = {

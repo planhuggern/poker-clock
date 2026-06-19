@@ -131,6 +131,17 @@ input:focus, select:focus { border-color: var(--gold); }
   background: var(--gold);
   color: var(--bg);
 }
+.btn.forfeit-btn {
+  opacity: 0.6;
+  border-color: #888;
+  color: #aaa;
+}
+.btn.forfeit-btn:hover {
+  opacity: 1;
+  background: transparent;
+  border-color: #e55;
+  color: #e55;
+}
 
 .lobby-help {
   color: var(--text-muted);

@@ -129,6 +129,10 @@ export function sendChooseStartCheckpoint(checkpointTerritoryId: string): void {
   sendWS({ type: 'choose_start_checkpoint', playerId: state.myPlayerId, checkpointTerritoryId });
 }
 
+export function sendForfeit(): void {
+  sendWS({ type: 'forfeit', playerId: state.myPlayerId });
+}
+
 export function refreshRooms(nextHandlers?: Handlers): void {
   setHandlers(nextHandlers);
   sendWS({ type: 'list_rooms' });

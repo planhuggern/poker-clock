@@ -370,6 +370,35 @@ def attack(
     return room_state, None
 
 
+def forfeit(room_state: dict, player_id: str | None) -> tuple[dict, str | None]:
+    if not room_state.get("started"):
+        return room_state, "Spillet har ikke startet"
+
+    if room_state.get("phase") not in ("playing", "setup"):
+        return room_state, "Spillet er allerede avsluttet"
+
+    player = find_player_by_id(room_state, player_id)
+    if not player:
+        return room_state, "Ukjent spiller"
+
+    forfeiting_side = player.get("side")
+    winner_side = next(
+        (p.get("side") for p in room_state.get("players", []) if p.get("side") != forfeiting_side),
+        None,
+    )
+    if not winner_side:
+        return room_state, "Ingen motstander funnet"
+
+    room_state["winner"] = winner_side
+    room_state["phase"] = "finished"
+    room_state.setdefault("log", []).insert(
+        0,
+        log_entry(f"{player['name']} ga opp"),
+    )
+
+    return room_state, None
+
+
 def _update_winner(room_state: dict) -> None:
     territories = room_state.get("territories") or {}
     total = len(territories)

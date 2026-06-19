@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   connectWS, createGame, joinGame, rejoinGame,
   sendAttack, sendChooseStartCheckpoint, sendEndTurn,
-  sendMove, sendRollDice,
+  sendForfeit, sendMove, sendRollDice,
 } from './transport/websocket/websocket.js';
 import { GameUI } from './ui/components/GameUI.js';
 import { notifyGameChanged, state } from './domains/game/state/state.js';
@@ -81,7 +81,16 @@ export function App() {
     onRooms: setRooms,
     onGameStarted: () => setInGame(true),
     onModal: setModal,
-    onGameState: (nextGameState) => { state.gameState = nextGameState; setGameState(nextGameState); },
+    onGameState: (nextGameState) => {
+      state.gameState = nextGameState;
+      setGameState(nextGameState);
+      if (nextGameState.winner && nextGameState.phase === 'finished') {
+        const winnerPlayer = nextGameState.players.find((p) => p.side === nextGameState.winner);
+        if (winnerPlayer) {
+          setModal({ type: 'win', player: winnerPlayer, mission: { emoji: '🏳️', title: 'Motstanderen ga opp' } });
+        }
+      }
+    },
     onError: (message) => setLobbyStatus({ message, isError: true }),
   }), []);
 
@@ -99,6 +108,15 @@ export function App() {
   function dispatchGameAction(action: { type: string; [key: string]: unknown }): void {
     if (!gameState) return;
     if (!isServerAuthoritativeGame(gameState)) return;
+
+    if (action.type === 'forfeit') { sendForfeit(); return; }
+    if (action.type === 'return_to_lobby') {
+      localStorage.removeItem('oslo-conquest-active-room');
+      setInGame(false);
+      setGameState(null);
+      setModal(null);
+      return;
+    }
 
     if (!isMyServerTurn(gameState, myPlayerId)) return;
     if (action.type === 'choose_start_checkpoint') sendChooseStartCheckpoint(action.checkpointTerritoryId as string);
