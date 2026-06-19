@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  connectWS, createGame, joinGame, rejoinGame,
+  connectWS, createGame, joinGame, refreshRooms, rejoinGame,
   sendAttack, sendChooseStartCheckpoint, sendEndTurn,
   sendForfeit, sendMove, sendRollDice,
 } from './transport/websocket/websocket.js';
@@ -67,13 +67,14 @@ export function App() {
   }, [playerName, myPlayerId]);
 
   useEffect(() => {
+    if (!inGame) return;
     state.gameState = gameState;
     state.myPlayerId = myPlayerId;
     state.selectedTerritory = selectedTerritory;
     state.modal = modal;
     state.missionRevealed = missionRevealed;
     notifyGameChanged();
-  }, [gameState, myPlayerId, selectedTerritory, modal, missionRevealed]);
+  }, [inGame, gameState, myPlayerId, selectedTerritory, modal, missionRevealed]);
 
   const handlers = useMemo<Handlers>(() => ({
     onConnectionChange: setConnectionStatus,
@@ -87,7 +88,14 @@ export function App() {
       if (nextGameState.winner && nextGameState.phase === 'finished') {
         const winnerPlayer = nextGameState.players.find((p) => p.side === nextGameState.winner);
         if (winnerPlayer) {
-          setModal({ type: 'win', player: winnerPlayer, mission: { emoji: '🏳️', title: 'Motstanderen ga opp' } });
+          const iAmWinner = nextGameState.players.some(
+            (p) => p.id === state.myPlayerId && p.side === nextGameState.winner,
+          );
+          setModal({
+            type: 'win',
+            player: winnerPlayer,
+            mission: { emoji: '🏳️', title: iAmWinner ? 'Motstanderen ga opp' : 'Du ga opp' },
+          });
         }
       }
     },
@@ -115,6 +123,7 @@ export function App() {
       setInGame(false);
       setGameState(null);
       setModal(null);
+      refreshRooms();
       return;
     }
 

@@ -133,6 +133,17 @@ export function sendForfeit(): void {
   sendWS({ type: 'forfeit', playerId: state.myPlayerId });
 }
 
+export function closeWS(): void {
+  pendingMessage = null;
+  if (state.ws) {
+    state.ws.onclose = null;
+    state.ws.onerror = null;
+    state.ws.onmessage = null;
+    state.ws.close();
+    state.ws = null;
+  }
+}
+
 export function refreshRooms(nextHandlers?: Handlers): void {
   setHandlers(nextHandlers);
   sendWS({ type: 'list_rooms' });
