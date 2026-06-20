@@ -43,7 +43,7 @@ export function App() {
   const [myPlayerId, setMyPlayerId] = useState<string | null>(
     () => localStorage.getItem('oslo-conquest-player-id') ?? getCurrentPlayer()?.id ?? null,
   );
-  const [selectedTerritory, setSelectedTerritory] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [modal, setModal] = useState<GameModal | null>(null);
   const [missionRevealed, setMissionRevealed] = useState(false);
 
@@ -77,11 +77,11 @@ export function App() {
     if (!inGame) return;
     state.gameState = gameState;
     state.myPlayerId = myPlayerId;
-    state.selectedTerritory = selectedTerritory;
+    state.selectedNodeId = selectedNodeId;
     state.modal = modal;
     state.missionRevealed = missionRevealed;
     notifyGameChanged();
-  }, [inGame, gameState, myPlayerId, selectedTerritory, modal, missionRevealed]);
+  }, [inGame, gameState, myPlayerId, selectedNodeId, modal, missionRevealed]);
 
   const handlers = useMemo<Handlers>(() => ({
     onConnectionChange: setConnectionStatus,
@@ -138,7 +138,7 @@ export function App() {
     if (!isPlayerTurn(gameState, myPlayerId)) return;
     if (action.type === 'choose_start_checkpoint') sendChooseStartCheckpoint(action.checkpointTerritoryId as string);
     if (action.type === 'roll_dice') sendRollDice();
-    if (action.type === 'move_to_territory') sendMove(action.territoryId as string);
+    if (action.type === 'move_to_position') sendMove(action.territoryId as string);
     if (action.type === 'end_turn') sendEndTurn();
     if (action.type === 'invade_territory') sendAttack(action.fromTerritoryId as string, action.territoryId as string);
   }
@@ -183,8 +183,8 @@ export function App() {
       <GameUI
         gameState={gameState}
         myPlayerId={myPlayerId}
-        selectedTerritory={selectedTerritory}
-        setSelectedTerritory={setSelectedTerritory}
+        selectedNodeId={selectedNodeId}
+        setSelectedNodeId={setSelectedNodeId}
         modal={modal}
         missionRevealed={missionRevealed}
         dispatchGameAction={dispatchGameAction}

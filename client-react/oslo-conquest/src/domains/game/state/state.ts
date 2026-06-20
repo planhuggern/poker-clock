@@ -1,11 +1,11 @@
 // Delt spilltilstand som alle moduler leser og skriver til.
 // Fordi ES-moduler eksporterer referanser, endres dette objektet live — ingen kopi.
-import { GameState, GameModal } from '../types';
+import { GameState, GameModal, CheckpointId, TerritoryId } from '../types';
 
 interface State {
   gameState: GameState | null;
   myPlayerId: string | null;
-  selectedTerritory: string | null;
+    selectedNodeId: TerritoryId | CheckpointId | null;
   missionRevealed: boolean;
   modal: GameModal | null;
   ws: WebSocket | null;
@@ -15,7 +15,7 @@ interface State {
 export const state: State = {
   gameState: null,
   myPlayerId: null,
-  selectedTerritory: null,
+  selectedNodeId: null,
   missionRevealed: false,
   modal: null,
   ws: null,

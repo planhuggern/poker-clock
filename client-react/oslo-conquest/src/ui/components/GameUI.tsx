@@ -13,8 +13,8 @@ type Action = { type: string; [key: string]: unknown };
 type GameUIProps = {
   gameState: GameState | null;
   myPlayerId: string | null;
-  selectedTerritory: string | null;
-  setSelectedTerritory: (id: string | null) => void;
+  selectedNodeId: string | null;
+  setSelectedNodeId: (id: string | null) => void;
   modal: GameModal | null;
   missionRevealed: boolean;
   dispatchGameAction: (action: Action) => void;
@@ -23,7 +23,7 @@ type GameUIProps = {
 };
 
 export function GameUI({
-  gameState, myPlayerId, selectedTerritory, setSelectedTerritory,
+  gameState, myPlayerId, selectedNodeId, setSelectedNodeId,
   modal, missionRevealed, dispatchGameAction, setMissionRevealed, clearModal,
 }: GameUIProps) {
   const [, setVersion] = useState(0);
@@ -31,43 +31,43 @@ export function GameUI({
   useEffect(() => {
     state.gameState = gameState;
     state.myPlayerId = myPlayerId;
-    state.selectedTerritory = selectedTerritory;
+    state.selectedNodeId = selectedNodeId;
     state.modal = modal;
     state.missionRevealed = missionRevealed;
-  }, [gameState, myPlayerId, selectedTerritory, modal, missionRevealed]);
+  }, [gameState, myPlayerId, selectedNodeId, modal, missionRevealed]);
 
   useEffect(() => subscribe(() => setVersion((v) => v + 1)), []);
 
   if (!gameState) return null;
 
-  function handleSelectTerritory(territoryId: TerritoryId | CheckpointId): void {
-    setSelectedTerritory(territoryId);
+  function handleSelectNode(nodeId: TerritoryId | CheckpointId): void {
+    setSelectedNodeId(nodeId);
     if (!isMyTurn()) return;
 
     if (state.gameState?.phase === 'setup') {
-      const territory = TERRITORIES.find((t) => t.id === territoryId);
+      const territory = TERRITORIES.find((t) => t.id === nodeId);
       if (territory?.type !== 'checkpoint') return;
-      dispatchGameAction({ type: 'choose_start_checkpoint', checkpointTerritoryId: territoryId });
+      dispatchGameAction({ type: 'choose_start_checkpoint', checkpointTerritoryId: nodeId });
       return;
     }
 
     const currentPlayer = getCurrentPlayer();
     const validMoves = currentPlayer?.validMoves ?? [];
-    const isValidMove = validMoves.includes(territoryId);
+    const isValidMove = validMoves.includes(nodeId);
     if (
       state.gameState?.phase === 'playing' &&
       currentPlayer !== null &&
       currentPlayer.diceRoll !== null &&
       isValidMove
     ) {
-      dispatchGameAction({ type: 'move_to_territory', territoryId });
+      dispatchGameAction({ type: 'move_to_position', territoryId: nodeId });
     }
   }
 
   return (
     <>
       <HUD dispatchGameAction={dispatchGameAction} />
-      <MapView gameState={gameState} selectedTerritory={selectedTerritory} onSelectTerritory={handleSelectTerritory} localPlayerId={myPlayerId} />
+      <MapView gameState={gameState} selectedNodeId={selectedNodeId} onSelectTerritory={handleSelectNode} localPlayerId={myPlayerId} />
       <TurnIndicator />
       {/* <CheckpointBar /> Not yet implemented in server*/}
       <LogPanel />
@@ -210,7 +210,7 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
     );
   }
 
-  if (!state.selectedTerritory) {
+  if (!state.selectedNodeId) {
     return (
       <div id="action-content">
         <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
@@ -227,8 +227,8 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
     );
   }
 
-  const node = TERRITORIES.find((t) => t.id === state.selectedTerritory);
-  const territoryState = state.gameState!.territories[state.selectedTerritory!];
+  const node = TERRITORIES.find((t) => t.id === state.selectedNodeId);
+  const territoryState = state.gameState!.territories[state.selectedNodeId!];
   if (!node || !territoryState) return null;
 
   const owner = findPlayerByOwner(territoryState.owner);
@@ -308,7 +308,7 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
           type="button"
           onClick={() =>
             dispatchGameAction({
-              type: 'move_to_territory',
+              type: 'move_to_position',
               territoryId: node.id,
             })
           }

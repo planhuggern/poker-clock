@@ -21,7 +21,7 @@ type Context = {
 
 type Action =
   | { type: 'roll_dice' }
-  | { type: 'move_to_territory'; territoryId: string }
+  | { type: 'move_to_position'; territoryId: string }
   | { type: 'buy_territory'; territoryId: string }
   | { type: 'invade_territory'; territoryId: string }
   | { type: 'reinforce_territory'; territoryId: string }
@@ -106,7 +106,7 @@ export function reduceGameAction(
       return;
     }
 
-    if (action.type === 'move_to_territory') {
+    if (action.type === 'move_to_position') {
       moveToTerritory(draft, cp, action.territoryId, events, log, sendState);
       return;
     }

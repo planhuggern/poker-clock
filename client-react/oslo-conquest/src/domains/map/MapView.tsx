@@ -6,12 +6,12 @@ type MapAdapter = ReturnType<typeof createMapAdapter>;
 
 type Props = {
   gameState: GameState | null;
-  selectedTerritory: string | null;
+  selectedNodeId: string | null;
   onSelectTerritory: (territoryId: string) => void;
   localPlayerId?: string | null;
 };
 
-export function MapView({ gameState, selectedTerritory, onSelectTerritory, localPlayerId }: Props) {
+export function MapView({ gameState, selectedNodeId: selectedNodeId, onSelectTerritory, localPlayerId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const adapterRef = useRef<MapAdapter | null>(null);
   const onSelectTerritoryRef = useRef(onSelectTerritory);
@@ -34,8 +34,8 @@ export function MapView({ gameState, selectedTerritory, onSelectTerritory, local
   }, []);
 
   useEffect(() => {
-    adapterRef.current?.update({ gameState, selectedTerritory, localPlayerId });
-  }, [gameState, selectedTerritory, localPlayerId]);
+    adapterRef.current?.update({ gameState, selectedTerritory: selectedNodeId, localPlayerId });
+  }, [gameState, selectedNodeId, localPlayerId]);
 
   return <div id="map-container" ref={containerRef} />;
 }

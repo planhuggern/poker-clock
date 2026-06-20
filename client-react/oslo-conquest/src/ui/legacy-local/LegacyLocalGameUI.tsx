@@ -61,7 +61,7 @@ export function TerritoryActions({ territory, territoryState, currentPlayer, dis
         </button>
       )}
       {canMove && (
-        <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'move_to_territory', territoryId: territory.id })}>
+        <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'move_to_position', territoryId: territory.id })}>
           🚶 Beveg hit ({currentPlayer.diceUsed + 1}/{currentPlayer.diceRoll})
         </button>
       )}
