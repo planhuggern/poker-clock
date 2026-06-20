@@ -16,11 +16,6 @@ const SERVER_ORIGIN = import.meta.env.VITE_SERVER_URL
 
 const DEFAULT_WS_URL = SERVER_ORIGIN.replace(/^https/, 'wss').replace(/^http/, 'ws') + '/ws/oslo-conquest/';
 
-//TODO remove calls to this function since all games are now server-authoritative.
-function isServerAuthoritativeGame(gameState: GameState | null): boolean {
-  return Boolean(gameState?.players?.some((p) => p.side));
-}
-
 function isPlayerTurn(gameState: GameState | null, playerId: string | null): boolean {
   if (!gameState?.activePlayer || !playerId) {
     return false;
@@ -129,7 +124,6 @@ export function App() {
 
   function dispatchGameAction(action: { type: string; [key: string]: unknown }): void {
     if (!gameState) return;
-    if (!isServerAuthoritativeGame(gameState)) return;
 
     if (action.type === 'forfeit') { sendForfeit(); return; }
     if (action.type === 'return_to_lobby') {
