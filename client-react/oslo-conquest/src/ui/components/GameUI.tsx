@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ADJACENCY, CHECKPOINTS, DISTRICTS, TERRITORIES } from '../../domains/game/model/game-data.js';
-import { findPlayerByOwner, getCurrentPlayer, isServerGameState, isMyTurn } from '../../domains/game/state/game-state.js';
+import { findPlayerByOwner, getCurrentPlayer, isMyTurn } from '../../domains/game/state/game-state.js';
 import { state, subscribe } from '../../domains/game/state/state.js';
 import { DICE_FACES } from '../../domains/dice/dice.js';
 import { MapView } from '../../domains/map/MapView.js';
 import { GameState, GameModal, DiceModal, RentModal, WinModal, Player, Territory, MapNode, TerritoryId, CheckpointId } from '../../domains/game/types.js';
-import { CheckpointBar, MissionCard, RentModalView, TerritoryActions } from '../legacy-local/LegacyLocalGameUI.js';
+import { CheckpointBar, MissionCard, RentModalView} from '../legacy-local/LegacyLocalGameUI.js';
 import { playerMatchesRef } from '../../utils/player-utils.js';
 
 type Action = { type: string; [key: string]: unknown };
@@ -42,7 +42,7 @@ export function GameUI({
 
   function handleSelectTerritory(territoryId: TerritoryId | CheckpointId): void {
     setSelectedTerritory(territoryId);
-    if (!isServerGameState() || !isMyTurn()) return;
+    if (!isMyTurn()) return;
 
     if (state.gameState?.phase === 'setup') {
       const territory = TERRITORIES.find((t) => t.id === territoryId);
@@ -69,10 +69,10 @@ export function GameUI({
       <HUD dispatchGameAction={dispatchGameAction} />
       <MapView gameState={gameState} selectedTerritory={selectedTerritory} onSelectTerritory={handleSelectTerritory} localPlayerId={myPlayerId} />
       <TurnIndicator />
-      <CheckpointBar />
+      {/* <CheckpointBar /> Not yet implemented in server*/}
       <LogPanel />
       <ActionPanel dispatchGameAction={dispatchGameAction} />
-      <MissionCard setMissionRevealed={setMissionRevealed} />
+      {/* <MissionCard setMissionRevealed={setMissionRevealed} /> Not yet implemented in server*/}
       <GameModalView clearModal={clearModal} dispatchGameAction={dispatchGameAction} />
     </>
   );
@@ -81,8 +81,8 @@ export function GameUI({
 function HUD({ dispatchGameAction }: { dispatchGameAction: (a: Action) => void }) {
   const currentPlayer = getCurrentPlayer();
   const myTurn = isMyTurn();
-  const showMvpRollButton = Boolean(
-    isServerGameState() && myTurn &&
+  const showRollButton = Boolean(
+    myTurn &&
     state.gameState?.phase === 'playing' &&
     currentPlayer?.position !== null &&
     currentPlayer?.diceRoll === null,
@@ -107,12 +107,12 @@ function HUD({ dispatchGameAction }: { dispatchGameAction: (a: Action) => void }
           </div>
         ))}
       </div>
-      {showMvpRollButton && (
+      {showRollButton && (
         <button className="btn" style={{ width: 'auto', padding: '6px 16px', fontSize: '0.75rem' }} type="button" onClick={() => dispatchGameAction({ type: 'roll_dice' })}>
           🎲 Kast terning
         </button>
       )}
-      <button className="btn" style={{ width: 'auto', padding: '6px 16px', fontSize: '0.75rem' }} type="button" disabled={isServerGameState() && !myTurn} onClick={() => dispatchGameAction({ type: 'end_turn' })}>
+      <button className="btn" style={{ width: 'auto', padding: '6px 16px', fontSize: '0.75rem' }} type="button" disabled={!myTurn} onClick={() => dispatchGameAction({ type: 'end_turn' })}>
         Avslutt tur →
       </button>
       {(state.gameState?.phase === 'playing' || state.gameState?.phase === 'setup') && (
@@ -138,19 +138,9 @@ function TurnIndicator() {
   if (!currentPlayer) return null;
 
   const round = state.gameState!.round ? ` – Runde ${state.gameState!.round}` : '';
-  const diceText = isServerGameState()
-    ? (currentPlayer.diceRoll !== null ? ` | Terning: ${currentPlayer.diceRoll} (trekk tilgjengelig)` : '')
-    : (currentPlayer.diceRoll !== null ? ` | Terning: ${currentPlayer.diceRoll} (brukt: ${currentPlayer.diceUsed})` : '');
-
-  if (!isServerGameState()) {
-    return (
-      <div id="turn-indicator">
-        <span style={{ color: currentPlayer.color }}>●</span> {currentPlayer.name}s tur{round}{diceText}
-      </div>
-    );
-  }
-
+  const diceText = (currentPlayer.diceRoll !== null ? ` | Terning: ${currentPlayer.diceRoll} (trekk tilgjengelig)` : '');
   const myPlayer = state.gameState?.players.find((player) => player.id === state.myPlayerId) ?? null;
+
   if (!myPlayer) return null;
 
   const turnText = isMyTurn()
@@ -195,10 +185,10 @@ type PlayerWithValidMoves = Player & { validMoves?: string[] };
 
 function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action) => void }) {
   const currentPlayer = getCurrentPlayer() as PlayerWithValidMoves | null;
-  const isMvpSetup = Boolean(isServerGameState() && state.gameState?.phase === 'setup');
+  const isSetupPhase = Boolean(state.gameState?.phase === 'setup');
   const myTurn = isMyTurn();
 
-  if (isMvpSetup) {
+  if (isSetupPhase) {
     const selectedCheckpointName = currentPlayer?.position
       ? CHECKPOINTS[currentPlayer.position.replace('_cp', '')]?.name ?? currentPlayer.position
       : null;
@@ -224,17 +214,15 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
     return (
       <div id="action-content">
         <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
-          {isServerGameState() && !myTurn ? `Venter på ${currentPlayer?.name ?? 'motspiller'}.` : 'Velg et område på kartet'}
+          {myTurn ? 'Velg et område på kartet' : `Venter på ${currentPlayer?.name ?? 'motspiller'}.`}
         </p>
-        {isServerGameState() ? (
-          <div style={{ marginTop: '12px' }}>
-            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'roll_dice' })} disabled={!myTurn || currentPlayer?.diceRoll !== null}>🎲 Kast terning</button>
-            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'end_turn' })} disabled={!myTurn}>Avslutt tur</button>
-            {!myTurn && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Du kan fortsatt inspisere kartet.</div>
+        <div style={{ marginTop: '12px' }}>
+          <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'roll_dice' })} disabled={!myTurn || currentPlayer?.diceRoll !== null}>🎲 Kast terning</button>
+          <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'end_turn' })} disabled={!myTurn}>Avslutt tur</button>
+          {!myTurn && (
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Du kan fortsatt inspisere kartet.</div>
             )}
-          </div>
-        ) : <RollDicePrompt dispatchGameAction={dispatchGameAction} />}
+        </div>
       </div>
     );
   }
@@ -248,7 +236,7 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
   const territory = isCheckpoint ? null : node as Territory;
   const district = territory ? DISTRICTS[territory.district] : null;
   const validMoves = currentPlayer?.validMoves ?? [];
-  const canMvpMove = Boolean(isServerGameState() && myTurn && currentPlayer?.diceRoll !== null && validMoves.includes(node.id));
+  const canMove = Boolean(myTurn && currentPlayer?.diceRoll !== null && validMoves.includes(node.id));
   const selectedNeighbors = (ADJACENCY as Record<string, string[]>)[node.id] ?? [];
 
 
@@ -285,10 +273,10 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
           ) : (
             <>
               <div className="stat">
-                <span className="stat-label">{isServerGameState() ? 'Units' : 'Bataljoner'}</span>
+                <span className="stat-label">Bataljoner</span>
                 <span>{territoryState.units}</span>
               </div>
-              {!isServerGameState() && territory && (
+              {territory?.price != null && (
                 <div className="stat">
                   <span className="stat-label">Pris</span>
                   <span style={{ color: 'var(--gold)' }}>{territory.price} kr</span>
@@ -300,22 +288,66 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
       </div>
 
       <div className="action-buttons">
-        {isServerGameState() ? (
-          <>
-            {!myTurn && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Venter på {currentPlayer?.name ?? 'motspiller'}. Du kan inspisere, men ikke handle.</div>
-            )}
-            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'roll_dice' })} disabled={!myTurn || currentPlayer?.diceRoll !== null}>🎲 Kast terning</button>
-            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'move_to_territory', territoryId: node.id })} disabled={!canMvpMove}>🚶 Flytt hit</button>
-            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'invade_territory', territoryId: node.id, fromTerritoryId: attackFromTerritoryId })} disabled={!canAttack}>⚔ Angrip område</button>
-            <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'end_turn' })} disabled={!myTurn}>Avslutt tur</button>
-            {myTurn && currentPlayer?.diceRoll !== null && (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Gyldige trekk: {validMoves.length}</div>
-            )}
-          </>
-        ) : territory ? (
-          <TerritoryActions territory={territory} territoryState={territoryState} currentPlayer={currentPlayer} dispatchGameAction={dispatchGameAction} />
-        ) : null}
+        {!myTurn && (
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+            Venter på {currentPlayer?.name ?? 'motspiller'}. Du kan inspisere, men ikke handle.
+          </div>
+        )}
+
+        <button
+          className="action-btn"
+          type="button"
+          onClick={() => dispatchGameAction({ type: 'roll_dice' })}
+          disabled={!myTurn || currentPlayer?.diceRoll !== null}
+        >
+          🎲 Kast terning
+        </button>
+          
+        <button
+          className="action-btn"
+          type="button"
+          onClick={() =>
+            dispatchGameAction({
+              type: 'move_to_territory',
+              territoryId: node.id,
+            })
+          }
+          disabled={!canMove}
+        >
+          🚶 Flytt hit
+        </button>
+  
+        {territory && (
+          <button
+            className="action-btn"
+            type="button"
+            onClick={() =>
+              dispatchGameAction({
+                type: 'invade_territory',
+                territoryId: territory.id,
+                fromTerritoryId: attackFromTerritoryId,
+              })
+            }
+            disabled={!canAttack}
+          >
+            ⚔ Angrip område
+          </button>
+        )}
+
+        <button
+          className="action-btn"
+          type="button"
+          onClick={() => dispatchGameAction({ type: 'end_turn' })}
+          disabled={!myTurn}
+        >
+          Avslutt tur
+        </button>
+  
+        {myTurn && currentPlayer?.diceRoll !== null && (
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+            Gyldige trekk: {validMoves.length}
+          </div>
+        )}
       </div>
     </div>
   );

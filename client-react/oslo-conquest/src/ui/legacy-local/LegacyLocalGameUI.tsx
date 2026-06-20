@@ -1,5 +1,5 @@
 import { ADJACENCY, CHECKPOINTS, MISSIONS } from '../../domains/game/model/game-data.js';
-import { getCurrentPlayer, isServerGameState, isMyTurn } from '../../domains/game/state/game-state.js';
+import { getCurrentPlayer, isMyTurn } from '../../domains/game/state/game-state.js';
 import { notifyGameChanged, state } from '../../domains/game/state/state.js';
 import { Player, RentModal, Territory } from '../../domains/game/types.js';
 
@@ -15,7 +15,6 @@ type Action = { type: string; [key: string]: unknown };
 type PlayerWithValidMoves = Player & { validMoves?: string[] };
 
 export function CheckpointBar() {
-  if (isServerGameState()) return null;
   const currentPlayer = getCurrentPlayer();
   if (!currentPlayer) return null;
 
@@ -71,7 +70,6 @@ export function TerritoryActions({ territory, territoryState, currentPlayer, dis
 }
 
 export function MissionCard({ setMissionRevealed }: { setMissionRevealed: (v: boolean) => void }) {
-  if (isServerGameState()) return null;
   const myPlayer = state.gameState!.players.find((player) => player.id === state.myPlayerId);
   if (!myPlayer) return null;
 

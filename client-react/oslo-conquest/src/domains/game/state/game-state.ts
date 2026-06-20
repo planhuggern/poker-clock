@@ -24,15 +24,6 @@ export function isMyTurn(): boolean {
   return getCurrentPlayer()?.id === state.myPlayerId;
 }
 
-export function isServerGameState(): boolean {
-  const gameState = state.gameState;
-  if (!gameState) return false;
-  // TODO: MVP/server compatibility.
-  // Server state currently uses player.side as a marker.
-  // Setup is also treated as server-controlled before activePlayer exists.
-  return Boolean(gameState.phase === 'setup' || gameState.players?.some((player) => player.side));
-}
-
 export function findPlayerByOwner(owner: string | null | undefined): Player | null {
   if (!owner || !state.gameState) return null;
   return findPlayerByRef(state.gameState.players, owner);
