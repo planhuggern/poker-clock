@@ -7,24 +7,24 @@ type MapAdapter = ReturnType<typeof createMapAdapter>;
 type Props = {
   gameState: GameState | null;
   selectedNodeId: string | null;
-  onSelectTerritory: (territoryId: string) => void;
+  onSelectNode: (nodeId: string) => void;
   localPlayerId?: string | null;
 };
 
-export function MapView({ gameState, selectedNodeId: selectedNodeId, onSelectTerritory, localPlayerId }: Props) {
+export function MapView({ gameState, selectedNodeId: selectedNodeId, onSelectNode: onSelectNode, localPlayerId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const adapterRef = useRef<MapAdapter | null>(null);
-  const onSelectTerritoryRef = useRef(onSelectTerritory);
+  const onSelectNodeRef = useRef(onSelectNode);
 
   useEffect(() => {
-    onSelectTerritoryRef.current = onSelectTerritory;
-  }, [onSelectTerritory]);
+    onSelectNodeRef.current = onSelectNode;
+  }, [onSelectNode]);
 
   useEffect(() => {
     if (!containerRef.current) return undefined;
 
     adapterRef.current = createMapAdapter(containerRef.current, {
-      onSelectTerritory: (territoryId) => onSelectTerritoryRef.current?.(territoryId),
+      onSelectNode: (nodeId) => onSelectNodeRef.current?.(nodeId),
     });
 
     return () => {
@@ -34,7 +34,7 @@ export function MapView({ gameState, selectedNodeId: selectedNodeId, onSelectTer
   }, []);
 
   useEffect(() => {
-    adapterRef.current?.update({ gameState, selectedTerritory: selectedNodeId, localPlayerId });
+    adapterRef.current?.update({ gameState, selectedNodeId: selectedNodeId, localPlayerId });
   }, [gameState, selectedNodeId, localPlayerId]);
 
   return <div id="map-container" ref={containerRef} />;

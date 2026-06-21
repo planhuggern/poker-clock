@@ -59,7 +59,7 @@ type TooltipWidget = {
 };
 type UpdateOptions = {
   gameState?: GameState | null;
-  selectedTerritory?: string | null;
+  selectedNodeId?: MapNode['id'] | null;
   localPlayerId?: string | null;
 };
 export type MapAdapter = {
@@ -198,7 +198,7 @@ function applyMapTransform(
 
 export function createMapAdapter(
   container: HTMLElement,
-  { onSelectTerritory }: { onSelectTerritory?: (id: string) => void } = {},
+  { onSelectNode: onSelectNode }: { onSelectNode?: (id: string) => void } = {},
 ): MapAdapter {
   container.innerHTML = "";
 
@@ -221,7 +221,7 @@ export function createMapAdapter(
   const districtNodes = new Map<string, Path>();
   const playerPieces = new Map<string, PlayerPiece>();
   let currentGameState: GameState | null = null;
-  let currentSelectedTerritory: string | null = null;
+  let currentSelectedNodeId: string | null = null;
   let currentLocalPlayerId: string | null = null;
 
   addDefs(draw);
@@ -342,7 +342,7 @@ export function createMapAdapter(
     group.on("mouseleave", () => tooltip.group.hide());
     group.on("pointerup", () => {
       if (panState.hasMoved) return;
-      onSelectTerritory?.(territoryId);
+      onSelectNode?.(territoryId);
     });
 
     territoryNodes.set(territoryId, { group, poly, units: null });
@@ -385,7 +385,7 @@ export function createMapAdapter(
     group.on("mouseleave", () => tooltip.group.hide());
     group.on("pointerup", () => {
       if (panState.hasMoved) return;
-      onSelectTerritory?.(terr.id);
+      onSelectNode?.(terr.id);
     });
 
     territoryNodes.set(terr.id, { group, poly, units });
@@ -440,11 +440,11 @@ export function createMapAdapter(
 
   function update({
     gameState = currentGameState,
-    selectedTerritory = currentSelectedTerritory,
+    selectedNodeId = currentSelectedNodeId,
     localPlayerId = currentLocalPlayerId,
   }: UpdateOptions = {}): void {
     currentGameState = gameState ?? null;
-    currentSelectedTerritory = selectedTerritory ?? null;
+    currentSelectedNodeId = selectedNodeId ?? null;
     currentLocalPlayerId = localPlayerId ?? null;
     if (!currentGameState) return;
     const renderGameState = currentGameState;
@@ -481,7 +481,7 @@ export function createMapAdapter(
       if (!nodes) continue;
 
       const territoryState = renderGameState.territories[territory.id];
-      const isSelected = currentSelectedTerritory === territory.id;
+      const isSelected = currentSelectedNodeId === territory.id;
       const isReachable = reachable.has(territory.id);
 
       if (territory.type === "checkpoint") {

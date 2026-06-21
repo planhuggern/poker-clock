@@ -7,8 +7,8 @@ import { MapView } from '../../domains/map/MapView.js';
 import { GameState, GameModal, DiceModal, RentModal, WinModal, Player, Territory, MapNode, TerritoryId, CheckpointId } from '../../domains/game/types.js';
 import { CheckpointBar, MissionCard, RentModalView} from '../legacy-local/LegacyLocalGameUI.js';
 import { playerMatchesRef } from '../../utils/player-utils.js';
+import { Action } from '../../domains/game/actions.js';
 
-type Action = { type: string; [key: string]: unknown };
 
 type GameUIProps = {
   gameState: GameState | null;
@@ -67,7 +67,7 @@ export function GameUI({
   return (
     <>
       <HUD dispatchGameAction={dispatchGameAction} />
-      <MapView gameState={gameState} selectedNodeId={selectedNodeId} onSelectTerritory={handleSelectNode} localPlayerId={myPlayerId} />
+      <MapView gameState={gameState} selectedNodeId={selectedNodeId} onSelectNode={handleSelectNode} localPlayerId={myPlayerId} />
       <TurnIndicator />
       {/* <CheckpointBar /> Not yet implemented in server*/}
       <LogPanel />
@@ -237,7 +237,7 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
   const district = territory ? DISTRICTS[territory.district] : null;
   const validMoves = currentPlayer?.validMoves ?? [];
   const canMove = Boolean(myTurn && currentPlayer?.diceRoll !== null && validMoves.includes(node.id));
-  const selectedNeighbors = (ADJACENCY as Record<string, string[]>)[node.id] ?? [];
+  const neighborNodeIds = (ADJACENCY as Record<string, string[]>)[node.id] ?? [];
 
 
   //TODO: Change when side is removed from server state.
@@ -247,7 +247,7 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
   };
 
   const attackFromTerritoryId = 
-    selectedNeighbors.find(
+    neighborNodeIds.find(
       (id) => currentPlayerOwns(state.gameState!.territories[id]?.owner)
     ) ?? null;
 
@@ -321,13 +321,15 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
           <button
             className="action-btn"
             type="button"
-            onClick={() =>
+            onClick={() => {
+              if (!territory || attackFromTerritoryId === null) return;
+
               dispatchGameAction({
                 type: 'invade_territory',
                 territoryId: territory.id,
                 fromTerritoryId: attackFromTerritoryId,
               })
-            }
+            }}
             disabled={!canAttack}
           >
             ⚔ Angrip område

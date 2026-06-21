@@ -6,6 +6,7 @@ export type PlayerRef = PlayerId | PlayerSide;
 export type TerritoryId = string;
 export type DistrictId = string;
 export type CheckpointId = string;
+export type MapNodeId = TerritoryId | CheckpointId;
 export type RoomId = string;
 export type ColorName = string;
 

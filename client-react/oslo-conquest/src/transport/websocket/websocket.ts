@@ -1,5 +1,5 @@
 import { notifyGameChanged, state } from '../../domains/game/state/state.js';
-import { GameState, GameModal, Handlers, RoomInfo } from '../../domains/game/types.js';
+import { GameState, GameModal, Handlers, RoomInfo, CheckpointId } from '../../domains/game/types.js';
 
 let pendingMessage: object | null = null;
 let activeUrl = '';
@@ -125,8 +125,12 @@ export function sendMove(toTerritoryId: string): void {
   sendWS({ type: 'move', playerId: state.myPlayerId, toTerritoryId });
 }
 
-export function sendChooseStartCheckpoint(checkpointTerritoryId: string): void {
-  sendWS({ type: 'choose_start_checkpoint', playerId: state.myPlayerId, checkpointTerritoryId });
+export function sendChooseStartCheckpoint(checkpointId: CheckpointId): void {
+  sendWS({
+    type: 'choose_start_checkpoint',
+    playerId: state.myPlayerId,
+    checkpointTerritoryId: checkpointId,
+  });
 }
 
 export function sendForfeit(): void {

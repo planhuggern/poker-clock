@@ -9,6 +9,7 @@ import { notifyGameChanged, state } from './domains/game/state/state.js';
 import { GameState, GameModal, Handlers, RoomInfo } from './domains/game/types.js';
 import { getCurrentPlayer } from '@shared/auth/authClient.js';
 import { findPlayerByRef, playerMatchesRef } from './utils/player-utils.js';
+import { Action } from './domains/game/actions.js';
 
 const SERVER_ORIGIN = import.meta.env.VITE_SERVER_URL
   || (typeof window !== 'undefined' ? window.location.origin : null)
@@ -122,7 +123,7 @@ export function App() {
     }
   }, [handlers, inGame]);
 
-  function dispatchGameAction(action: { type: string; [key: string]: unknown }): void {
+  function dispatchGameAction(action: Action): void {
     if (!gameState) return;
 
     if (action.type === 'forfeit') { sendForfeit(); return; }

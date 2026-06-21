@@ -2,7 +2,7 @@ import { ADJACENCY, CHECKPOINTS, MISSIONS } from '../../domains/game/model/game-
 import { getCurrentPlayer, isMyTurn } from '../../domains/game/state/game-state.js';
 import { notifyGameChanged, state } from '../../domains/game/state/state.js';
 import { Player, RentModal, Territory } from '../../domains/game/types.js';
-
+import { Action } from '../../domains/game/actions.js';
 /**
  * Legacy local-game UI.
  *
@@ -11,7 +11,6 @@ import { Player, RentModal, Territory } from '../../domains/game/types.js';
  * such as missions, checkpoint progress, rent, and local territory actions.
  */
 
-type Action = { type: string; [key: string]: unknown };
 type PlayerWithValidMoves = Player & { validMoves?: string[] };
 
 export function CheckpointBar() {
@@ -51,7 +50,7 @@ export function TerritoryActions({ territory, territoryState, currentPlayer, dis
           <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'buy_territory', territoryId: territory.id })} disabled={!neutral || currentPlayer.money < territory.price}>
             Kjøp av bank <span className="price">{territory.price} kr</span>
           </button>
-          <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'invade_territory', territoryId: territory.id })} disabled={!adjacent && currentPlayer.position !== territory.id}>
+          <button className="action-btn" type="button" onClick={() => dispatchGameAction({ type: 'invade_territory', territoryId: territory.id, fromTerritoryId: territory.id})} disabled={!adjacent && currentPlayer.position !== territory.id}>
             ⚔ Invader {territoryState.owner ? `(${territoryState.units} bat.)` : `(nøytral: ${territoryState.units} bat.)`}
           </button>
         </>

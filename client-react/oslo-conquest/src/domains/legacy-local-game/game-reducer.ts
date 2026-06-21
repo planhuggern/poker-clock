@@ -2,6 +2,7 @@ import { produce, Draft } from 'immer';
 import { GameState, Player, LogEntry, Mission, Territory, Checkpoint, MapNode, GameModal } from '../game/types.js';
 import { ADJACENCY, DISTRICTS, MISSIONS, TERRITORIES } from '../game/model/game-data.js';
 import { findPlayerByRef } from '../../utils/player-utils.js';
+import { Action } from '../game/actions.js';
 
 /**
  * Legacy local-game reducer.
@@ -18,15 +19,6 @@ type Context = {
   random: () => number;
   now?: () => string;
 };
-
-type Action =
-  | { type: 'roll_dice' }
-  | { type: 'move_to_position'; territoryId: string }
-  | { type: 'buy_territory'; territoryId: string }
-  | { type: 'invade_territory'; territoryId: string }
-  | { type: 'reinforce_territory'; territoryId: string }
-  | { type: 'pay_rent'; territoryId: string }
-  | { type: 'end_turn' };
 
 type Event =
   | { type: 'log'; message: string; level?: string }
