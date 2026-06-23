@@ -99,7 +99,7 @@ export function reduceGameAction(
     }
 
     if (action.type === 'move_to_position') {
-      moveToTerritory(draft, cp, action.territoryId, events, log, sendState);
+      moveToTerritory(draft, cp, action.nodeId, events, log, sendState);
       return;
     }
 

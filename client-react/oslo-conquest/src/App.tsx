@@ -137,9 +137,9 @@ export function App() {
     }
 
     if (!isPlayerTurn(gameState, myPlayerId)) return;
-    if (action.type === 'choose_start_checkpoint') sendChooseStartCheckpoint(action.checkpointTerritoryId as string);
+    if (action.type === 'choose_start_checkpoint') sendChooseStartCheckpoint(action.checkpointId as string);
     if (action.type === 'roll_dice') sendRollDice();
-    if (action.type === 'move_to_position') sendMove(action.territoryId as string);
+    if (action.type === 'move_to_position') sendMove(action.nodeId as string);
     if (action.type === 'end_turn') sendEndTurn();
     if (action.type === 'invade_territory') sendAttack(action.fromTerritoryId as string, action.territoryId as string);
   }

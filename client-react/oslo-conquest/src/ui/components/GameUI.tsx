@@ -48,7 +48,7 @@ export function GameUI({
     if (state.gameState?.phase === 'setup') {
       const territory = TERRITORIES.find((t) => t.id === nodeId);
       if (territory?.type !== 'checkpoint') return;
-      dispatchGameAction({ type: 'choose_start_checkpoint', checkpointTerritoryId: nodeId });
+      dispatchGameAction({ type: 'choose_start_checkpoint', checkpointId: nodeId });
       return;
     }
 
@@ -61,7 +61,7 @@ export function GameUI({
       currentPlayer.diceRoll !== null &&
       isValidMove
     ) {
-      dispatchGameAction({ type: 'move_to_position', territoryId: nodeId });
+      dispatchGameAction({ type: 'move_to_position', nodeId: nodeId });
     }
   }
 
@@ -310,14 +310,14 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
           onClick={() =>
             dispatchGameAction({
               type: 'move_to_position',
-              territoryId: node.id,
+              nodeId: node.id,
             })
           }
           disabled={!canMove}
         >
           🚶 Flytt hit
         </button>
-  
+
         {territory &&
           <AttackButton
             territory={territory}
@@ -326,7 +326,7 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
             dispatchGameAction={dispatchGameAction}
           />
         }
-
+  
         <button
           className="action-btn"
           type="button"
