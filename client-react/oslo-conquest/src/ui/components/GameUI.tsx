@@ -8,6 +8,7 @@ import { GameState, GameModal, DiceModal, RentModal, WinModal, Player, Territory
 import { CheckpointBar, MissionCard, RentModalView} from '../legacy-local/LegacyLocalGameUI.js';
 import { playerMatchesRef } from '../../utils/player-utils.js';
 import { Action } from '../../domains/game/actions.js';
+import { AttackButton } from './AttackButton.js';
 
 
 type GameUIProps = {
@@ -317,24 +318,14 @@ function ActionContent({ dispatchGameAction }: { dispatchGameAction: (a: Action)
           🚶 Flytt hit
         </button>
   
-        {territory && (
-          <button
-            className="action-btn"
-            type="button"
-            onClick={() => {
-              if (!territory || attackFromTerritoryId === null) return;
-
-              dispatchGameAction({
-                type: 'invade_territory',
-                territoryId: territory.id,
-                fromTerritoryId: attackFromTerritoryId,
-              })
-            }}
-            disabled={!canAttack}
-          >
-            ⚔ Angrip område
-          </button>
-        )}
+        {territory &&
+          <AttackButton
+            territory={territory}
+            canAttack={canAttack}
+            attackFromTerritoryId={attackFromTerritoryId}
+            dispatchGameAction={dispatchGameAction}
+          />
+        }
 
         <button
           className="action-btn"
