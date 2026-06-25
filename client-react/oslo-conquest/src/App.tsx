@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  connectWS, createGame, joinGame, refreshRooms, rejoinGame,
+  connectWS, createGame, createGameWithBot, joinGame, refreshRooms, rejoinGame,
   sendAttack, sendChooseStartCheckpoint, sendEndTurn,
   sendForfeit, sendMove, sendRollDice,
 } from './transport/websocket/websocket.js';
@@ -158,21 +158,17 @@ export function App() {
     return true;
   }
 
-  function handleCreateGame(): void {
+  function handleLobbyAction(wsFn: (opts: { url: string; name: string; room: string; handlers: typeof handlers }) => void): void {
     if (!requireLobbyFields()) return;
     if (blockIfPlayerAlreadyInRoom()) return;
-    createGame({ url: DEFAULT_WS_URL, name: playerName, room: effectiveRoomId, handlers });
+    wsFn({ url: DEFAULT_WS_URL, name: playerName, room: effectiveRoomId, handlers });
     setMyPlayerId(state.myPlayerId);
     localStorage.setItem('oslo-conquest-active-room', effectiveRoomId);
   }
 
-  function handleJoinGame(): void {
-    if (!requireLobbyFields()) return;
-    if (blockIfPlayerAlreadyInRoom()) return;
-    joinGame({ url: DEFAULT_WS_URL, name: playerName, room: effectiveRoomId, handlers });
-    setMyPlayerId(state.myPlayerId);
-    localStorage.setItem('oslo-conquest-active-room', effectiveRoomId);
-  }
+  function handleCreateGame(): void { handleLobbyAction(createGame); }
+  function handleJoinGame(): void { handleLobbyAction(joinGame); }
+  function handleCreateGameWithBot(): void { handleLobbyAction(createGameWithBot); }
 
   function handleSelectRoom(room: string): void {
     setRoomId(room);
@@ -210,6 +206,7 @@ export function App() {
             existingPlayerRoom={existingPlayerRoom}
             handleCreateGame={handleCreateGame}
             handleJoinGame={handleJoinGame}
+            handleCreateGameWithBot={handleCreateGameWithBot}
           />
           <LobbyRoomsColumn
             lobbyStatus={lobbyStatus}
@@ -242,9 +239,10 @@ type LobbyConnectionColumnProps = {
   existingPlayerRoom: RoomInfo | null;
   handleCreateGame: () => void;
   handleJoinGame: () => void;
+  handleCreateGameWithBot: () => void;
 };
 
-function LobbyConnectionColumn({ connectionStatus, playerName, setPlayerName, roomId, suggestedRoomId, setRoomId, existingPlayerRoom, handleCreateGame, handleJoinGame }: LobbyConnectionColumnProps) {
+function LobbyConnectionColumn({ connectionStatus, playerName, setPlayerName, roomId, suggestedRoomId, setRoomId, existingPlayerRoom, handleCreateGame, handleJoinGame, handleCreateGameWithBot }: LobbyConnectionColumnProps) {
   const roomBlocked = Boolean(existingPlayerRoom);
 
   return (
@@ -266,6 +264,7 @@ function LobbyConnectionColumn({ connectionStatus, playerName, setPlayerName, ro
       ) : null}
       <button className="btn primary" type="button" disabled={roomBlocked} onClick={handleCreateGame}>Opprett spill</button>
       <button className="btn" type="button" disabled={roomBlocked} onClick={handleJoinGame}>Bli med i spill</button>
+      <button className="btn" type="button" disabled={roomBlocked} onClick={handleCreateGameWithBot}>Opprett spill med bot</button>
     </section>
   );
 }

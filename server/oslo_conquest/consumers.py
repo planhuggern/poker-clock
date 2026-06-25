@@ -15,10 +15,12 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+from .bot import get_bot_action
 from .mvp import (
     add_player,
     attack,
     choose_start_checkpoint,
+    create_bot_room,
     create_waiting_room,
     end_turn,
     find_room_with_player,
@@ -61,6 +63,8 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
 
         if msg_type == "create_game":
             await self._handle_create(data)
+        elif msg_type == "create_game_with_bot":
+            await self._handle_create_with_bot(data)
         elif msg_type == "join_game":
             await self._handle_join(data)
         elif msg_type == "end_turn":
@@ -83,6 +87,12 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
     # ── Handlers ─────────────────────────────────────────────────────────────
 
     async def _handle_create(self, data: dict) -> None:
+        await self._handle_create_room(data, create_waiting_room)
+
+    async def _handle_create_with_bot(self, data: dict) -> None:
+        await self._handle_create_room(data, create_bot_room)
+
+    async def _handle_create_room(self, data: dict, room_factory) -> None:
         room = str(data.get("room") or "default")
         player = data.get("player") or {}
         self.player_id = str(player.get("id") or "")
@@ -91,7 +101,7 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
             await self._send_existing_room_error(existing_room)
             return
         await self._join_group(room)
-        _rooms[room] = create_waiting_room(room, player)
+        _rooms[room] = room_factory(room, player)
         await self._broadcast(room, {"type": "game_state", "state": _rooms[room]})
         await self._broadcast_room_list()
 
@@ -128,6 +138,7 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
         if error:
             await self.send(text_data=json.dumps({"type": "error", "message": error}))
             return
+        await self._maybe_run_bot_turn(self.room)
         await self._broadcast(
             self.room,
             {"type": "game_state", "state": _rooms[self.room]},
@@ -236,6 +247,27 @@ class OsloConquestConsumer(AsyncWebsocketConsumer):
 
     async def _handle_list_rooms(self) -> None:
         await self._send_room_list()
+
+    async def _maybe_run_bot_turn(self, room: str) -> None:
+        room_state = _rooms.get(room)
+        if not room_state:
+            return
+        bot_player = next(
+            (p for p in room_state.get("players", []) if p.get("isBot")),
+            None,
+        )
+        if not bot_player:
+            return
+        for _ in range(5):
+            action = get_bot_action(_rooms[room], bot_player["id"])
+            if not action:
+                return
+            if action["type"] == "choose_start_checkpoint":
+                _rooms[room], _ = choose_start_checkpoint(
+                    _rooms[room], bot_player["id"], action["checkpointId"]
+                )
+            elif action["type"] == "end_turn":
+                _rooms[room], _ = end_turn(_rooms[room], bot_player["id"])
 
     # ── Channel-layer receiver ────────────────────────────────────────────────
 

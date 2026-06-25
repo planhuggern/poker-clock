@@ -3,6 +3,7 @@
 import random
 
 from .board import ADJACENCY, CHECKPOINT_IDS, START_TERRITORIES, TERRITORY_IDS
+from .bot import BOT_PLAYER_ID, BOT_PLAYER_NAME
 
 PLAYER_SIDES = ("red", "blue")
 CHECKPOINT_SEQUENCE = ("lysaker_cp", "kolbotn_cp", "lørenskog_cp")
@@ -33,6 +34,7 @@ def assign_player(player: dict, side: str) -> dict:
         "side": side,
         "color": PLAYER_COLORS[side],
         "colorName": "Rød" if side == "red" else "Blå",
+        "isBot": bool(player.get("isBot", False)),
         "position": None,
         "diceRoll": None,
         "movesRemaining": 0,
@@ -42,6 +44,13 @@ def assign_player(player: dict, side: str) -> dict:
         "units": 10,
         "nextCheckpoint": None,
     }
+
+
+def create_bot_room(room: str, human_player: dict) -> dict:
+    room_state = create_waiting_room(room, human_player)
+    bot_player = {"id": BOT_PLAYER_ID, "name": BOT_PLAYER_NAME, "isBot": True}
+    room_state, _ = add_player(room_state, bot_player)
+    return room_state
 
 
 def add_player(room_state: dict, player: dict) -> tuple[dict, str | None]:

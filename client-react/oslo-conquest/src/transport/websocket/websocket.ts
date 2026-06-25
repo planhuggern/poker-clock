@@ -164,17 +164,30 @@ export function rejoinGame({ url, room, playerId, handlers: nextHandlers }: { ur
   sendWS({ type: 'rejoin_game', room, playerId });
 }
 
-export function createGame({ url, name, room, handlers: nextHandlers }: { url?: string; name?: string; room?: string; handlers?: Handlers } = {}): boolean {
+type CreateGameOpts = { url?: string; name?: string; room?: string; handlers?: Handlers };
+
+function _createGame(
+  { url, name, room, handlers: nextHandlers }: CreateGameOpts,
+  messageType: string,
+  statusSuffix: string,
+): boolean {
   setHandlers(nextHandlers);
   if (url) activeUrl = url.trim();
   const cleanName = name?.trim();
   const cleanRoom = room?.trim();
   if (!cleanName || !cleanRoom) { emit('onError', 'Fyll inn navn og rom-ID'); return false; }
-
   state.myPlayerId = nextPlayerId();
-  emit('onLobbyStatus', `Oppretter rom "${cleanRoom}"...`, false);
-  sendWS({ type: 'create_game', room: cleanRoom, player: { id: state.myPlayerId, name: cleanName } });
+  emit('onLobbyStatus', `Oppretter rom "${cleanRoom}"${statusSuffix}...`, false);
+  sendWS({ type: messageType, room: cleanRoom, player: { id: state.myPlayerId, name: cleanName } });
   return true;
+}
+
+export function createGame(opts: CreateGameOpts = {}): boolean {
+  return _createGame(opts, 'create_game', '');
+}
+
+export function createGameWithBot(opts: CreateGameOpts = {}): boolean {
+  return _createGame(opts, 'create_game_with_bot', ' med bot');
 }
 
 export function joinGame({ url, name, room, handlers: nextHandlers }: { url?: string; name?: string; room?: string; handlers?: Handlers } = {}): boolean {
