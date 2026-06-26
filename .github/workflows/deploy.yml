@@ -54,9 +54,6 @@ jobs:
             mkdir -p "$REPO/server/public${BASE_PATH}"
             cp -r "$REPO/client-react/dist/." "$REPO/server/public${BASE_PATH}/"
 
-            echo "=== traefik config ==="
-            sudo cp "$REPO/traefik/prod/poker-clock.yml" /etc/traefik/dynamic/poker-clock.yml
-
             echo "=== go build ==="
             export PATH="$PATH:$HOME/go-sdk/bin"
             cd "$REPO/server/go"
