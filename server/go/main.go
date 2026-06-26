@@ -19,7 +19,7 @@ func methodDispatch(handlers map[string]http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
-	fmt.Println("Starting server on :8080")
+	fmt.Println("Starting server on :8082")
 
 	cfg, err := loadConfig("../config.json")
 	if err != nil {
@@ -54,7 +54,9 @@ func main() {
 		requireAuth(cfg.JwtSecret, getTournamentByID(db, tournamentPath+"/")),
 	)
 
-	fmt.Println("Lytter på :8080")
+	fmt.Println("Lytter på :8082")
 
-	http.ListenAndServe(":8080", nil)
+	if err := http.ListenAndServe(":8082", nil); err != nil {
+		fmt.Println("Server-feil:", err)
+	}
 }
