@@ -25,7 +25,7 @@ _ALGORITHM = "HS256"
 
 
 def _secret() -> str:
-    return settings.SECRET_KEY
+    return settings.CONFIG["jwtSecret"]
 
 
 def sign_access_token(player_id: uuid.UUID) -> str:
