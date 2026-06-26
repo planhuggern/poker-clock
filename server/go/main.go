@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -56,7 +57,16 @@ func main() {
 
 	fmt.Println("Lytter på :8082")
 
-	if err := http.ListenAndServe(":8082", nil); err != nil {
+	// Traefik may or may not strip /pokerklokke before forwarding — handle both.
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.URL.Path = strings.TrimPrefix(r.URL.Path, "/pokerklokke")
+		if r.URL.Path == "" {
+			r.URL.Path = "/"
+		}
+		http.DefaultServeMux.ServeHTTP(w, r)
+	})
+
+	if err := http.ListenAndServe(":8082", handler); err != nil {
 		fmt.Println("Server-feil:", err)
 	}
 }
