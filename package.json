@@ -2,8 +2,9 @@
   "name": "poker-clock-dev",
   "private": true,
   "scripts": {
-    "dev": "concurrently --names VITE,DJANGO --prefix-colors cyan,green \"npm run dev --prefix client-react\" \"npm run dev:server\"",
-    "dev:server": "cd server && set DEBUG=true && .venv\\Scripts\\python.exe manage.py runserver [::]:8000"
+    "dev": "concurrently --names VITE,DJANGO,GO --prefix-colors cyan,green,yellow \"npm run dev --prefix client-react\" \"npm run dev:server\" \"npm run dev:go\"",
+    "dev:server": "cd server && set DEBUG=true && .venv\\Scripts\\python.exe manage.py runserver [::]:8000",
+    "dev:go": "cd server\\go && go run ."
   },
   "devDependencies": {
     "concurrently": "^9"
