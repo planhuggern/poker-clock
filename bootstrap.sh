@@ -227,29 +227,17 @@ EOF
     log "traefik.yml finnes allerede – hopper over (eksisterende konfig bevares)"
   fi
 
-  # Dynamic config: skriv til poker-clock.yml (ikke dynamic.yml) slik at
-  # andre tjenester sine konfig-filer i dynamic/-mappen ikke berøres.
-  #
-  # Ingen stripPrefix – Django får full path og håndterer BASE_PATH selv
-  # via portal/urls.py (register_spa).
-
-  cat > /etc/traefik/dynamic/poker-clock.yml <<EOF
-http:
-  routers:
-    poker-clock:
-      rule: "Host(\`${DOMAIN}\`) && PathPrefix(\`${BASE_PATH}\`)"
-      entryPoints:
-        - websecure
-      tls:
-        certResolver: letsencrypt
-      service: poker-clock-backend
-
-  services:
-    poker-clock-backend:
-      loadBalancer:
-        servers:
-          - url: "${BACKEND_URL}"
-EOF
+  # Dynamic config: symlink til repo-filen så den oppdateres automatisk med git pull.
+  # Filen inneholder ruter for både Django og Go-serveren.
+  local dynamic_target="/etc/traefik/dynamic/poker-clock.yml"
+  local dynamic_source="$REPO_DIR/traefik/prod/poker-clock.yml"
+  if [[ -L "$dynamic_target" && "$(readlink "$dynamic_target")" == "$dynamic_source" ]]; then
+    log "Traefik dynamic config: symlink finnes allerede – hopper over"
+  else
+    log "Setter opp symlink: $dynamic_target -> $dynamic_source"
+    rm -f "$dynamic_target"
+    ln -s "$dynamic_source" "$dynamic_target"
+  fi
 
   # Ensure ACME storage exists and is private
   if [[ ! -f /var/lib/traefik/acme.json ]]; then
