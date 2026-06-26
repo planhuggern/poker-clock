@@ -54,8 +54,18 @@ jobs:
             mkdir -p "$REPO/server/public${BASE_PATH}"
             cp -r "$REPO/client-react/dist/." "$REPO/server/public${BASE_PATH}/"
 
-            echo "=== restart service ==="
+            echo "=== traefik config ==="
+            sudo cp "$REPO/traefik/prod/poker-clock.yml" /etc/traefik/dynamic/poker-clock.yml
+
+            echo "=== go build ==="
+            export PATH="$PATH:$HOME/go-sdk/bin"
+            cd "$REPO/server/go"
+            go build -o holtebu-server .
+
+            echo "=== restart services ==="
             sudo systemctl restart poker-clock
+            sudo systemctl restart holtebu-server
             sleep 2
             systemctl is-active poker-clock
+            systemctl is-active holtebu-server
             echo "=== deploy OK ==="
