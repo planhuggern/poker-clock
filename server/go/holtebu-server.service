@@ -1,0 +1,20 @@
+# Referansefil — bootstrap.sh genererer den faktiske filen med riktige stier
+# og kopierer den til /etc/systemd/system/holtebu-server.service.
+#
+# WorkingDirectory må peke på server/go/ så den relative stien
+# ../config.json løser seg til server/config.json.
+
+[Unit]
+Description=Holtebu Server (Go)
+After=network.target poker-clock.service
+
+[Service]
+Type=simple
+User=REPLACE_APP_USER
+WorkingDirectory=REPLACE_REPO_DIR/server/go
+ExecStart=REPLACE_REPO_DIR/server/go/holtebu-server
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

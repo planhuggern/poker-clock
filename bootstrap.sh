@@ -32,7 +32,8 @@ TRAEFIK_VERSION="latest"  # 'latest' for automatisk, eller angi f.eks. v3.6.8
 TRAEFIK_USER="traefik"
 TRAEFIK_GROUP="traefik"
 
-APP_USER=""   # settes automatisk til SUDO_USER
+GO_SDK_DIR=""  # settes i main() etter APP_USER er kjent
+APP_USER=""    # settes automatisk til SUDO_USER
 
 usage() {
   cat <<'EOF'
@@ -355,6 +356,70 @@ setup_django() {
   log "React-build kopiert til $spa_dir"
 }
 
+install_go() {
+  if [[ -x "$GO_SDK_DIR/bin/go" ]]; then
+    log "Go allerede installert: $($GO_SDK_DIR/bin/go version)"
+    return
+  fi
+  require_cmd curl
+  local arch
+  arch="$(detect_arch)"
+  log "Henter siste Go-versjon fra go.dev..."
+  local go_version
+  go_version="$(curl -fsSL 'https://go.dev/dl/?mode=json' \
+    | grep -o '"version":"go[^"]*"' | head -1 | cut -d'"' -f4)"
+  [[ -n "$go_version" ]] || die "Kunne ikke hente Go-versjon fra go.dev"
+  local tarball="${go_version}.linux-${arch}.tar.gz"
+  local tmp
+  tmp="$(mktemp -d)"
+  log "Laster ned https://go.dev/dl/${tarball}..."
+  curl -fsSL "https://go.dev/dl/${tarball}" -o "$tmp/$tarball"
+  rm -rf "$GO_SDK_DIR"
+  mkdir -p "$GO_SDK_DIR"
+  tar -xzf "$tmp/$tarball" -C "$GO_SDK_DIR" --strip-components=1
+  chown -R "$APP_USER":"$APP_USER" "$GO_SDK_DIR"
+  rm -rf "$tmp"
+  log "Go installert: $($GO_SDK_DIR/bin/go version)"
+}
+
+build_go_server() {
+  local go_dir="$REPO_DIR/server/go"
+  log "Bygger Go-server..."
+  sudo -u "$APP_USER" bash -c \
+    "PATH=\"\$PATH:$GO_SDK_DIR/bin\" go build -C \"$go_dir\" -o holtebu-server ."
+  log "Go-server bygget: $go_dir/holtebu-server"
+}
+
+write_holtebu_server_systemd_unit() {
+  local go_dir="$REPO_DIR/server/go"
+  log "Skriver systemd-unit for holtebu-server (Go)"
+
+  cat > /etc/systemd/system/holtebu-server.service <<EOF
+[Unit]
+Description=Holtebu Server (Go)
+After=network.target poker-clock.service
+
+[Service]
+Type=simple
+User=${APP_USER}
+WorkingDirectory=${go_dir}
+ExecStart=${go_dir}/holtebu-server
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  systemctl daemon-reload
+  systemctl enable holtebu-server
+  systemctl restart holtebu-server
+  sleep 2
+  systemctl is-active --quiet holtebu-server \
+    && log "holtebu-server service: active" \
+    || { log "ADVARSEL: holtebu-server er IKKE aktiv. Sjekk: systemctl status holtebu-server"; systemctl status holtebu-server --no-pager || true; }
+}
+
 write_django_systemd_unit() {
   local server_dir="$REPO_DIR/server"
   local venv_dir="$server_dir/.venv"
@@ -397,6 +462,7 @@ main() {
   else
     APP_USER="$(logname 2>/dev/null || echo root)"
   fi
+  GO_SDK_DIR="$REAL_HOME/go-sdk"
 
   # Klon eller oppdater repoet først
   require_cmd git
@@ -425,11 +491,16 @@ main() {
   write_systemd_unit
   setup_django
   write_django_systemd_unit
+  install_go
+  build_go_server
+  write_holtebu_server_systemd_unit
 
   log "Ferdig."
-  log "  Traefik:     https://${DOMAIN}${BASE_PATH}"
-  log "  Django app:  http://127.0.0.1:8000  (via Traefik -> HTTPS)"
-  log "  Logg:        journalctl -u poker-clock -f"
+  log "  Traefik:        https://${DOMAIN}${BASE_PATH}"
+  log "  Django app:     http://127.0.0.1:8000  (via Traefik -> HTTPS)"
+  log "  Go server:      http://127.0.0.1:8082  (via Traefik -> ${BASE_PATH}/api/)"
+  log "  Logg Django:    journalctl -u poker-clock -f"
+  log "  Logg Go:        journalctl -u holtebu-server -f"
   sleep 1
   netstat -tuln
 }
