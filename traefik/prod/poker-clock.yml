@@ -11,7 +11,7 @@ http:
       tls:
         certResolver: letsencrypt
       service: poker-clock-backend
-      priority: 10
+      priority: 100
 
     holtebu-server:
       rule: "Host(`espen.holtebu.eu`) && PathPrefix(`/pokerklokke/api/`)"
@@ -22,7 +22,7 @@ http:
       service: holtebu-server-backend
       middlewares:
         - strip-pokerklokke
-      priority: 20
+      priority: 200
 
   services:
     poker-clock-backend:
