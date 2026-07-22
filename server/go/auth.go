@@ -25,6 +25,7 @@ func claimsFromContext(ctx context.Context) *Claims {
 }
 
 func parseToken(tokenString string, jwtSecret string) (*Claims, error) {
+	// Parse the JWT token and validate it using the provided secret.
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(t *jwt.Token) (any, error) {
 		return []byte(jwtSecret), nil
 	})
@@ -40,6 +41,7 @@ func parseToken(tokenString string, jwtSecret string) (*Claims, error) {
 	return claims, nil
 }
 
+// requireAuth is a middleware that checks for a valid JWT token in the Authorization header.
 func requireAuth(jwtSecret string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
@@ -55,7 +57,7 @@ func requireAuth(jwtSecret string, next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		if claims.TokenType != "access" {
-			http.Error(w, "Ugyldig token type", http.StatusUnauthorized)
+			http.Error(w, "invalid token type", http.StatusUnauthorized)
 			return
 		}
 

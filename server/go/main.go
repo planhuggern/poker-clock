@@ -45,14 +45,14 @@ func main() {
 	tournamentPath := "/api/tournaments"
 	http.HandleFunc(
 		tournamentPath,
-		requireAuth(cfg.JwtSecret, methodDispatch(map[string]http.HandlerFunc{
+		methodDispatch(map[string]http.HandlerFunc{
 			http.MethodGet:  listTournaments(db),
 			http.MethodPost: createTournament(db),
-		})),
+		}),
 	)
 	http.HandleFunc(
 		tournamentPath+"/",
-		requireAuth(cfg.JwtSecret, getTournamentByID(db, tournamentPath+"/")),
+		getTournamentByID(db, tournamentPath+"/"),
 	)
 
 	fmt.Println("Lytter på :8082")

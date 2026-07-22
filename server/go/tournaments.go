@@ -80,10 +80,6 @@ type createTournamentBody struct {
 func createTournament(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims := claimsFromContext(r.Context())
-		if claims == nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
 
 		var body createTournamentBody
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -109,10 +105,15 @@ func createTournament(db *sql.DB) http.HandlerFunc {
 
 		now := time.Now().UTC().Format("2006-01-02 15:04:05.000000")
 
+		var hostID any
+		if claims != nil {
+			hostID = claims.PlayerID
+		}
+
 		result, err := db.Exec(
 			`INSERT INTO clock_tournament (name, status, state_json, created_at, updated_at, host_id)
 			 VALUES (?, 'pending', ?, ?, ?, ?)`,
-			name, string(stateJSONBytes), now, now, claims.PlayerID,
+			name, string(stateJSONBytes), now, now, hostID,
 		)
 		if err != nil {
 			http.Error(w, "DB error", http.StatusInternalServerError)
