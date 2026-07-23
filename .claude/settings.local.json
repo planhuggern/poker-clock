@@ -35,7 +35,8 @@
       "PowerShell(ssh vps \"systemctl status holtebu-server --no-pager\")",
       "PowerShell(ssh vps \"curl -si https://espen.holtebu.eu/pokerklokke/api/tournaments | head -3\")",
       "PowerShell(ssh vps \"TOKEN=\\\\$\\(curl -s -X POST https://espen.holtebu.eu/pokerklokke/auth/guest/ | python3 -c 'import sys,json; print\\(json.load\\(sys.stdin\\)[\\\\\"access\\\\\"]\\)'\\) && curl -si https://espen.holtebu.eu/pokerklokke/api/tournaments -H \\\\\"Authorization: Bearer \\\\$TOKEN\\\\\" | head -5\")",
-      "PowerShell(ssh vps 'TOKEN=$\\(curl -s -X POST https://espen.holtebu.eu/pokerklokke/auth/guest/ | python3 -c \"import sys,json; print\\(json.load\\(sys.stdin\\)[\\\\\"access\\\\\"]\\)\"\\) && curl -si https://espen.holtebu.eu/pokerklokke/api/tournaments -H \"Authorization: Bearer $TOKEN\" | head -5')"
+      "PowerShell(ssh vps 'TOKEN=$\\(curl -s -X POST https://espen.holtebu.eu/pokerklokke/auth/guest/ | python3 -c \"import sys,json; print\\(json.load\\(sys.stdin\\)[\\\\\"access\\\\\"]\\)\"\\) && curl -si https://espen.holtebu.eu/pokerklokke/api/tournaments -H \"Authorization: Bearer $TOKEN\" | head -5')",
+      "PowerShell(head *)"
     ]
   }
 }
