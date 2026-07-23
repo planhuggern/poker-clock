@@ -1,6 +1,7 @@
 package main
 
 import (
+	"holtebu-server/db"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -21,7 +22,7 @@ func newTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 
 	dbPath := filepath.Join(t.TempDir(), "test.sqlite")
-	db, err := openDatabase(dbPath)
+	db, err := db.Open(dbPath)
 	if err != nil {
 		t.Fatalf("openDatabase: %v", err)
 	}
