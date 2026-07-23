@@ -8,7 +8,9 @@ import (
 	_ "modernc.org/sqlite"
 
 	"holtebu-server/config"
+	"holtebu-server/db"
 )
+
 
 func methodDispatch(handlers map[string]http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +34,7 @@ func main() {
 
 	dbPath := "../" + cfg.SqliteFile
 
-	db, err := openDatabase(dbPath)
+	db, err := db.Open(dbPath)
 	if err != nil {
 		fmt.Println("Error opening database:", err)
 		return
