@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"net"
 	"fmt"
 	"net/http"
 	"strings"
@@ -11,6 +13,20 @@ import (
 	"holtebu-server/db"
 )
 
+func addressWithPort() string {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8082"
+	}
+
+	host := os.Getenv("HOST")
+	if host == "" {
+		host = "127.0.0.1"
+	}
+
+	addr := net.JoinHostPort(host, port)
+	return addr
+}
 
 func methodDispatch(handlers map[string]http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +40,8 @@ func methodDispatch(handlers map[string]http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
-	fmt.Println("Starting server on :8082")
+	addr := addressWithPort()
+	fmt.Println("Starting server on", addr)
 
 	cfg, err := config.LoadConfig("../config.json")
 	if err != nil {
@@ -59,7 +76,7 @@ func main() {
 		getTournamentByID(db, tournamentPath+"/"),
 	)
 
-	fmt.Println("Lytter på :8082")
+	fmt.Println("Lytter på", addr, "...")
 
 	// Traefik may or may not strip /pokerklokke before forwarding — handle both.
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +87,7 @@ func main() {
 		http.DefaultServeMux.ServeHTTP(w, r)
 	})
 
-	if err := http.ListenAndServe(":8082", handler); err != nil {
+	if err := http.ListenAndServe(addr, handler); err != nil {
 		fmt.Println("Server-feil:", err)
 	}
 }
