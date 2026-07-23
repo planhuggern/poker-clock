@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	_ "modernc.org/sqlite"
+
+	"holtebu-server/config"
 )
 
 func methodDispatch(handlers map[string]http.HandlerFunc) http.HandlerFunc {
@@ -22,7 +24,7 @@ func methodDispatch(handlers map[string]http.HandlerFunc) http.HandlerFunc {
 func main() {
 	fmt.Println("Starting server on :8082")
 
-	cfg, err := loadConfig("../config.json")
+	cfg, err := config.LoadConfig("../config.json")
 	if err != nil {
 		fmt.Println("Config-feil:", err)
 		return
