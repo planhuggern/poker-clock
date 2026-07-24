@@ -177,18 +177,30 @@ Navngivingsregel for ny Go-kode:
 - "Første slice" betyr bare liten leveranse, ikke at spillet skal bygges som en
   separat MVP ved siden av det ekte spillet.
 
+Identitetsregel 2026-07-25:
+- `side` skal utryddes i ny Go-kode. Ikke definer `Side`, `Red`, `Blue` eller
+  `PlayerSide`.
+- Spillere identifiseres med `PlayerID`.
+- `activePlayer`, `winner` og territory `owner` skal være `PlayerID`/`null`,
+  ikke `"red"`/`"blue"`.
+- Farge/navn kan fortsatt være presentasjonsfelter på spiller (`color`,
+  `colorName`), men de skal ikke brukes som spillidentitet.
+- Dette er en bevisst kontraktsendring fra dagens Django-server. React-klienten
+  må justeres når Go-serveren kobles inn.
+
 ### Oslo Conquest-steg
 
 - [x] **3. Les og lås protokoll + state-kontrakt før koding** — ferdig
-      2026-07-24. Kontrakt er dokumentert under "Oslo Conquest
-      protokollkontrakt" nedenfor. Første Go-port skal være kompatibel med
-      dagens React-klient og Django-testene, ikke den bredere fremtidige
-      specen.
+      2026-07-24, justert 2026-07-25. Kontrakt er dokumentert under
+      "Oslo Conquest protokollkontrakt" nedenfor. Første Go-port skal følge
+      dagens spillflyt, men med ny identitetskontrakt: `PlayerID` erstatter
+      `side`.
 - [ ] **4. Opprett `osloconquest` package med rene domenetyper** — port
       board-konstanter (`TERRITORY_IDS`, `CHECKPOINT_IDS`, `ADJACENCY`) og
-      definer typed `Room`, `Player`, `Territory`, `Side`, `Phase`. Start med
-      tester for initielt rom og board-invarianter. Ikke WebSocket ennå.
-      Lærer: Go-structs, maps/slices, typed constants og table-driven tests.
+      definer typed `Room`, `Player`, `Territory`, `PlayerID`, `Phase`. Ikke
+      definer `Side`. Start med tester for initielt rom og board-invarianter.
+      Ikke WebSocket ennå. Lærer: Go-structs, maps/slices, typed constants og
+      table-driven tests.
 - [ ] **5. Port romopprettelse og spillerflyt** — implementer rene funksjoner
       tilsvarende `create_waiting_room`, `create_bot_room`, `add_player`,
       `find_room_with_player` og `summarize_rooms`. Test happy path og
@@ -253,9 +265,10 @@ Kilder lest 2026-07-24:
 - `server/tests/test_oslo_conquest_consumer.py`
 - `memory/oslo-conquest-spec.md`
 
-Første Go-port skal bevare dagens klientkontrakt. `memory/oslo-conquest-spec.md`
-er retning for videre spillutvikling, men er ikke kontrakten for første port når
-den avviker fra Django/React.
+Første Go-port skal bevare dagens spillflyt, men ikke videreføre dagens
+`side`-baserte identitet. `memory/oslo-conquest-spec.md` er retning for videre
+spillutvikling, men er ikke kontrakten for første port når den avviker fra
+Django/React.
 
 **WebSocket endpoint**
 - Dagens Django endpoint: `/ws/oslo-conquest/`
@@ -302,8 +315,8 @@ Room-list skal ikke inkludere full `territories`-state.
 - `room`
 - `phase`: `"waiting"`, `"setup"`, `"playing"` eller `"finished"`
 - `started`
-- `activePlayer`: `"red"`, `"blue"` eller `null`
-- `winner`: `"red"`, `"blue"` eller fraværende/null
+- `activePlayer`: `PlayerID` eller `null`
+- `winner`: `PlayerID` eller fraværende/null
 - `players`: liste av spillere
 - `territories`: map fra territory/checkpoint-id til territory-state
 - `log`: liste av `{msg,type,time}`
@@ -311,8 +324,6 @@ Room-list skal ikke inkludere full `territories`-state.
 **Player minimum**
 - `id`
 - `name`
-- `side`: `"red"` eller `"blue"` (klienten har TODO om å fjerne dette senere,
-  men dagens server/klient bruker `side` for tur og winner)
 - `color`
 - `colorName`
 - `isBot`
@@ -326,15 +337,15 @@ Room-list skal ikke inkludere full `territories`-state.
 - `nextCheckpoint`
 
 **Territory state**
-- For vanlige territorier: `{id, owner, units}` der owner er `"red"`, `"blue"`
+- For vanlige territorier: `{id, owner, units}` der owner er `PlayerID`
   eller `null`.
 - For checkpoints: `{id, owner:null, units:0}`.
 
 **Første Go-port følger dagens Django-regler**
-- 2 spillere: `red`, så `blue`.
-- `create_game` oppretter waiting-room med red.
-- `join_game` legger til blue og starter setup når rommet er fullt.
-- `create_game_with_bot` oppretter red + bot-blue og starter setup.
+- 2 spillere per rom.
+- `create_game` oppretter waiting-room med første spiller.
+- `join_game` legger til andre spiller og starter setup når rommet er fullt.
+- `create_game_with_bot` oppretter menneskelig spiller + bot og starter setup.
 - Setup: hver spiller må velge checkpoint og avslutte tur før `playing`.
 - `roll_dice` setter `diceRoll`, `movesRemaining` og `validMoves`.
 - `move` krever terningkast og gyldig destination; checkpoint-bonus beholdes.
