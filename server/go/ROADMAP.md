@@ -56,10 +56,12 @@ er ferdig, i stedet for å slette det.
       fortsatt Claudes opprinnelige (feilaktig selvskrevne) utkast — Espen
       valgte bevisst å beholde dem som de er, ikke skrive dem om. Alt
       kompilerer og passerer (`go test ./...`).
-- [ ] **2. Restrukturer til package + `cmd/`-mønster** — forberedelse for at
-      oslo-conquest også skal bli Go i samme modul (se "Struktur-beslutning"
-      under). Ikke et poker-clock-feature-steg, men infrastruktur som må på
-      plass før oslo-conquest-arbeidet starter.
+- [x] **2. Restrukturer til package + `cmd/`-mønster** — ferdig 2026-07-24.
+      Go-koden er delt i packages (`auth`, `config`, `db`, `pokerclock`) og
+      kjørbar server ligger i `cmd/holtebu-server`. Build-kommandoer i
+      `bootstrap.sh` og GitHub Actions peker på `./cmd/holtebu-server`.
+      Verifisert av Espen med `go test ./...` og
+      `go build -o holtebu-server ./cmd/holtebu-server`.
 
 ### Poker-clock-steg — PÅ VENT (lavere prioritet enn oslo-conquest)
 

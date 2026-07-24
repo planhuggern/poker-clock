@@ -374,7 +374,7 @@ build_go_server() {
   local go_dir="$REPO_DIR/server/go"
   log "Bygger Go-server..."
   sudo -u "$APP_USER" bash -c \
-    "PATH=\"\$PATH:$GO_SDK_DIR/bin\" go build -C \"$go_dir\" -o holtebu-server ."
+    "PATH=\"\$PATH:$GO_SDK_DIR/bin\" go build -C \"$go_dir\" -o holtebu-server ./cmd/holtebu-server"
   log "Go-server bygget: $go_dir/holtebu-server"
 }
 

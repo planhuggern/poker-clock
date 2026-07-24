@@ -57,7 +57,7 @@ jobs:
             echo "=== go build ==="
             export PATH="$PATH:$HOME/go-sdk/bin"
             cd "$REPO/server/go"
-            go build -o holtebu-server .
+            go build -o holtebu-server ./cmd/holtebu-server
 
             echo "=== restart services ==="
             sudo systemctl restart poker-clock
