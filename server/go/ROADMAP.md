@@ -9,6 +9,23 @@ steg eller endrer retning — ikke la den bli stale.
 Prinsipp: vertikale skiver. Hvert steg skal ende med noe som kjører og kan
 testes, ikke halvferdig kode (jf. `AGENTS.md`).
 
+## Viktig: denne roadmapen bruker ikke feature-workflowen
+
+Arbeid som følger denne filen skal **ikke** kjøres gjennom
+`.ai/workflows/feature.workflow.md` som streng state machine. Roadmapen er
+selv arbeidsflyten for Go-læringen.
+
+Konsekvens:
+- Ikke start "Steg 1 - Analytikeravklaring" fra feature-workflowen når vi sier
+  at vi skal fortsette på denne roadmapen.
+- Ikke stopp ved feature-workflowens godkjenningsporter med mindre Espen
+  eksplisitt ber om det.
+- Følg i stedet rekkefølgen og samarbeidsformen i denne filen: Espen skriver
+  koden, assistenten forklarer, peker på relevante filer, reviewer og kjører
+  verktøy/tester.
+- Vanlige prosjektregler gjelder fortsatt: små steg, tester der det gir mening,
+  ingen scope creep, og oppdater roadmapen når et steg fullføres eller endres.
+
 ## Samarbeidsform
 
 **Espen skriver koden. Claude guider, forklarer og reviewer — skriver ikke
@@ -27,14 +44,17 @@ Go, ikke å få en Go-backend generert. Rollen til Claude i denne planen:
 ## Status i dag
 
 `server/go/` inneholder:
-- `main.go` — HTTP-routing (`net/http`), `/pokerklokke`-prefix-stripping
-- `config.go` — leser `../config.json`
-- `db.go` — SQLite-tilkobling (`modernc.org/sqlite`)
-- `auth.go` — JWT-parsing (`golang-jwt/jwt/v5`) + `requireAuth`-middleware
+- `cmd/holtebu-server/main.go` — HTTP-routing (`net/http`),
+  `/pokerklokke`-prefix-stripping og wiring av packages
+- `config/config.go` — leser `../config.json`
+- `db/db.go` — SQLite-tilkobling (`modernc.org/sqlite`)
+- `auth/auth.go` — JWT-parsing (`golang-jwt/jwt/v5`) + auth-middleware
   (**for øyeblikket ikke koblet inn noe sted, bevisst utsatt** — se steg 6)
-- `tournaments.go` — `GET/POST /api/tournaments`, `GET /api/tournaments/{id}`
+- `pokerclock/tournaments.go` — `GET/POST /api/tournaments`,
+  `GET /api/tournaments/{id}`
 
-Ingen Go-tester finnes ennå (`go test ./...` → "no test files").
+Go-tester finnes for eksisterende poker-clock-handlers og main-routing
+(`go test ./...` passerer).
 
 Tilsvarende Django-endepunkter (`server/clock/urls.py`) som **ikke** er
 portet ennå:
@@ -132,19 +152,211 @@ kommandoen oppdateres til å peke på `./cmd/holtebu-server` — ellers
 feiler deploy. Ta dette eksplisitt når restruktureringen faktisk gjøres,
 ikke bare i farten.
 
-## Oslo Conquest → Go (ny retning, ikke brutt ned i steg ennå)
+## Oslo Conquest → Go
 
 Kilde å porte fra: `server/oslo_conquest/` (Django-app, WS-consumer via
 Channels — se `oslo_conquest/consumers.py`, `oslo_conquest/routing.py`,
 mounted på `/ws/oslo-conquest/`). Ingen DB-persistens i dag (`_rooms` i
 minnet), jf. `memory/oslo-conquest-spec.md`.
 
-Denne planen er ikke brutt ned i konkrete steg ennå — det gjør vi når
-struktur-steget (package + `cmd/`) er unnagjort og vi faktisk starter.
-Grovt sett venter: WebSocket-håndtering i Go (`net/http` sin
-`ResponseWriter`-hijacking eller et bibliotek som `gorilla/websocket`/
-`nhooyr.io/websocket` — ikke avgjort), og in-memory concurrency-sikker
-romtilstand (goroutines/channels eller mutex-beskyttet map).
+Viktig retning 2026-07-25: Vi skal ikke lage "en ny MVP" og vi skal ikke
+videreføre `mvp` som fil-/package-navn i Go-koden. Python-kilden heter
+`server/oslo_conquest/mvp.py` av historiske grunner, men Go-porten skal
+modelleres som selve Oslo Conquest-spillet.
+
+Mål for første Go-versjon: portere dagens server-autoritære spillkontrakt uten
+DB-persistens. Det betyr rom/lobby i minnet, to spillere per rom, bot-rom,
+startcheckpoint/setup, terning, flytting, angrep, forfeit, rejoin og room-list.
+Full økonomi, oppdragskort og DB-persistens er fortsatt utenfor første slice.
+
+Navngivingsregel for ny Go-kode:
+- Bruk `osloconquest` som package.
+- Bruk filer som `board.go`, `types.go`, `game.go`, `rooms.go`, `turns.go`,
+  `combat.go`, `bot.go`, `store.go` og `websocket.go` når de trengs.
+- Ikke opprett `mvp.go`, `mvp_test.go`, `mvp/` eller andre nye `mvp`-navn.
+- "Første slice" betyr bare liten leveranse, ikke at spillet skal bygges som en
+  separat MVP ved siden av det ekte spillet.
+
+### Oslo Conquest-steg
+
+- [x] **3. Les og lås protokoll + state-kontrakt før koding** — ferdig
+      2026-07-24. Kontrakt er dokumentert under "Oslo Conquest
+      protokollkontrakt" nedenfor. Første Go-port skal være kompatibel med
+      dagens React-klient og Django-testene, ikke den bredere fremtidige
+      specen.
+- [ ] **4. Opprett `osloconquest` package med rene domenetyper** — port
+      board-konstanter (`TERRITORY_IDS`, `CHECKPOINT_IDS`, `ADJACENCY`) og
+      definer typed `Room`, `Player`, `Territory`, `Side`, `Phase`. Start med
+      tester for initielt rom og board-invarianter. Ikke WebSocket ennå.
+      Lærer: Go-structs, maps/slices, typed constants og table-driven tests.
+- [ ] **5. Port romopprettelse og spillerflyt** — implementer rene funksjoner
+      tilsvarende `create_waiting_room`, `create_bot_room`, `add_player`,
+      `find_room_with_player` og `summarize_rooms`. Test happy path og
+      avvisninger: fullt rom, samme spiller i annet rom, ukjent/blank spiller.
+      Lærer: funksjoner som returnerer `(state, error)` uten global mutasjon.
+- [ ] **6. Port setup og turregler uten WebSocket** — implementer
+      `choose_start_checkpoint`, `roll_dice`, `move`, `end_turn` og `forfeit`
+      som testbare domenefunksjoner. Gjør terningkast injiserbart i tester
+      (f.eks. liten `Dice`-funksjon), ikke hardkod `rand.Intn` inne i logikken.
+      Lærer: dependency injection i Go uten framework.
+- [ ] **7. Port kampreglene som egen vertikal skive** — implementer dagens
+      Django-angrep først (`fromTerritoryId` → `toTerritoryId`) før eventuell
+      full mass-attack fra specen. Test nabo-validering, eier-validering,
+      seier/tap, units-endringer og winner-threshold. Lærer: komplekse
+      state-overganger med små tester.
+- [ ] **8. Velg WebSocket-bibliotek og lag minimal server** — velg mellom
+      stdlib-hijacking, `gorilla/websocket` og `nhooyr.io/websocket` før koding.
+      Anbefalt beslutning for læring: bruk et lite bibliotek, sannsynligvis
+      `nhooyr.io/websocket`, og hold resten av koden i egne packages. Lag
+      `cmd/oslo-conquest/main.go` eller wire Oslo Conquest inn i eksisterende
+      `cmd/holtebu-server` etter en eksplisitt beslutning. Lærer:
+      WebSocket-oppgradering, read-loop/write-loop og JSON-protokoll.
+- [ ] **9. Implementer concurrency-sikker room store** — erstatt Django sin
+      globale `_rooms` med en Go-store. Start med `sync.Mutex`/`sync.RWMutex`
+      rundt map for enkelhet; vurder per-room goroutine/channels senere hvis
+      behovet faktisk oppstår. Test med parallelle room-operasjoner. Lærer:
+      race-sikker delt tilstand; kjør `go test -race ./...` når mulig.
+- [ ] **10. Koble WebSocket-handlers til domenelogikken** — støtt minst
+      `create_game`, `create_game_with_bot`, `join_game`, `rejoin_game`,
+      `list_rooms`, `choose_start_checkpoint`, `roll_dice`, `move`, `attack`,
+      `end_turn` og `forfeit`. Serveren skal sende samme hovedtyper som
+      klienten forventer: `game_state`, `room_list`, `error`. Lærer:
+      protokoll-dispatch uten stor uoversiktlig switch hvis mønsteret blir
+      tungt.
+- [ ] **11. Bot som vanlig regelbruker** — port `bot.py` minimalt: bot velger
+      checkpoint i setup og avslutter tur i playing, via samme action-path som
+      en menneskelig spiller. Ikke gi boten snarveier inn i state. Lærer:
+      separere beslutning fra mutasjon.
+- [ ] **12. Lokal integrasjon mot klienten** — pek klienten mot Go-WS lokalt
+      og spill gjennom: create room, join/rejoin, bot-room, setup, roll, move,
+      attack, end_turn, forfeit. Fiks bare kontraktbrudd som hindrer dagens
+      spillflyt.
+      Lærer: ende-til-ende debugging mellom React og Go.
+- [ ] **13. Drift/utrulling etter eksplisitt beslutning** — bestem om
+      Oslo Conquest skal kjøres som egen binary/service eller samme
+      `holtebu-server`-binary. Oppdater Traefik/systemd/bootstrap/GitHub
+      Actions først når lokal flyt er verifisert. Lærer: deploy-konsekvenser
+      av Go package/cmd-valg.
+- [ ] **14. Rydding og Django-paritetssjekk** — sammenlign Go mot Django én
+      gang til. Kryss av hva som kan slettes senere og hva Django fortsatt må
+      eie. Ikke slett Django-implementasjonen før Go-versjonen er kjørt lokalt
+      med klienten og deploy-planen er klar.
+
+### Oslo Conquest protokollkontrakt (låst for første Go-port)
+
+Kilder lest 2026-07-24:
+- `client-react/oslo-conquest/src/transport/websocket/websocket.ts`
+- `client-react/oslo-conquest/src/App.tsx`
+- `client-react/oslo-conquest/src/domains/game/types.ts`
+- `server/oslo_conquest/consumers.py`
+- `server/oslo_conquest/mvp.py` (historisk navn; skal ikke kopieres til Go)
+- `server/tests/test_oslo_conquest_consumer.py`
+- `memory/oslo-conquest-spec.md`
+
+Første Go-port skal bevare dagens klientkontrakt. `memory/oslo-conquest-spec.md`
+er retning for videre spillutvikling, men er ikke kontrakten for første port når
+den avviker fra Django/React.
+
+**WebSocket endpoint**
+- Dagens Django endpoint: `/ws/oslo-conquest/`
+- Go-versjonen må lokalt kunne tilby samme path når klientintegrasjon testes.
+
+**Client → server**
+- `{"type":"list_rooms"}`
+- `{"type":"create_game","room":string,"player":{"id":string,"name":string}}`
+- `{"type":"create_game_with_bot","room":string,"player":{"id":string,"name":string}}`
+- `{"type":"join_game","room":string,"player":{"id":string,"name":string}}`
+- `{"type":"rejoin_game","room":string,"playerId":string}`
+- `{"type":"choose_start_checkpoint","playerId"?:string,"checkpointTerritoryId":string}`
+- `{"type":"roll_dice","playerId"?:string}`
+- `{"type":"move","playerId"?:string,"toTerritoryId":string}`
+- `{"type":"attack","playerId"?:string,"fromTerritoryId":string,"toTerritoryId":string}`
+- `{"type":"end_turn","playerId"?:string}`
+- `{"type":"forfeit","playerId"?:string}`
+
+`playerId` er valgfritt i flere meldinger fordi Django fallbacker til
+connectionens spiller-id der det finnes. Go-porten bør støtte samme toleranse.
+
+**Server → client**
+- `{"type":"room_list","rooms":[RoomInfo...]}`
+- `{"type":"game_state","state":GameState}`
+- `{"type":"error","message":string}`
+
+Klienten kan også lese `action_result`, men Django-consumeren bruker ikke det i
+dag. Første Go-port trenger derfor ikke sende `action_result`.
+
+**RoomInfo**
+- `room`
+- `playerCount`
+- `maxPlayers`
+- `started`
+- `phase`
+- `status` (`"waiting"` eller `"started"`)
+- `ownerId`
+- `playerIds`
+- `players` (spillernavn)
+
+Room-list skal ikke inkludere full `territories`-state.
+
+**GameState minimum**
+- `room`
+- `phase`: `"waiting"`, `"setup"`, `"playing"` eller `"finished"`
+- `started`
+- `activePlayer`: `"red"`, `"blue"` eller `null`
+- `winner`: `"red"`, `"blue"` eller fraværende/null
+- `players`: liste av spillere
+- `territories`: map fra territory/checkpoint-id til territory-state
+- `log`: liste av `{msg,type,time}`
+
+**Player minimum**
+- `id`
+- `name`
+- `side`: `"red"` eller `"blue"` (klienten har TODO om å fjerne dette senere,
+  men dagens server/klient bruker `side` for tur og winner)
+- `color`
+- `colorName`
+- `isBot`
+- `position`
+- `diceRoll`
+- `movesRemaining`
+- `validMoves`
+- `setupConfirmed`
+- `money`
+- `units`
+- `nextCheckpoint`
+
+**Territory state**
+- For vanlige territorier: `{id, owner, units}` der owner er `"red"`, `"blue"`
+  eller `null`.
+- For checkpoints: `{id, owner:null, units:0}`.
+
+**Første Go-port følger dagens Django-regler**
+- 2 spillere: `red`, så `blue`.
+- `create_game` oppretter waiting-room med red.
+- `join_game` legger til blue og starter setup når rommet er fullt.
+- `create_game_with_bot` oppretter red + bot-blue og starter setup.
+- Setup: hver spiller må velge checkpoint og avslutte tur før `playing`.
+- `roll_dice` setter `diceRoll`, `movesRemaining` og `validMoves`.
+- `move` krever terningkast og gyldig destination; checkpoint-bonus beholdes.
+- `attack` er dagens enkle Django-angrep fra `fromTerritoryId` til
+  `toTerritoryId`. Full mass-attack fra specen er videre spillutvikling, ikke
+  del av første Go-slice.
+- `end_turn` bytter aktiv spiller og nullstiller dice/moves.
+- `forfeit` setter `winner` og `phase:"finished"`.
+- `rejoin_game` sender full `game_state` hvis rom og spiller finnes, ellers
+  `error` og oppdatert `room_list`.
+- Ukjente/ugyldige actions bør ikke mutere state; returner `error` når dagens
+  Django gjør det.
+
+**Bevisst utsatt fra første port**
+- `pickup_units`
+- `drop_units`
+- `buy_territory`
+- full mobil hær-modell fra specen
+- mass attack med support-map
+- oppdragskort
+- full økonomi/leie/bydelsbonus
+- DB-persistens
 
 ## Ikke-mål (foreløpig)
 
