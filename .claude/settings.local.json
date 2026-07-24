@@ -30,13 +30,9 @@
       "PowerShell(npx vitest run 2>&1 | Select-Object -Last 20)",
       "PowerShell(npx vitest run 2>&1 | Select-Object -Last 25)",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\client-react\\\\src\" -Recurse -File | Select-Object -First 30 | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\asbj0\\\\projects\\\\poker-clock\\\\\", \"\"\\) })",
-      "PowerShell(ssh vps \"go version 2>/dev/null || echo 'go not found'\")",
-      "PowerShell(ssh vps \"uname -m && cat /etc/os-release | head -3\")",
-      "PowerShell(ssh vps \"systemctl status holtebu-server --no-pager\")",
-      "PowerShell(ssh vps \"curl -si https://espen.holtebu.eu/pokerklokke/api/tournaments | head -3\")",
-      "PowerShell(ssh vps \"TOKEN=\\\\$\\(curl -s -X POST https://espen.holtebu.eu/pokerklokke/auth/guest/ | python3 -c 'import sys,json; print\\(json.load\\(sys.stdin\\)[\\\\\"access\\\\\"]\\)'\\) && curl -si https://espen.holtebu.eu/pokerklokke/api/tournaments -H \\\\\"Authorization: Bearer \\\\$TOKEN\\\\\" | head -5\")",
-      "PowerShell(ssh vps 'TOKEN=$\\(curl -s -X POST https://espen.holtebu.eu/pokerklokke/auth/guest/ | python3 -c \"import sys,json; print\\(json.load\\(sys.stdin\\)[\\\\\"access\\\\\"]\\)\"\\) && curl -si https://espen.holtebu.eu/pokerklokke/api/tournaments -H \"Authorization: Bearer $TOKEN\" | head -5')",
-      "PowerShell(head *)"
+      "PowerShell(ssh vps *)",
+      "PowerShell(head *)",
+      "PowerShell(go *)"
     ]
   }
 }
