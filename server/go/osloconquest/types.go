@@ -12,18 +12,18 @@ const (
 )
 
 type Player struct {
-	ID   PlayerID
-	Name string
-	Color string
-	ColorName string
-	IsBot bool
-	Position *MapNodeID
+	ID             PlayerID
+	Name           string
+	Color          string
+	ColorName      string
+	IsBot          bool
+	Position       *MapNodeID
 	MovesRemaining int
-	DiceRoll *int
-	ValidMoves []MapNodeID
+	DiceRoll       *int
+	ValidMoves     []MapNodeID
 	SetupConfirmed bool
-	Money int
-	Units int
+	Money          int
+	Units          int
 	NextCheckpoint *MapNodeID
 }
 
@@ -35,17 +35,17 @@ type MapNode struct {
 
 type LogEntry struct {
 	Message string
-	Type	string
+	Type    string
 	Time    string
 }
 
 type Room struct {
-	ID          string
-	Players     []Player
-	Territories map[MapNodeID]MapNode
-	Phase       Phase
-	Started     bool
+	ID           string
+	Players      []Player
+	Territories  map[MapNodeID]MapNode
+	Phase        Phase
+	Started      bool
 	ActivePlayer *PlayerID
-	Winner      *PlayerID
-	Log []LogEntry
+	Winner       *PlayerID
+	Log          []LogEntry
 }
