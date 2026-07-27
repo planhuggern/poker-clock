@@ -11,6 +11,8 @@ const (
 	PhaseGameOver Phase = "finished"
 )
 
+const MaxPlayers = 2
+
 type Player struct {
 	ID             PlayerID
 	Name           string

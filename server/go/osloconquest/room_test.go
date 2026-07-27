@@ -27,27 +27,68 @@ func TestAdjacencyIsSymmetric(t *testing.T) {
 	}
 }
 
- func TestNewWaitingRoom(t *testing.T) {
-        player := Player{
-                ID:   "player-1",
-                Name: "Espen",
+func TestNewWaitingRoom(t *testing.T) {
+	player := Player{
+		ID:   "player-1",
+		Name: "Espen",
+	}
+
+	room := NewWaitingRoom("room-1", player)
+
+	if room.ID != "room-1" {
+		t.Errorf("room ID = %q, want %q", room.ID, "room-1")
+	}
+	if room.Phase != PhaseWaiting {
+		t.Errorf("phase = %q, want %q", room.Phase, PhaseWaiting)
+	}
+	if room.Started {
+		t.Error("waiting room should not be started")
+	}
+	if room.ActivePlayer != nil {
+		t.Error("waiting room should not have an active player")
+	}
+	if len(room.Players) != 1 {
+		t.Errorf("player count = %d, want 1", len(room.Players))
+	}
+}
+
+func TestAddPlayerAddsSecondPlayer(t *testing.T) {
+	room := NewWaitingRoom("room-1", Player{
+		ID:   "player-1",
+		Name: "Espen",
+	})
+
+	updatedRoom, err := AddPlayer(room, Player{
+		ID:   "player-2",
+		Name: "Ada",
+	})
+
+	if err != nil {
+		t.Fatalf("AddPlayer returned an error: %v", err)
+	}
+	if len(updatedRoom.Players) != 2 {
+		t.Errorf("player count = %d, want 2", len(updatedRoom.Players))
+	}
+}
+
+func TestAddPlayerRejectsThirdPlayer(t *testing.T) {
+        room, err := AddPlayer(
+                NewWaitingRoom("room-1", Player{ID: "player-1", Name: "Espen"}),
+                Player{ID: "player-2", Name: "Ada"},
+        )
+        if err != nil {
+                t.Fatalf("adding second player: %v", err)
         }
 
-        room := NewWaitingRoom("room-1", player)
+        updatedRoom, err := AddPlayer(room, Player{
+                ID:   "player-3",
+                Name: "Lin",
+        })
 
-        if room.ID != "room-1" {
-                t.Errorf("room ID = %q, want %q", room.ID, "room-1")
+        if err != ErrRoomFull {
+                t.Errorf("error = %v, want ErrRoomFull", err)
         }
-        if room.Phase != PhaseWaiting {
-                t.Errorf("phase = %q, want %q", room.Phase, PhaseWaiting)
-        }
-        if room.Started {
-                t.Error("waiting room should not be started")
-        }
-        if room.ActivePlayer != nil {
-                t.Error("waiting room should not have an active player")
-        }
-        if len(room.Players) != 1 {
-                t.Errorf("player count = %d, want 1", len(room.Players))
+        if len(updatedRoom.Players) != 2 {
+                t.Errorf("player count = %d, want 2", len(updatedRoom.Players))
         }
   }
