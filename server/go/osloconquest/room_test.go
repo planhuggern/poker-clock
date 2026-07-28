@@ -72,23 +72,41 @@ func TestAddPlayerAddsSecondPlayer(t *testing.T) {
 }
 
 func TestAddPlayerRejectsThirdPlayer(t *testing.T) {
-        room, err := AddPlayer(
-                NewWaitingRoom("room-1", Player{ID: "player-1", Name: "Espen"}),
-                Player{ID: "player-2", Name: "Ada"},
-        )
-        if err != nil {
-                t.Fatalf("adding second player: %v", err)
-        }
+	room, err := AddPlayer(
+		NewWaitingRoom("room-1", Player{ID: "player-1", Name: "Espen"}),
+		Player{ID: "player-2", Name: "Ada"},
+	)
+	if err != nil {
+		t.Fatalf("adding second player: %v", err)
+	}
 
-        updatedRoom, err := AddPlayer(room, Player{
-                ID:   "player-3",
-                Name: "Lin",
-        })
+	updatedRoom, err := AddPlayer(room, Player{
+		ID:   "player-3",
+		Name: "Lin",
+	})
 
-        if err != ErrRoomFull {
-                t.Errorf("error = %v, want ErrRoomFull", err)
-        }
-        if len(updatedRoom.Players) != 2 {
-                t.Errorf("player count = %d, want 2", len(updatedRoom.Players))
-        }
-  }
+	if err != ErrRoomFull {
+		t.Errorf("error = %v, want ErrRoomFull", err)
+	}
+	if len(updatedRoom.Players) != 2 {
+		t.Errorf("player count = %d, want 2", len(updatedRoom.Players))
+	}
+}
+
+func TestAddPlayerRejectsBlankPlayerID(t *testing.T) {
+	room := NewWaitingRoom("room-1", Player{
+		ID:   "player-1",
+		Name: "Espen",
+	})
+
+	updatedRoom, err := AddPlayer(room, Player{
+		Name: "Anonymous",
+	})
+
+	if err != ErrInvalidPlayer {
+		t.Errorf("error = %v, want ErrInvalidPlayer", err)
+	}
+	if len(updatedRoom.Players) != 1 {
+		t.Errorf("player count = %d, want 1", len(updatedRoom.Players))
+	}
+}

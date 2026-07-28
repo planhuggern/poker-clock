@@ -1,8 +1,13 @@
 package osloconquest
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
 var ErrRoomFull = errors.New("room is full")
+
+var ErrInvalidPlayer = errors.New("player ID is required")
 
 func NewWaitingRoom(id string, player Player) Room {
 	return Room{
@@ -17,6 +22,10 @@ func NewWaitingRoom(id string, player Player) Room {
 }
 
 func AddPlayer(room Room, player Player) (Room, error) {
+	if strings.TrimSpace(string(player.ID)) == "" {
+		return room, ErrInvalidPlayer
+	}
+
 	if len(room.Players) >= MaxPlayers {
 		return room, ErrRoomFull
 	}
