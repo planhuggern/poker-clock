@@ -1,10 +1,10 @@
 package main
 
 import (
-	"os"
-	"net"
 	"fmt"
+	"net"
 	"net/http"
+	"os"
 	"strings"
 
 	_ "modernc.org/sqlite"
