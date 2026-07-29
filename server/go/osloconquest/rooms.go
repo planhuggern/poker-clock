@@ -127,7 +127,11 @@ func summarizeRooms(rooms map[string]Room) []RoomInfo {
 	return roomInfos
 }
 
-func NewBotRoom(id string, player Player) Room {
+func NewBotRoom(id string, player Player) (Room, error) {
+	if isBlankPlayerID(player.ID) {
+		return Room{}, ErrInvalidPlayer
+	}
+
 	room := NewWaitingRoom(id, player)
 	for i := 1; i < MaxPlayers; i++ {
 		bot := Player{
@@ -137,5 +141,5 @@ func NewBotRoom(id string, player Player) Room {
 		}
 		room, _ = AddPlayer(room, bot)
 	}
-	return room
+	return room, nil
 }

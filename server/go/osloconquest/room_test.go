@@ -231,14 +231,17 @@ func TestFullRoomStartsSetup(t *testing.T) {
 }
 
 func TestNewBotRoomCreatesStartedRoom(t *testing.T) {
-	room := NewBotRoom("room-1", Player{
+	room, err := NewBotRoom("room-1", Player{
 		ID:   "player-1",
 		Name: "Espen",
 	})
-
+	if err != nil {
+		t.Fatalf("NewBotRoom returned an error: %v", err)
+	}
 	if len(room.Players) != MaxPlayers {
 		t.Errorf("player count = %d, want %d", len(room.Players), MaxPlayers)
 	}
+	
 	if !room.Players[1].IsBot {
 		t.Error("second player should be a bot")
 	}
@@ -330,5 +333,15 @@ func TestCreateWaitingRoomAddsRoomWithoutMutatingInput(t *testing.T) {
 	}
 	if _, exists := updatedRooms["room-2"]; !exists {
 		t.Error("new room should exist")
+	}
+}
+
+func TestNewBotRoomRejectsBlankPlayerID(t *testing.T) {
+	_, err := NewBotRoom("room-1", Player{
+		Name: "Anonymous",
+	})
+
+	if err != ErrInvalidPlayer {
+		t.Errorf("error = %v, want ErrInvalidPlayer", err)
 	}
 }
