@@ -241,7 +241,7 @@ func TestNewBotRoomCreatesStartedRoom(t *testing.T) {
 	if len(room.Players) != MaxPlayers {
 		t.Errorf("player count = %d, want %d", len(room.Players), MaxPlayers)
 	}
-	
+
 	if !room.Players[1].IsBot {
 		t.Error("second player should be a bot")
 	}

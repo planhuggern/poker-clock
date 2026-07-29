@@ -139,7 +139,11 @@ func NewBotRoom(id string, player Player) (Room, error) {
 			Name:  fmt.Sprintf("Bot %d", i),
 			IsBot: true,
 		}
-		room, _ = AddPlayer(room, bot)
+		updatedRoom, err := AddPlayer(room, bot)
+		if err != nil {
+			return Room{}, err
+		}
+		room = updatedRoom
 	}
 	return room, nil
 }
