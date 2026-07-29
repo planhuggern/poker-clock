@@ -249,3 +249,38 @@ func TestNewBotRoomCreatesStartedRoom(t *testing.T) {
 		t.Error("bot room should start immediately")
 	}
 }
+
+func TestCreateWaitingRoomRejectsPlayerAlreadyInAnotherRoom(t *testing.T) {
+	espen := Player{
+		ID:   "player-1",
+		Name: "Espen",
+	}
+
+	rooms := map[string]Room{
+		"room-1": NewWaitingRoom("room-1", espen),
+	}
+
+	updatedRooms, err := createWaitingRoom(rooms, "room-2", espen)
+
+	if err != ErrPlayerAlreadyInRoom {
+		t.Errorf("error = %v, want ErrPlayerAlreadyInRoom", err)
+	}
+	if _, exists := updatedRooms["room-2"]; exists {
+		t.Error("second room should not be created")
+	}
+}
+
+func TestCreateWaitingRoomRejectsBlankPlayerID(t *testing.T) {
+	rooms := map[string]Room{}
+
+	updatedRooms, err := createWaitingRoom(rooms, "room-1", Player{
+		Name: "Anonymous",
+	})
+
+	if err != ErrInvalidPlayer {
+		t.Errorf("error = %v, want ErrInvalidPlayer", err)
+	}
+	if len(updatedRooms) != 0 {
+		t.Errorf("room count = %d, want 0", len(updatedRooms))
+	}
+}

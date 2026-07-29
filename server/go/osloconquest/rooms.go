@@ -3,14 +3,17 @@ package osloconquest
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
 )
 
 var ErrRoomFull = errors.New("room is full")
-
+var ErrRoomExists = errors.New("room already exists")
 var ErrInvalidPlayer = errors.New("player ID is required")
+var ErrPlayerAlreadyInRoom = errors.New("player is already in a room")
 
 func NewWaitingRoom(id string, player Player) Room {
+
 	return Room{
 		ID:          id,
 		Players:     []Player{player},
@@ -20,6 +23,27 @@ func NewWaitingRoom(id string, player Player) Room {
 			{Message: "Venter på spiller 2", Type: "info"},
 		},
 	}
+}
+
+func createWaitingRoom(rooms map[string]Room, id string, player Player) (map[string]Room, error) {
+	if strings.TrimSpace(string(player.ID)) == "" {
+		return rooms, ErrInvalidPlayer
+	}
+
+	if _, exists := rooms[id]; exists {
+		return rooms, ErrRoomExists
+	}
+
+	_, playerAlreadyInRoom := findRoomWithPlayer(rooms, player.ID, "")
+	if playerAlreadyInRoom {
+		return rooms, ErrPlayerAlreadyInRoom
+	}
+
+	updatedRooms := make(map[string]Room, len(rooms)+1)
+	maps.Copy(updatedRooms, rooms)
+	room := NewWaitingRoom(id, player)
+	updatedRooms[id] = room
+	return updatedRooms, nil
 }
 
 func AddPlayer(room Room, player Player) (Room, error) {
