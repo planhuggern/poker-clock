@@ -12,6 +12,10 @@ var ErrRoomExists = errors.New("room already exists")
 var ErrInvalidPlayer = errors.New("player ID is required")
 var ErrPlayerAlreadyInRoom = errors.New("player is already in a room")
 
+func isBlankPlayerID(playerID PlayerID) bool {
+	return strings.TrimSpace(string(playerID)) == ""
+}
+
 func NewWaitingRoom(id string, player Player) Room {
 
 	return Room{
@@ -26,7 +30,7 @@ func NewWaitingRoom(id string, player Player) Room {
 }
 
 func createWaitingRoom(rooms map[string]Room, id string, player Player) (map[string]Room, error) {
-	if strings.TrimSpace(string(player.ID)) == "" {
+	if isBlankPlayerID(player.ID) {
 		return rooms, ErrInvalidPlayer
 	}
 
@@ -47,7 +51,7 @@ func createWaitingRoom(rooms map[string]Room, id string, player Player) (map[str
 }
 
 func AddPlayer(room Room, player Player) (Room, error) {
-	if strings.TrimSpace(string(player.ID)) == "" {
+	if isBlankPlayerID(player.ID) {
 		return room, ErrInvalidPlayer
 	}
 
@@ -74,7 +78,7 @@ func findRoomWithPlayer(
 	playerID PlayerID,
 	excludeRoomID string,
 ) (string, bool) {
-	if strings.TrimSpace(string(playerID)) == "" {
+	if isBlankPlayerID(playerID) {
 		return "", false
 	}
 
