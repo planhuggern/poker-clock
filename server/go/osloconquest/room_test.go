@@ -110,3 +110,40 @@ func TestAddPlayerRejectsBlankPlayerID(t *testing.T) {
 		t.Errorf("player count = %d, want 1", len(updatedRoom.Players))
 	}
 }
+
+func TestFindRoomWithPlayer(t *testing.T) {
+	rooms := map[string]Room{
+		"room-1": NewWaitingRoom("room-1", Player{
+			ID:   "player-1",
+			Name: "Espen",
+		}),
+		"room-2": NewWaitingRoom("room-2", Player{
+			ID:   "player-2",
+			Name: "Ada",
+		}),
+	}
+
+	roomID, found := findRoomWithPlayer(rooms, "player-2", "")
+
+	if !found {
+		t.Fatal("player should be in a room")
+	}
+	if roomID != "room-2" {
+		t.Errorf("room ID = %q, want %q", roomID, "room-2")
+	}
+}
+
+func TestFindRoomWithPlayerIgnoresExcludedRoom(t *testing.T) {
+        rooms := map[string]Room{
+                "room-1": NewWaitingRoom("room-1", Player{
+                        ID:   "player-1",
+                        Name: "Espen",
+                }),
+        }
+
+        _, found := findRoomWithPlayer(rooms, "player-1", "room-1")
+
+        if found {
+                t.Fatal("player should not be found in the excluded room")
+        }
+  }

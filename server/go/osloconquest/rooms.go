@@ -36,3 +36,27 @@ func AddPlayer(room Room, player Player) (Room, error) {
 
 	return room, nil
 }
+
+func findRoomWithPlayer(
+	rooms map[string]Room,
+	playerID PlayerID,
+	excludeRoomID string,
+) (string, bool) {
+	if strings.TrimSpace(string(playerID)) == "" {
+		return "", false
+	}
+
+	for roomID, room := range rooms {
+		if roomID == excludeRoomID {
+			continue
+		}
+
+		for _, player := range room.Players {
+			if player.ID == playerID {
+				return roomID, true
+			}
+		}
+	}
+
+	return "", false
+}
