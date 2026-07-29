@@ -1,6 +1,28 @@
 package osloconquest
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
+
+func fillRoomWithPlayers(numPlayers int) Room {
+	room := NewWaitingRoom("room-1", Player{
+		ID:   "player-1",
+		Name: "Espen",
+	})
+
+	for playerNumber := 2; playerNumber <= numPlayers; playerNumber++ {
+		updatedRoom, err := AddPlayer(room, Player{
+			ID:   PlayerID(fmt.Sprintf("player-%d", playerNumber)),
+			Name: fmt.Sprintf("Player %d", playerNumber),
+		})
+		if err != nil {
+			panic(fmt.Sprintf("adding player %d: %v", playerNumber, err))
+		}
+		room = updatedRoom
+	}
+	return room
+}
 
 func TestCheckpointsAreMapNodes(t *testing.T) {
 	for _, checkpointID := range CheckpointIDs {
@@ -71,25 +93,19 @@ func TestAddPlayerAddsSecondPlayer(t *testing.T) {
 	}
 }
 
-func TestAddPlayerRejectsThirdPlayer(t *testing.T) {
-	room, err := AddPlayer(
-		NewWaitingRoom("room-1", Player{ID: "player-1", Name: "Espen"}),
-		Player{ID: "player-2", Name: "Ada"},
-	)
-	if err != nil {
-		t.Fatalf("adding second player: %v", err)
-	}
+func TestAddPlayerRejectsPlayerWhenRoomIsFull(t *testing.T) {
+	room := fillRoomWithPlayers(MaxPlayers)
 
 	updatedRoom, err := AddPlayer(room, Player{
-		ID:   "player-3",
+		ID:   PlayerID("player-too-many"),
 		Name: "Lin",
 	})
 
 	if err != ErrRoomFull {
 		t.Errorf("error = %v, want ErrRoomFull", err)
 	}
-	if len(updatedRoom.Players) != 2 {
-		t.Errorf("player count = %d, want 2", len(updatedRoom.Players))
+	if len(updatedRoom.Players) != MaxPlayers {
+		t.Errorf("player count = %d, want %d", len(updatedRoom.Players), MaxPlayers)
 	}
 }
 
@@ -134,16 +150,82 @@ func TestFindRoomWithPlayer(t *testing.T) {
 }
 
 func TestFindRoomWithPlayerIgnoresExcludedRoom(t *testing.T) {
-        rooms := map[string]Room{
-                "room-1": NewWaitingRoom("room-1", Player{
-                        ID:   "player-1",
-                        Name: "Espen",
-                }),
-        }
+	rooms := map[string]Room{
+		"room-1": NewWaitingRoom("room-1", Player{
+			ID:   "player-1",
+			Name: "Espen",
+		}),
+	}
 
-        _, found := findRoomWithPlayer(rooms, "player-1", "room-1")
+	_, found := findRoomWithPlayer(rooms, "player-1", "room-1")
 
-        if found {
-                t.Fatal("player should not be found in the excluded room")
-        }
-  }
+	if found {
+		t.Fatal("player should not be found in the excluded room")
+	}
+}
+
+func TestSummarizeRooms(t *testing.T) {
+	rooms := map[string]Room{
+		"room-1": NewWaitingRoom("room-1", Player{
+			ID:   "player-1",
+			Name: "Espen",
+		}),
+	}
+
+	roomInfos := summarizeRooms(rooms)
+
+	if len(roomInfos) != 1 {
+		t.Fatalf("room count = %d, want 1", len(roomInfos))
+	}
+
+	info := roomInfos[0]
+	if info.Room != "room-1" {
+		t.Errorf("room = %q, want %q", info.Room, "room-1")
+	}
+	if info.PlayerCount != 1 {
+		t.Errorf("player count = %d, want 1", info.PlayerCount)
+	}
+	if info.MaxPlayers != MaxPlayers {
+		t.Errorf("max players = %d, want %d", info.MaxPlayers, MaxPlayers)
+	}
+	if info.Status != "waiting" {
+		t.Errorf("status = %q, want %q", info.Status, "waiting")
+	}
+	if len(info.Players) != 1 || info.Players[0] != "Espen" {
+		t.Errorf("players = %v, want [Espen]", info.Players)
+	}
+}
+
+func TestSummarizeRoomsMarksStartedRooms(t *testing.T) {
+	room := NewWaitingRoom("room-1", Player{
+		ID:   "player-1",
+		Name: "Espen",
+	})
+	room.Started = true
+	room.Phase = PhaseSetup
+
+	roomInfos := summarizeRooms(map[string]Room{
+		"room-1": room,
+	})
+
+	if roomInfos[0].Status != "started" {
+		t.Errorf("status = %q, want %q", roomInfos[0].Status, "started")
+	}
+}
+
+func TestFullRoomStartsSetup(t *testing.T) {
+	room := fillRoomWithPlayers(MaxPlayers)
+
+	if !room.Started {
+		t.Error("room should be started when it reaches MaxPlayers")
+	}
+	if room.Phase != PhaseSetup {
+		t.Errorf("phase = %q, want %q", room.Phase, PhaseSetup)
+	}
+	if room.ActivePlayer == nil {
+		t.Fatal("started room should have an active player")
+	}
+	if *room.ActivePlayer != "player-1" {
+		t.Errorf("active player = %q, want %q", *room.ActivePlayer, "player-1")
+	}
+}

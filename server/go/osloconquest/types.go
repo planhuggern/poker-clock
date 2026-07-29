@@ -51,3 +51,15 @@ type Room struct {
 	Winner       *PlayerID
 	Log          []LogEntry
 }
+
+type RoomInfo struct {
+	Room        string
+	PlayerCount int
+	MaxPlayers  int
+	Started     bool
+	Phase       Phase
+	Status      string
+	OwnerID     PlayerID
+	PlayerIDs   []PlayerID
+	Players     []string
+}

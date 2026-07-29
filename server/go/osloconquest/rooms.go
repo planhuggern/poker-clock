@@ -34,6 +34,13 @@ func AddPlayer(room Room, player Player) (Room, error) {
 	copy(players, room.Players)
 	room.Players = append(players, player)
 
+	if len(room.Players) == MaxPlayers {
+		room.Log = append(room.Log, LogEntry{Message: "Rommet er fullt. Kjører setup!", Type: "info"})
+		room.Phase = PhaseSetup
+		room.Started = true
+		room.ActivePlayer = &room.Players[0].ID
+	}
+
 	return room, nil
 }
 
@@ -59,4 +66,34 @@ func findRoomWithPlayer(
 	}
 
 	return "", false
+}
+
+func summarizeRooms(rooms map[string]Room) []RoomInfo {
+	roomInfos := make([]RoomInfo, 0, len(rooms))
+	for _, room := range rooms {
+		var status string
+		if room.Started {
+			status = "started"
+		} else {
+			status = "waiting"
+		}
+
+		info := RoomInfo{
+			Room:        room.ID,
+			PlayerCount: len(room.Players),
+			MaxPlayers:  MaxPlayers,
+			Started:     room.Started,
+			Phase:       room.Phase,
+			Status:      status,
+			OwnerID:     room.Players[0].ID,
+			PlayerIDs:   make([]PlayerID, len(room.Players)),
+			Players:     make([]string, len(room.Players)),
+		}
+		for i, player := range room.Players {
+			info.PlayerIDs[i] = player.ID
+			info.Players[i] = player.Name
+		}
+		roomInfos = append(roomInfos, info)
+	}
+	return roomInfos
 }
