@@ -2,6 +2,7 @@ package osloconquest
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -96,4 +97,17 @@ func summarizeRooms(rooms map[string]Room) []RoomInfo {
 		roomInfos = append(roomInfos, info)
 	}
 	return roomInfos
+}
+
+func NewBotRoom(id string, player Player) Room {
+	room := NewWaitingRoom(id, player)
+	for i := 1; i < MaxPlayers; i++ {
+		bot := Player{
+			ID:    PlayerID(fmt.Sprintf("bot-%d", i)),
+			Name:  fmt.Sprintf("Bot %d", i),
+			IsBot: true,
+		}
+		room, _ = AddPlayer(room, bot)
+	}
+	return room
 }

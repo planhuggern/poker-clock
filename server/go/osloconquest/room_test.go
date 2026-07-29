@@ -229,3 +229,23 @@ func TestFullRoomStartsSetup(t *testing.T) {
 		t.Errorf("active player = %q, want %q", *room.ActivePlayer, "player-1")
 	}
 }
+
+func TestNewBotRoomCreatesStartedRoom(t *testing.T) {
+	room := NewBotRoom("room-1", Player{
+		ID:   "player-1",
+		Name: "Espen",
+	})
+
+	if len(room.Players) != MaxPlayers {
+		t.Errorf("player count = %d, want %d", len(room.Players), MaxPlayers)
+	}
+	if !room.Players[1].IsBot {
+		t.Error("second player should be a bot")
+	}
+	if room.Players[1].ID == "" {
+		t.Error("bot should have an ID")
+	}
+	if !room.Started {
+		t.Error("bot room should start immediately")
+	}
+}
