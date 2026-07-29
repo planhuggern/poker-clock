@@ -201,11 +201,10 @@ Identitetsregel 2026-07-25:
       definer `Side`. Start med tester for initielt rom og board-invarianter.
       Ikke WebSocket ennå. Lærer: Go-structs, maps/slices, typed constants og
       table-driven tests.
-- [ ] **5. Port romopprettelse og spillerflyt** — implementer rene funksjoner
-      tilsvarende `create_waiting_room`, `create_bot_room`, `add_player`,
-      `find_room_with_player` og `summarize_rooms`. Test happy path og
-      avvisninger: fullt rom, samme spiller i annet rom, ukjent/blank spiller.
-      Lærer: funksjoner som returnerer `(state, error)` uten global mutasjon.
+- [x] **5. Port romopprettelse og spillerflyt** — ferdig 2026-07-29.
+      Rene funksjoner for waiting- og bot-rom, spillerinnmelding, room-oppslag
+      og room-liste. Tester dekker happy path, fullt rom, blank ID, duplikat
+      romnavn og spiller i annet rom. `go test ./...` grønt.
 - [ ] **6. Port setup og turregler uten WebSocket** — implementer
       `choose_start_checkpoint`, `roll_dice`, `move`, `end_turn` og `forfeit`
       som testbare domenefunksjoner. Gjør terningkast injiserbart i tester
