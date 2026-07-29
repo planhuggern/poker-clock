@@ -305,3 +305,30 @@ func TestCreateWaitingRoomRejectsExistingRoomID(t *testing.T) {
 		t.Errorf("room count = %d, want 1", len(updatedRooms))
 	}
 }
+
+func TestCreateWaitingRoomAddsRoomWithoutMutatingInput(t *testing.T) {
+	rooms := map[string]Room{
+		"room-1": NewWaitingRoom("room-1", Player{
+			ID:   "player-1",
+			Name: "Espen",
+		}),
+	}
+
+	updatedRooms, err := createWaitingRoom(rooms, "room-2", Player{
+		ID:   "player-2",
+		Name: "Ada",
+	})
+
+	if err != nil {
+		t.Fatalf("createWaitingRoom returned an error: %v", err)
+	}
+	if len(rooms) != 1 {
+		t.Errorf("original room count = %d, want 1", len(rooms))
+	}
+	if len(updatedRooms) != 2 {
+		t.Errorf("updated room count = %d, want 2", len(updatedRooms))
+	}
+	if _, exists := updatedRooms["room-2"]; !exists {
+		t.Error("new room should exist")
+	}
+}
