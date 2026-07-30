@@ -15,14 +15,14 @@ func isActivePlayer(room Room, playerID PlayerID) bool {
 }
 
 func isCheckpoint(nodeID MapNodeID) bool {
-	return containsMapNodeID(CheckpointIDs, nodeID)
+	return containsMapNodeID(CheckpointIDSequence, nodeID)
 }
 
 func nextCheckpointID(currentCheckpointID MapNodeID) *MapNodeID {
-	for i, cp := range CheckpointIDs {
+	for i, cp := range CheckpointIDSequence {
 		if cp == currentCheckpointID {
-			nextIndex := (i + 1) % len(CheckpointIDs)
-			return &CheckpointIDs[nextIndex]
+			nextIndex := (i + 1) % len(CheckpointIDSequence)
+			return &CheckpointIDSequence[nextIndex]
 		}
 	}
 	return nil

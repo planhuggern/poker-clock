@@ -25,7 +25,7 @@ func fillRoomWithPlayers(numPlayers int) Room {
 }
 
 func TestCheckpointsAreMapNodes(t *testing.T) {
-	for _, checkpointID := range CheckpointIDs {
+	for _, checkpointID := range CheckpointIDSequence {
 		if !containsMapNodeID(MapNodeIDs, checkpointID) {
 			t.Errorf("checkpoint %q is not a map node", checkpointID)
 		}

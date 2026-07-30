@@ -10,7 +10,7 @@ var MapNodeIDs = []MapNodeID{
 	"lørenskog_cp", "lysaker_cp", "kolbotn_cp",
 }
 
-var CheckpointIDs = []MapNodeID{
+var CheckpointIDSequence = []MapNodeID{
 	"lørenskog_cp",
 	"lysaker_cp",
 	"kolbotn_cp",
