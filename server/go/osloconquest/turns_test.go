@@ -50,6 +50,9 @@ func TestChooseStartCheckpointSetsActivePlayerPosition(t *testing.T) {
 			"kolbotn_cp",
 		)
 	}
+	if activePlayer.SetupConfirmed {
+		t.Error("player should not be setup-confirmed before ending the turn")
+	}
 }
 
 func TestChooseStartCheckpointRejectsNonCheckpoint(t *testing.T) {
@@ -102,5 +105,74 @@ func TestChooseStartCheckpointRejectsWaitingRoom(t *testing.T) {
 	}
 	if updatedRoom.Players[0].Position != nil {
 		t.Error("player should not get a position")
+	}
+}
+
+func TestNextCheckpointIDWrapsToFirstCheckpoint(t *testing.T) {
+	if len(CheckpointIDSequence) < 2 {
+		t.Fatal("checkpoint sequence needs at least two checkpoints")
+	}
+
+	lastCheckpoint := CheckpointIDSequence[len(CheckpointIDSequence)-1]
+	firstCheckpoint := CheckpointIDSequence[0]
+
+	nextCheckpoint := nextCheckpointID(lastCheckpoint)
+
+	if nextCheckpoint == nil {
+		t.Fatal("next checkpoint should exist")
+	}
+	if *nextCheckpoint != firstCheckpoint {
+		t.Errorf(
+			"next checkpoint = %q, want %q",
+			*nextCheckpoint,
+			firstCheckpoint,
+		)
+	}
+}
+
+func TestEndTurnConfirmsSetupAndActivatesNextPlayer(t *testing.T) {
+	room := fillRoomWithPlayers(MaxPlayers)
+	firstPlayerID := *room.ActivePlayerID
+	expectedNextPlayerID := room.Players[1].ID
+
+	room, err := ChooseStartCheckpoint(
+		room,
+		firstPlayerID,
+		"lysaker_cp",
+	)
+	if err != nil {
+		t.Fatalf("ChooseStartCheckpoint returned an error: %v", err)
+	}
+
+	updatedRoom, err := EndTurn(room, firstPlayerID)
+	if err != nil {
+		t.Fatalf("EndTurn returned an error: %v", err)
+	}
+
+	if !updatedRoom.Players[0].SetupConfirmed {
+		t.Error("first player should be setup-confirmed")
+	}
+	if updatedRoom.ActivePlayerID == nil {
+		t.Fatal("room should have an active player")
+	}
+	if *updatedRoom.ActivePlayerID != expectedNextPlayerID {
+		t.Errorf(
+			"active player = %q, want %q",
+			*updatedRoom.ActivePlayerID,
+			expectedNextPlayerID,
+		)
+	}
+	if updatedRoom.Phase != PhaseSetup {
+		t.Errorf("phase = %q, want %q", updatedRoom.Phase, PhaseSetup)
+	}
+	if updatedRoom.Players[0].Position == nil {
+		t.Fatal("first player should keep the chosen checkpoint")
+	}
+	if *updatedRoom.Players[0].Position != "lysaker_cp" {
+		t.Errorf(
+			"position = %q, want %q",
+			*updatedRoom.Players[0].Position,
+			"lysaker_cp",
+		)
 	}
 }

@@ -28,6 +28,27 @@ func nextCheckpointID(currentCheckpointID MapNodeID) *MapNodeID {
 	return nil
 }
 
+func getNextActivePlayerID(room Room) *PlayerID {
+	if room.ActivePlayerID == nil {
+		return nil
+	}
+
+	var currentIndex int = -1
+	for i, player := range room.Players {
+		if room.ActivePlayerID != nil && player.ID == *room.ActivePlayerID {
+			currentIndex = i
+			break
+		}
+	}
+
+	if currentIndex == -1 {
+		return nil
+	}
+
+	nextIndex := (currentIndex + 1) % len(room.Players)
+	return &room.Players[nextIndex].ID
+}
+
 func ChooseStartCheckpoint(room Room, actorID PlayerID, checkpointID MapNodeID) (Room, error) {
 	if room.Phase != PhaseSetup {
 		return room, ErrGameNotStarted
@@ -56,5 +77,32 @@ func ChooseStartCheckpoint(room Room, actorID PlayerID, checkpointID MapNodeID) 
 	activePlayer.NextCheckpoint = nextCheckpointID(checkpointID)
 
 	activePlayer.Position = &checkpointID
+	return room, nil
+}
+
+func EndTurn(room Room, actorID PlayerID) (Room, error) {
+	if !isActivePlayer(room, actorID) {
+		return room, ErrNotActivePlayer
+	}
+
+	room.Players = slices.Clone(room.Players)
+	var activePlayer *Player
+	for i := range room.Players {
+		if room.Players[i].ID == actorID {
+			activePlayer = &room.Players[i]
+		}
+	}
+
+	if activePlayer == nil {
+		return room, ErrPlayerNotFound
+	}
+
+	if activePlayer.NextCheckpoint == nil {
+		return room, ErrInvalidCheckpoint
+	}
+
+	activePlayer.SetupConfirmed = true
+
+	room.ActivePlayerID = getNextActivePlayerID(room)
 	return room, nil
 }
