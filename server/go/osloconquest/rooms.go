@@ -67,7 +67,7 @@ func AddPlayer(room Room, player Player) (Room, error) {
 		room.Log = append(room.Log, LogEntry{Message: "Rommet er fullt. Kjører setup!", Type: "info"})
 		room.Phase = PhaseSetup
 		room.Started = true
-		room.ActivePlayer = &room.Players[0].ID
+		room.ActivePlayerID = &room.Players[0].ID
 	}
 
 	return room, nil

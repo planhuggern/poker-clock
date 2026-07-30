@@ -66,7 +66,7 @@ func TestNewWaitingRoom(t *testing.T) {
 	if room.Started {
 		t.Error("waiting room should not be started")
 	}
-	if room.ActivePlayer != nil {
+	if room.ActivePlayerID != nil {
 		t.Error("waiting room should not have an active player")
 	}
 	if len(room.Players) != 1 {
@@ -222,11 +222,11 @@ func TestFullRoomStartsSetup(t *testing.T) {
 	if room.Phase != PhaseSetup {
 		t.Errorf("phase = %q, want %q", room.Phase, PhaseSetup)
 	}
-	if room.ActivePlayer == nil {
+	if room.ActivePlayerID == nil {
 		t.Fatal("started room should have an active player")
 	}
-	if *room.ActivePlayer != "player-1" {
-		t.Errorf("active player = %q, want %q", *room.ActivePlayer, "player-1")
+	if *room.ActivePlayerID != "player-1" {
+		t.Errorf("active player = %q, want %q", *room.ActivePlayerID, "player-1")
 	}
 }
 

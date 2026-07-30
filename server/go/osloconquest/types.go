@@ -42,14 +42,14 @@ type LogEntry struct {
 }
 
 type Room struct {
-	ID           string
-	Players      []Player
-	Territories  map[MapNodeID]MapNode
-	Phase        Phase
-	Started      bool
-	ActivePlayer *PlayerID
-	Winner       *PlayerID
-	Log          []LogEntry
+	ID             string
+	Players        []Player
+	Territories    map[MapNodeID]MapNode
+	Phase          Phase
+	Started        bool
+	ActivePlayerID *PlayerID
+	WinnerID       *PlayerID
+	Log            []LogEntry
 }
 
 type RoomInfo struct {
