@@ -26,5 +26,8 @@ server/public/
 *.db-shm
 *.db-wal
 
+#go
+test.go
+
 # Frontend build
 client-react/dist/
