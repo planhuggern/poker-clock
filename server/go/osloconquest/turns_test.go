@@ -4,6 +4,26 @@ import (
 	"testing"
 )
 
+func playingRoomWithPlayers(numPlayers int, t *testing.T) Room {
+	room := fillRoomWithPlayers(numPlayers)
+	for range room.Players {
+		actorID := *room.ActivePlayerID
+		room, err = ChooseStartCheckpoint(
+			room,
+			actorID,
+			CheckpointIDSequence[0],
+		)
+		if err != nil {
+			t.Fatalf("choosing checkpoint for %q: %v", actorID, err)
+		}
+		room, err = EndTurn(room, actorID)
+		if err != nil {
+			t.Fatalf("ending setup turn for %q: %v", actorID, err)
+		}
+	}
+	return room
+}
+
 func TestChooseStartCheckpointSetsActivePlayerPosition(t *testing.T) {
 	room := fillRoomWithPlayers(MaxPlayers)
 	actorID := *room.ActivePlayerID
@@ -179,27 +199,8 @@ func TestEndTurnConfirmsSetupAndActivatesNextPlayer(t *testing.T) {
 }
 
 func TestEndTurnStartsPlayingAfterAllPlayersConfirmSetup(t *testing.T) {
-	room := fillRoomWithPlayers(MaxPlayers)
+	room := playingRoomWithPlayers(MaxPlayers, t)
 	firstPlayerID := room.Players[0].ID
-
-	for range room.Players {
-		actorID := *room.ActivePlayerID
-
-		var err error
-		room, err = ChooseStartCheckpoint(
-			room,
-			actorID,
-			CheckpointIDSequence[0],
-		)
-		if err != nil {
-			t.Fatalf("choosing checkpoint for %q: %v", actorID, err)
-		}
-
-		room, err = EndTurn(room, actorID)
-		if err != nil {
-			t.Fatalf("ending setup turn for %q: %v", actorID, err)
-		}
-	}
 
 	if room.Phase != PhasePlaying {
 		t.Errorf("phase = %q, want %q", room.Phase, PhasePlaying)
