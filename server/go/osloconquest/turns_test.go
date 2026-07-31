@@ -7,6 +7,7 @@ import (
 func playingRoomWithPlayers(numPlayers int, t *testing.T) Room {
 	room := fillRoomWithPlayers(numPlayers)
 	for range room.Players {
+		var err error
 		actorID := *room.ActivePlayerID
 		room, err = ChooseStartCheckpoint(
 			room,
