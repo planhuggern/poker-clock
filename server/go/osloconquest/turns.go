@@ -18,6 +18,15 @@ func isCheckpoint(nodeID MapNodeID) bool {
 	return containsMapNodeID(CheckpointIDSequence, nodeID)
 }
 
+func playerByID(players []Player, playerID PlayerID) *Player {
+	for i := range players {
+		if players[i].ID == playerID {
+			return &players[i]
+		}
+	}
+	return nil
+}
+
 func nextCheckpointID(currentCheckpointID MapNodeID) *MapNodeID {
 	for i, cp := range CheckpointIDSequence {
 		if cp == currentCheckpointID {
@@ -33,20 +42,22 @@ func getNextActivePlayerID(room Room) *PlayerID {
 		return nil
 	}
 
-	var currentIndex int = -1
 	for i, player := range room.Players {
 		if room.ActivePlayerID != nil && player.ID == *room.ActivePlayerID {
-			currentIndex = i
-			break
+			nextIndex := (i + 1) % len(room.Players)
+			return &room.Players[nextIndex].ID
 		}
 	}
+	return nil
+}
 
-	if currentIndex == -1 {
-		return nil
+func allPlayersSetupConfirmed(room Room) bool {
+	for _, player := range room.Players {
+		if !player.SetupConfirmed {
+			return false
+		}
 	}
-
-	nextIndex := (currentIndex + 1) % len(room.Players)
-	return &room.Players[nextIndex].ID
+	return true
 }
 
 func ChooseStartCheckpoint(room Room, actorID PlayerID, checkpointID MapNodeID) (Room, error) {
@@ -59,13 +70,7 @@ func ChooseStartCheckpoint(room Room, actorID PlayerID, checkpointID MapNodeID) 
 	}
 
 	room.Players = slices.Clone(room.Players)
-	var activePlayer *Player
-	for i := range room.Players {
-		if room.Players[i].ID == actorID {
-			activePlayer = &room.Players[i]
-		}
-	}
-
+	activePlayer := playerByID(room.Players, actorID)
 	if activePlayer == nil {
 		return room, ErrPlayerNotFound
 	}
@@ -86,13 +91,7 @@ func EndTurn(room Room, actorID PlayerID) (Room, error) {
 	}
 
 	room.Players = slices.Clone(room.Players)
-	var activePlayer *Player
-	for i := range room.Players {
-		if room.Players[i].ID == actorID {
-			activePlayer = &room.Players[i]
-		}
-	}
-
+	activePlayer := playerByID(room.Players, actorID)
 	if activePlayer == nil {
 		return room, ErrPlayerNotFound
 	}
@@ -104,5 +103,8 @@ func EndTurn(room Room, actorID PlayerID) (Room, error) {
 	activePlayer.SetupConfirmed = true
 
 	room.ActivePlayerID = getNextActivePlayerID(room)
+	if allPlayersSetupConfirmed(room) {
+		room.Phase = PhasePlaying
+	}
 	return room, nil
 }

@@ -134,11 +134,12 @@ func TestEndTurnConfirmsSetupAndActivatesNextPlayer(t *testing.T) {
 	room := fillRoomWithPlayers(MaxPlayers)
 	firstPlayerID := *room.ActivePlayerID
 	expectedNextPlayerID := room.Players[1].ID
+	chosenCheckpoint := CheckpointIDSequence[0]
 
 	room, err := ChooseStartCheckpoint(
 		room,
 		firstPlayerID,
-		"lysaker_cp",
+		chosenCheckpoint,
 	)
 	if err != nil {
 		t.Fatalf("ChooseStartCheckpoint returned an error: %v", err)
@@ -168,11 +169,49 @@ func TestEndTurnConfirmsSetupAndActivatesNextPlayer(t *testing.T) {
 	if updatedRoom.Players[0].Position == nil {
 		t.Fatal("first player should keep the chosen checkpoint")
 	}
-	if *updatedRoom.Players[0].Position != "lysaker_cp" {
+	if *updatedRoom.Players[0].Position != chosenCheckpoint {
 		t.Errorf(
 			"position = %q, want %q",
 			*updatedRoom.Players[0].Position,
-			"lysaker_cp",
+			chosenCheckpoint,
+		)
+	}
+}
+
+func TestEndTurnStartsPlayingAfterAllPlayersConfirmSetup(t *testing.T) {
+	room := fillRoomWithPlayers(MaxPlayers)
+	firstPlayerID := room.Players[0].ID
+
+	for range room.Players {
+		actorID := *room.ActivePlayerID
+
+		var err error
+		room, err = ChooseStartCheckpoint(
+			room,
+			actorID,
+			CheckpointIDSequence[0],
+		)
+		if err != nil {
+			t.Fatalf("choosing checkpoint for %q: %v", actorID, err)
+		}
+
+		room, err = EndTurn(room, actorID)
+		if err != nil {
+			t.Fatalf("ending setup turn for %q: %v", actorID, err)
+		}
+	}
+
+	if room.Phase != PhasePlaying {
+		t.Errorf("phase = %q, want %q", room.Phase, PhasePlaying)
+	}
+	if room.ActivePlayerID == nil {
+		t.Fatal("playing room should have an active player")
+	}
+	if *room.ActivePlayerID != firstPlayerID {
+		t.Errorf(
+			"active player = %q, want %q",
+			*room.ActivePlayerID,
+			firstPlayerID,
 		)
 	}
 }
