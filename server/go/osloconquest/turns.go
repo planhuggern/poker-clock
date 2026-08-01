@@ -2,13 +2,13 @@ package osloconquest
 
 import (
 	"errors"
-	"slices"
 )
 
 var ErrNotActivePlayer = errors.New("player is not the active player")
 var ErrPlayerNotFound = errors.New("player not found in room")
 var ErrInvalidCheckpoint = errors.New("invalid checkpoint")
 var ErrGameNotStarted = errors.New("game has not started yet")
+var ErrAlreadyRolled = errors.New("player has already rolled the dice this turn")
 
 func isActivePlayer(room Room, playerID PlayerID) bool {
 	return room.ActivePlayerID != nil && *room.ActivePlayerID == playerID
@@ -69,7 +69,7 @@ func ChooseStartCheckpoint(room Room, actorID PlayerID, checkpointID MapNodeID) 
 		return room, ErrNotActivePlayer
 	}
 
-	room.Players = slices.Clone(room.Players)
+	room = room.Clone()
 	activePlayer := playerByID(room.Players, actorID)
 	if activePlayer == nil {
 		return room, ErrPlayerNotFound
@@ -90,7 +90,7 @@ func EndTurn(room Room, actorID PlayerID) (Room, error) {
 		return room, ErrNotActivePlayer
 	}
 
-	room.Players = slices.Clone(room.Players)
+	room = room.Clone()
 	activePlayer := playerByID(room.Players, actorID)
 	if activePlayer == nil {
 		return room, ErrPlayerNotFound
@@ -106,5 +106,25 @@ func EndTurn(room Room, actorID PlayerID) (Room, error) {
 	if allPlayersSetupConfirmed(room) {
 		room.Phase = PhasePlaying
 	}
+	return room, nil
+}
+
+func RollDice(room Room, actorID PlayerID, diceFunc func() int) (Room, error) {
+	if !isActivePlayer(room, actorID) {
+		return room, ErrNotActivePlayer
+	}
+
+	room = room.Clone()
+	activePlayer := playerByID(room.Players, actorID)
+	if activePlayer == nil {
+		return room, ErrPlayerNotFound
+	}
+
+	if activePlayer.DiceRoll != nil {
+		return room, ErrAlreadyRolled
+	}
+	roll := diceFunc()
+	activePlayer.DiceRoll = &roll
+	activePlayer.MovesRemaining = roll
 	return room, nil
 }

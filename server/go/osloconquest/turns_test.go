@@ -217,3 +217,45 @@ func TestEndTurnStartsPlayingAfterAllPlayersConfirmSetup(t *testing.T) {
 		)
 	}
 }
+
+func TestRollDiceUsesInjectedDiceAndRejectsSecondRoll(t *testing.T) {
+	room := playingRoomWithPlayers(MaxPlayers, t)
+	actorID := *room.ActivePlayerID
+
+	updatedRoom, err := RollDice(room, actorID, func() int {
+		return 4
+	})
+	if err != nil {
+		t.Fatalf("RollDice returned an error: %v", err)
+	}
+
+	activePlayer := playerByID(updatedRoom.Players, actorID)
+	if activePlayer == nil {
+		t.Fatal("active player not found")
+	}
+	if activePlayer.DiceRoll == nil {
+		t.Fatal("active player should have a dice roll")
+	}
+	if *activePlayer.DiceRoll != 4 {
+		t.Errorf("dice roll = %d, want 4", *activePlayer.DiceRoll)
+	}
+	if activePlayer.MovesRemaining != 4 {
+		t.Errorf("moves remaining = %d, want 4", activePlayer.MovesRemaining)
+	}
+	// Attempt a second roll
+	updatedRoom, err = RollDice(updatedRoom, actorID, func() int {
+		return 6
+	})
+
+	if err != ErrAlreadyRolled {
+		t.Errorf("error = %v, want ErrAlreadyRolled", err)
+	}
+
+	activePlayer = playerByID(updatedRoom.Players, actorID)
+	if activePlayer == nil || activePlayer.DiceRoll == nil {
+		t.Fatal("active player should keep the first dice roll")
+	}
+	if *activePlayer.DiceRoll != 4 {
+		t.Errorf("dice roll = %d, want 4", *activePlayer.DiceRoll)
+	}
+}
