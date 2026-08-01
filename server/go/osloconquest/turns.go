@@ -9,6 +9,7 @@ var ErrPlayerNotFound = errors.New("player not found in room")
 var ErrInvalidCheckpoint = errors.New("invalid checkpoint")
 var ErrGameNotStarted = errors.New("game has not started yet")
 var ErrAlreadyRolled = errors.New("player has already rolled the dice this turn")
+var ErrNotPlaying = errors.New("game is not in playing phase")
 
 func isActivePlayer(room Room, playerID PlayerID) bool {
 	return room.ActivePlayerID != nil && *room.ActivePlayerID == playerID
@@ -112,6 +113,10 @@ func EndTurn(room Room, actorID PlayerID) (Room, error) {
 func RollDice(room Room, actorID PlayerID, diceFunc func() int) (Room, error) {
 	if !isActivePlayer(room, actorID) {
 		return room, ErrNotActivePlayer
+	}
+
+	if room.Phase != PhasePlaying {
+		return room, ErrNotPlaying
 	}
 
 	room = room.Clone()

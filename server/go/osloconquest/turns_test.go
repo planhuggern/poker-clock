@@ -259,3 +259,23 @@ func TestRollDiceUsesInjectedDiceAndRejectsSecondRoll(t *testing.T) {
 		t.Errorf("dice roll = %d, want 4", *activePlayer.DiceRoll)
 	}
 }
+
+func TestRollDiceRejectsSetupPhase(t *testing.T) {
+	room := fillRoomWithPlayers(MaxPlayers)
+	actorID := *room.ActivePlayerID
+
+	updatedRoom, err := RollDice(room, actorID, func() int {
+		return 4
+	})
+
+	if err != ErrNotPlaying {
+		t.Errorf("error = %v, want ErrNotPlaying", err)
+	}
+	activePlayer := playerByID(updatedRoom.Players, actorID)
+	if activePlayer == nil {
+		t.Fatal("active player not found")
+	}
+	if activePlayer.DiceRoll != nil {
+		t.Error("player should not get a dice roll during setup")
+	}
+}
