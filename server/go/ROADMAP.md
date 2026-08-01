@@ -210,6 +210,15 @@ Identitetsregel 2026-07-25:
       som testbare domenefunksjoner. Gjør terningkast injiserbart i tester
       (f.eks. liten `Dice`-funksjon), ikke hardkod `rand.Intn` inne i logikken.
       Lærer: dependency injection i Go uten framework.
+      Status 2026-08-02: `ChooseStartCheckpoint`, setup-delen av `EndTurn`
+      og `RollDice` finnes. `RollDice` avviser setup-fasen og bruker
+      injiserbar terningfunksjon. Neste delsteg er rekkeviddeberegning for
+      `ValidMoves`: `moves.go` har et første utkast, men det bruker DFS og
+      itererer en map. Bytt til BFS med korteste avstand per node og sorter
+      resultatet, ellers kan gyldige noder mangle og testrekkefølgen bli
+      ustabil. `TestRollDiceSetsValidMovesFromPlayerPosition` etablerer
+      eksplisitt start på `lørenskog_cp` og skal være grønn etterpå. Kjør
+      `go test ./osloconquest` før neste steg (`Move`).
 - [ ] **7. Port kampreglene som egen vertikal skive** — implementer dagens
       Django-angrep først (`fromTerritoryId` → `toTerritoryId`) før eventuell
       full mass-attack fra specen. Test nabo-validering, eier-validering,
