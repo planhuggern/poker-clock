@@ -73,6 +73,46 @@ http://localhost:8000/auth/dev?role=admin
 
 WebSocket: `ws://localhost:8000/ws/clock/?token=<jwt>`
 
+## Postgres med Docker Compose
+
+Databasen kjøres i Docker. Foreløpig er det kun Postgres-tjenesten i
+`docker-compose.yml`; appene legges til etter hvert. Go-serveren
+(`server/go`) vil koble til den på `localhost:5432` når Postgres-støtten
+implementeres. Django bruker fortsatt SQLite via `server/config.json`.
+
+```bash
+# Valgfritt: tilpass bruker/passord/database/port
+cp .env.example .env
+
+# Start databasen
+docker compose up -d db
+
+# Status (skal vise "healthy")
+docker compose ps
+```
+
+Tilkobling: `localhost:5432` med credentials fra `.env` (default:
+`pokerclock` / `pokerclock`, database `pokerclock`). `.env` er gitignored –
+bruk `.env.example` som mal.
+
+Stopp uten å slette data:
+
+```bash
+docker compose stop db
+```
+
+Slett containeren (data beholdes i volumet `pgdata`):
+
+```bash
+docker compose down
+```
+
+Slett data permanent:
+
+```bash
+docker compose down -v   # ⚠ sletter volumet pgdata
+```
+
 ## server/config.json
 
 ```json
