@@ -131,5 +131,6 @@ func RollDice(room Room, actorID PlayerID, diceFunc func() int) (Room, error) {
 	roll := diceFunc()
 	activePlayer.DiceRoll = &roll
 	activePlayer.MovesRemaining = roll
+	activePlayer.ValidMoves = reachableMapNodes(*activePlayer.Position, roll)
 	return room, nil
 }
