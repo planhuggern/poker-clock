@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func playingRoomWithPlayers(numPlayers int, t *testing.T) Room {
+func playingRoomWithPlayers(numPlayers int, checkpointID MapNodeID, t *testing.T) Room {
 	room := fillRoomWithPlayers(numPlayers)
 	for range room.Players {
 		var err error
@@ -12,7 +12,7 @@ func playingRoomWithPlayers(numPlayers int, t *testing.T) Room {
 		room, err = ChooseStartCheckpoint(
 			room,
 			actorID,
-			CheckpointIDSequence[0],
+			checkpointID,
 		)
 		if err != nil {
 			t.Fatalf("choosing checkpoint for %q: %v", actorID, err)
@@ -200,7 +200,7 @@ func TestEndTurnConfirmsSetupAndActivatesNextPlayer(t *testing.T) {
 }
 
 func TestEndTurnStartsPlayingAfterAllPlayersConfirmSetup(t *testing.T) {
-	room := playingRoomWithPlayers(MaxPlayers, t)
+	room := playingRoomWithPlayers(MaxPlayers, CheckpointIDSequence[0], t)
 	firstPlayerID := room.Players[0].ID
 
 	if room.Phase != PhasePlaying {
@@ -219,7 +219,7 @@ func TestEndTurnStartsPlayingAfterAllPlayersConfirmSetup(t *testing.T) {
 }
 
 func TestRollDiceUsesInjectedDiceAndRejectsSecondRoll(t *testing.T) {
-	room := playingRoomWithPlayers(MaxPlayers, t)
+	room := playingRoomWithPlayers(MaxPlayers, CheckpointIDSequence[0], t)
 	actorID := *room.ActivePlayerID
 
 	updatedRoom, err := RollDice(room, actorID, func() int {
@@ -277,5 +277,69 @@ func TestRollDiceRejectsSetupPhase(t *testing.T) {
 	}
 	if activePlayer.DiceRoll != nil {
 		t.Error("player should not get a dice roll during setup")
+	}
+}
+
+func TestRollDiceSetsValidMovesFromPlayerPosition(t *testing.T) {
+	room := playingRoomWithPlayers(MaxPlayers, "lørenskog_cp", t)
+	actorID := *room.ActivePlayerID
+
+	updatedRoom, err := RollDice(room, actorID, func() int {
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RollDice returned an error: %v", err)
+	}
+
+	activePlayer := playerByID(updatedRoom.Players, actorID)
+	if activePlayer == nil {
+		t.Fatal("active player not found")
+	}
+
+	want := []MapNodeID{"t26", "t27", "t28"}
+	if len(activePlayer.ValidMoves) != len(want) {
+		t.Fatalf("valid moves = %v, want %v", activePlayer.ValidMoves, want)
+	}
+	for i, move := range activePlayer.ValidMoves {
+		if move != want[i] {
+			t.Errorf("valid moves = %v, want %v", activePlayer.ValidMoves, want)
+			break
+		}
+	}
+}
+
+func TestMoveUpdatesActivePlayerPosition(t *testing.T) {
+	room := playingRoomWithPlayers(MaxPlayers, "kolbotn_cp", t)
+	actorID := *room.ActivePlayerID
+
+	room, err := RollDice(room, actorID, func() int {
+		return 6
+	})
+	if err != nil {
+		t.Fatalf("RollDice returned an error: %v", err)
+	}
+
+	updatedRoom, err := Move(room, actorID, "t35")
+	if err != nil {
+		t.Fatalf("Move returned an error: %v", err)
+	}
+
+	activePlayer := playerByID(updatedRoom.Players, actorID)
+	if activePlayer == nil {
+		t.Fatal("active player not found")
+	}
+	if activePlayer.Position == nil || *activePlayer.Position != "t35" {
+		t.Errorf("position = %v, want %q", activePlayer.Position, "t35")
+	}
+	if activePlayer.MovesRemaining != 0 {
+		t.Errorf("moves remaining = %d, want 0", activePlayer.MovesRemaining)
+	}
+	if len(activePlayer.ValidMoves) != 0 {
+		t.Errorf("valid moves = %v, want empty", activePlayer.ValidMoves)
+	}
+
+	inputPlayer := playerByID(room.Players, actorID)
+	if inputPlayer.Position == nil || *inputPlayer.Position != "kolbotn_cp" {
+		t.Error("input room should not be mutated")
 	}
 }
