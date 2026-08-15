@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch file",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${file}",
+      "cwd": "${fileDirname}"
+    },
+    {
+      "name": "Go: Holtebu server",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/server/go/cmd/holtebu-server",
+      "cwd": "${workspaceFolder}/server/go"
+    },
+    {
+      "name": "Frontend: Vite (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:8081/oslo-conquest/",
+      "webRoot": "${workspaceFolder}/client-react",
+      "preLaunchTask": "frontend: dev"
+    }
+  ]
+}
