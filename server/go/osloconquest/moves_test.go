@@ -4,7 +4,6 @@ import (
 	"testing"
 )
 
-
 func TestNoValidMovesIfNoStartNode(t *testing.T) {
 	start := MapNodeID("") // No start node
 	maxSteps := 3

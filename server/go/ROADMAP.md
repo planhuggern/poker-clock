@@ -210,16 +210,20 @@ Identitetsregel 2026-07-25:
       som testbare domenefunksjoner. Gjør terningkast injiserbart i tester
       (f.eks. liten `Dice`-funksjon), ikke hardkod `rand.Intn` inne i logikken.
       Lærer: dependency injection i Go uten framework.
-      Status 2026-08-13: `ChooseStartCheckpoint`, setup-delen av `EndTurn`
-      og `RollDice` finnes. `RollDice` avviser setup-fasen og bruker
+      Status 2026-08-16: `ChooseStartCheckpoint`, setup-delen av `EndTurn`,
+      `RollDice` og `Move` finnes. `RollDice` avviser setup-fasen og bruker
       injiserbar terningfunksjon. Rekkeviddeberegningen for `ValidMoves` er
       ferdig: `reachableMapNodes` i `moves.go` bruker BFS (kø + `distances`-
       map) og sorterer med `slices.Sort`, så hver node kun besøkes via
-      korteste avstand og rekkefølgen er deterministisk. `go test
-      ./osloconquest` og `go vet ./osloconquest` er grønne. Regelen «spilleren
-      kan velge å ikke flytte» ligger i `end_turn` i playing-fasen (jf.
-      Django), ikke i `validMoves`. Neste delsteg: `Move` og playing-delen av
-      `EndTurn`.
+      korteste avstand og rekkefølgen er deterministisk. `Move` følger
+      Django-kontrakten: ett hopp til en node innenfor rekkevidde, så
+      `MovesRemaining = 0` og `ValidMoves` tømmes. Checkpoint-bonus er
+      implementert med konstantene `CheckpointBonusMoney`/`CheckpointBonusUnits`
+      i `rules.go` (500/3 etter Django, lette å justere senere).
+      `go test ./osloconquest`, `go vet ./osloconquest` og `gofmt` er grønne.
+      Regelen «spilleren kan velge å ikke flytte» ligger i `end_turn` i
+      playing-fasen (jf. Django), ikke i `validMoves`. Neste delsteg:
+      playing-delen av `EndTurn` (med «kan velge å ikke flytte») og `forfeit`.
 - [ ] **7. Port kampreglene som egen vertikal skive** — implementer dagens
       Django-angrep først (`fromTerritoryId` → `toTerritoryId`) før eventuell
       full mass-attack fra specen. Test nabo-validering, eier-validering,

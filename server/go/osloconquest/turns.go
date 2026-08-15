@@ -10,6 +10,8 @@ var ErrInvalidCheckpoint = errors.New("invalid checkpoint")
 var ErrGameNotStarted = errors.New("game has not started yet")
 var ErrAlreadyRolled = errors.New("player has already rolled the dice this turn")
 var ErrNotPlaying = errors.New("game is not in playing phase")
+var ErrNoMovesRemaining = errors.New("player has no moves remaining")
+var ErrInvalidMove = errors.New("invalid move: destination is not reachable")
 
 func isActivePlayer(room Room, playerID PlayerID) bool {
 	return room.ActivePlayerID != nil && *room.ActivePlayerID == playerID
@@ -17,6 +19,16 @@ func isActivePlayer(room Room, playerID PlayerID) bool {
 
 func isCheckpoint(nodeID MapNodeID) bool {
 	return containsMapNodeID(CheckpointIDSequence, nodeID)
+}
+
+func isNextCheckpoint(player Player, nodeID MapNodeID) bool {
+	if !isCheckpoint(nodeID) {
+		return false
+	}
+	if player.NextCheckpoint == nil {
+		return false
+	}
+	return *player.NextCheckpoint == nodeID
 }
 
 func playerByID(players []Player, playerID PlayerID) *Player {
@@ -132,5 +144,48 @@ func RollDice(room Room, actorID PlayerID, diceFunc func() int) (Room, error) {
 	activePlayer.DiceRoll = &roll
 	activePlayer.MovesRemaining = roll
 	activePlayer.ValidMoves = reachableMapNodes(*activePlayer.Position, roll)
+	return room, nil
+}
+
+// Move allows the active player to move to a new position on the map, given that they have moves remaining and the destination is valid.
+func Move(room Room, actorID PlayerID, destination MapNodeID) (Room, error) {
+	if !isActivePlayer(room, actorID) {
+		return room, ErrNotActivePlayer
+	}
+
+	if room.Phase != PhasePlaying {
+		return room, ErrNotPlaying
+	}
+
+	room = room.Clone()
+	activePlayer := playerByID(room.Players, actorID)
+	if activePlayer == nil {
+		return room, ErrPlayerNotFound
+	}
+
+	if activePlayer.MovesRemaining <= 0 {
+		return room, ErrNoMovesRemaining
+	}
+
+	valid := false
+	for _, move := range activePlayer.ValidMoves {
+		if move == destination {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		return room, ErrInvalidMove
+	}
+
+	activePlayer.Position = &destination
+	if isNextCheckpoint(*activePlayer, destination) {
+		activePlayer.Money += CheckpointBonusMoney
+		activePlayer.Units += CheckpointBonusUnits
+		activePlayer.NextCheckpoint = nextCheckpointID(destination)
+	}
+
+	activePlayer.MovesRemaining = 0
+	activePlayer.ValidMoves = nil
 	return room, nil
 }

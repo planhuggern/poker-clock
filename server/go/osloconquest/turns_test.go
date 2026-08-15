@@ -343,3 +343,83 @@ func TestMoveUpdatesActivePlayerPosition(t *testing.T) {
 		t.Error("input room should not be mutated")
 	}
 }
+
+func TestMoveGrantsCheckpointBonus(t *testing.T) {
+	room := playingRoomWithPlayers(MaxPlayers, "kolbotn_cp", t)
+	actorID := *room.ActivePlayerID
+
+	// Set up the move state directly so the test checks the rule, not the
+	// board layout: any destination listed in ValidMoves is accepted.
+	activePlayer := playerByID(room.Players, actorID)
+	activePlayer.MovesRemaining = 1
+	activePlayer.ValidMoves = []MapNodeID{"lørenskog_cp"}
+	nextCheckpoint := MapNodeID("lørenskog_cp")
+	activePlayer.NextCheckpoint = &nextCheckpoint
+
+	updatedRoom, err := Move(room, actorID, "lørenskog_cp")
+	if err != nil {
+		t.Fatalf("Move returned an error: %v", err)
+	}
+
+	movedPlayer := playerByID(updatedRoom.Players, actorID)
+	if movedPlayer == nil {
+		t.Fatal("active player not found")
+	}
+	if movedPlayer.Position == nil || *movedPlayer.Position != "lørenskog_cp" {
+		t.Errorf("position = %v, want %q", movedPlayer.Position, "lørenskog_cp")
+	}
+	if movedPlayer.Money != CheckpointBonusMoney {
+		t.Errorf(
+			"money = %d, want %d",
+			movedPlayer.Money,
+			CheckpointBonusMoney,
+		)
+	}
+	if movedPlayer.Units != CheckpointBonusUnits {
+		t.Errorf(
+			"units = %d, want %d",
+			movedPlayer.Units,
+			CheckpointBonusUnits,
+		)
+	}
+	if movedPlayer.NextCheckpoint == nil {
+		t.Fatal("next checkpoint should be set after bonus")
+	}
+	if *movedPlayer.NextCheckpoint != "lysaker_cp" {
+		t.Errorf("next checkpoint = %q, want %q", *movedPlayer.NextCheckpoint, "lysaker_cp")
+	}
+}
+
+func TestMoveSkipsBonusForWrongCheckpoint(t *testing.T) {
+	room := playingRoomWithPlayers(MaxPlayers, "kolbotn_cp", t)
+	actorID := *room.ActivePlayerID
+
+	activePlayer := playerByID(room.Players, actorID)
+	activePlayer.MovesRemaining = 1
+	activePlayer.ValidMoves = []MapNodeID{"lysaker_cp"}
+	nextCheckpoint := MapNodeID("lørenskog_cp")
+	activePlayer.NextCheckpoint = &nextCheckpoint
+
+	updatedRoom, err := Move(room, actorID, "lysaker_cp")
+	if err != nil {
+		t.Fatalf("Move returned an error: %v", err)
+	}
+
+	movedPlayer := playerByID(updatedRoom.Players, actorID)
+	if movedPlayer == nil {
+		t.Fatal("active player not found")
+	}
+	if movedPlayer.Money != 0 {
+		t.Errorf("money = %d, want 0", movedPlayer.Money)
+	}
+	if movedPlayer.Units != 0 {
+		t.Errorf("units = %d, want 0", movedPlayer.Units)
+	}
+	if movedPlayer.NextCheckpoint == nil || *movedPlayer.NextCheckpoint != "lørenskog_cp" {
+		t.Errorf(
+			"next checkpoint = %v, want %q",
+			movedPlayer.NextCheckpoint,
+			"lørenskog_cp",
+		)
+	}
+}
