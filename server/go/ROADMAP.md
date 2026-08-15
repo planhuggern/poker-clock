@@ -395,6 +395,9 @@ Room-list skal ikke inkludere full `territories`-state.
 
 ## Notater fra tidligere økter
 
+- 2026-08-16: Lagt inn `.vscode/settings.json` med `formatOnSave` for Go
+  (Go-utvidelsen `golang.go` + `gofmt`). gofmt kjøres automatisk ved save,
+  så vi slipper manuell `gofmt -w` og CRLF/LF-støyen som fulgte med.
 - 2026-07-22: Fjernet `requireAuth`-wrapping fra `main.go` midlertidig
   («vi venter med auth»). `createTournament` gjort tolerant for manglende
   claims (`host_id` er nullable, `null=True` i `clock/models.py`).
