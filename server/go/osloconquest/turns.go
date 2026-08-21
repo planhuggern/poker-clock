@@ -130,7 +130,6 @@ func EndTurn(room Room, actorID PlayerID) (Room, error) {
 
 		room.ActivePlayerID = getNextActivePlayerID(room)
 
-
 		return room, nil
 	}
 
@@ -202,5 +201,33 @@ func Move(room Room, actorID PlayerID, destination MapNodeID) (Room, error) {
 
 	activePlayer.MovesRemaining = 0
 	activePlayer.ValidMoves = nil
+	return room, nil
+}
+
+func Forfeit(room Room, actorID PlayerID) (Room, error) {
+	room = room.Clone()
+	forfeitingPlayer := playerByID(room.Players, actorID)
+	if forfeitingPlayer == nil {
+		return room, ErrPlayerNotFound
+	}
+
+	if forfeitingPlayer.ID == *room.ActivePlayerID {
+		room.ActivePlayerID = getNextActivePlayerID(room)
+	}
+
+	if len(room.Players) <= 2 {
+		room.Phase = PhaseGameOver
+		room.WinnerID = room.ActivePlayerID
+	}
+
+	// Remove the forfeiting player from the room
+	newPlayers := []Player{}
+	for _, player := range room.Players {
+		if player.ID != actorID {
+			newPlayers = append(newPlayers, player)
+		}
+	}
+	room.Players = newPlayers
+
 	return room, nil
 }

@@ -524,3 +524,45 @@ func TestEndTurnInPlayingWhenSkippingMovesResetsDiceAndSwitchesPlayer(t *testing
 		t.Error("active player should switch after ending turn")
 	}
 }
+
+func TestForfeitEndsPlayingGameAndAwardsOpponent(t *testing.T) {
+	room := playingRoomWithPlayers(MaxPlayers, "kolbotn_cp", t)
+	forfeitingPlayerID := *room.ActivePlayerID
+	winnerID := room.Players[1].ID
+
+	room, err := Forfeit(room, forfeitingPlayerID)
+	if err != nil {
+		t.Fatalf("Forfeit returned an error: %v", err)
+	}
+
+	if room.Phase != PhaseGameOver {
+		t.Errorf("phase = %q, want %q", room.Phase, PhaseGameOver)
+	}
+	if room.WinnerID == nil {
+		t.Fatal("winner ID = nil, want opponent ID")
+	}
+	if *room.WinnerID != winnerID {
+		t.Errorf("winner ID = %q, want %q", *room.WinnerID, winnerID)
+	}
+}
+
+func TestForfeitAllowsNonActivePlayer(t *testing.T) {
+	room := playingRoomWithPlayers(MaxPlayers, "kolbotn_cp", t)
+	forfeitingPlayerID := room.Players[1].ID
+	winnerID := *room.ActivePlayerID
+
+	room, err := Forfeit(room, forfeitingPlayerID)
+	if err != nil {
+		t.Fatalf("Forfeit returned an error: %v", err)
+	}
+
+	if room.Phase != PhaseGameOver {
+		t.Errorf("phase = %q, want %q", room.Phase, PhaseGameOver)
+	}
+	if room.WinnerID == nil {
+		t.Fatal("winner ID = nil, want opponent ID")
+	}
+	if *room.WinnerID != winnerID {
+		t.Errorf("winner ID = %q, want %q", *room.WinnerID, winnerID)
+	}
+}
