@@ -566,3 +566,23 @@ func TestForfeitAllowsNonActivePlayer(t *testing.T) {
 		t.Errorf("winner ID = %q, want %q", *room.WinnerID, winnerID)
 	}
 }
+
+func TestForfeitKeepsBothPlayersInFinishedRoom(t *testing.T) {
+	room := playingRoomWithPlayers(MaxPlayers, "kolbotn_cp", t)
+	forfeitingPlayerID := *room.ActivePlayerID
+	wantPlayerIDs := []PlayerID{room.Players[0].ID, room.Players[1].ID}
+
+	room, err := Forfeit(room, forfeitingPlayerID)
+	if err != nil {
+		t.Fatalf("Forfeit returned an error: %v", err)
+	}
+
+	if len(room.Players) != len(wantPlayerIDs) {
+		t.Fatalf("player count = %d, want %d", len(room.Players), len(wantPlayerIDs))
+	}
+	for index, wantPlayerID := range wantPlayerIDs {
+		if room.Players[index].ID != wantPlayerID {
+			t.Errorf("player at index %d = %q, want %q", index, room.Players[index].ID, wantPlayerID)
+		}
+	}
+}

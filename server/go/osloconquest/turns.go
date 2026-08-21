@@ -220,14 +220,5 @@ func Forfeit(room Room, actorID PlayerID) (Room, error) {
 		room.WinnerID = room.ActivePlayerID
 	}
 
-	// Remove the forfeiting player from the room
-	newPlayers := []Player{}
-	for _, player := range room.Players {
-		if player.ID != actorID {
-			newPlayers = append(newPlayers, player)
-		}
-	}
-	room.Players = newPlayers
-
 	return room, nil
 }
