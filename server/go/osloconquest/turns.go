@@ -8,6 +8,7 @@ var ErrNotActivePlayer = errors.New("player is not the active player")
 var ErrPlayerNotFound = errors.New("player not found in room")
 var ErrInvalidCheckpoint = errors.New("invalid checkpoint")
 var ErrGameNotStarted = errors.New("game has not started yet")
+var ErrGameOver = errors.New("game is over")
 var ErrAlreadyRolled = errors.New("player has already rolled the dice this turn")
 var ErrNotPlaying = errors.New("game is not in playing phase")
 var ErrNoMovesRemaining = errors.New("player has no moves remaining")
@@ -209,6 +210,14 @@ func Forfeit(room Room, actorID PlayerID) (Room, error) {
 	forfeitingPlayer := playerByID(room.Players, actorID)
 	if forfeitingPlayer == nil {
 		return room, ErrPlayerNotFound
+	}
+
+	if room.Phase == PhaseWaiting {
+		return room, ErrGameNotStarted
+	}
+
+	if room.Phase != PhasePlaying && room.Phase != PhaseSetup {
+		return room, ErrGameOver
 	}
 
 	if forfeitingPlayer.ID == *room.ActivePlayerID {

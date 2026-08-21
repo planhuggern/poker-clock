@@ -586,3 +586,59 @@ func TestForfeitKeepsBothPlayersInFinishedRoom(t *testing.T) {
 		}
 	}
 }
+
+func TestForfeitRejectsGameThatHasNotStarted(t *testing.T) {
+	player := Player{ID: "player-1", Name: "Espen"}
+	room := NewWaitingRoom("room-1", player)
+
+	updatedRoom, err := Forfeit(room, player.ID)
+
+	if err != ErrGameNotStarted {
+		t.Errorf("error = %v, want ErrGameNotStarted", err)
+	}
+	if updatedRoom.Phase != PhaseWaiting {
+		t.Errorf("phase = %q, want %q", updatedRoom.Phase, PhaseWaiting)
+	}
+	if updatedRoom.WinnerID != nil {
+		t.Errorf("winner ID = %q, want nil", *updatedRoom.WinnerID)
+	}
+}
+
+func TestForfeitEndsSetupGameAndAwardsOpponent(t *testing.T) {
+	room := fillRoomWithPlayers(MaxPlayers)
+	forfeitingPlayerID := *room.ActivePlayerID
+	winnerID := room.Players[1].ID
+
+	room, err := Forfeit(room, forfeitingPlayerID)
+	if err != nil {
+		t.Fatalf("Forfeit returned an error: %v", err)
+	}
+
+	if room.Phase != PhaseGameOver {
+		t.Errorf("phase = %q, want %q", room.Phase, PhaseGameOver)
+	}
+	if room.WinnerID == nil {
+		t.Fatal("winner ID = nil, want opponent ID")
+	}
+	if *room.WinnerID != winnerID {
+		t.Errorf("winner ID = %q, want %q", *room.WinnerID, winnerID)
+	}
+}
+
+func TestForfeitRejectsGameThatIsAlreadyFinished(t *testing.T) {
+	room := playingRoomWithPlayers(MaxPlayers, "kolbotn_cp", t)
+	actorID := *room.ActivePlayerID
+	room.Phase = PhaseGameOver
+
+	updatedRoom, err := Forfeit(room, actorID)
+
+	if err != ErrGameOver {
+		t.Errorf("error = %v, want ErrGameOver", err)
+	}
+	if updatedRoom.Phase != PhaseGameOver {
+		t.Errorf("phase = %q, want %q", updatedRoom.Phase, PhaseGameOver)
+	}
+	if updatedRoom.WinnerID != nil {
+		t.Errorf("winner ID = %q, want nil", *updatedRoom.WinnerID)
+	}
+}
