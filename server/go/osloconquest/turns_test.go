@@ -25,6 +25,28 @@ func playingRoomWithPlayers(numPlayers int, checkpointID MapNodeID, t *testing.T
 	return room
 }
 
+func takePlayingTurn(room Room, actorID PlayerID, nodeID MapNodeID, t *testing.T) Room {
+	t.Helper()
+	var err error
+	room, err = RollDice(room, actorID, func() int {
+		return 3
+	})
+	if err != nil {
+		t.Fatalf("rolling dice for %q: %v", actorID, err)
+	}
+	activePlayer := playerByID(room.Players, actorID)
+	activePlayer.ValidMoves = []MapNodeID{nodeID}
+	room, err = Move(room, actorID, nodeID)
+	if err != nil {
+		t.Fatalf("moving to node for %q: %v", actorID, err)
+	}
+	room, err = EndTurn(room, actorID)
+	if err != nil {
+		t.Fatalf("ending turn for %q: %v", actorID, err)
+	}
+	return room
+}
+
 func TestChooseStartCheckpointSetsActivePlayerPosition(t *testing.T) {
 	room := fillRoomWithPlayers(MaxPlayers)
 	actorID := *room.ActivePlayerID
@@ -421,5 +443,84 @@ func TestMoveSkipsBonusForWrongCheckpoint(t *testing.T) {
 			movedPlayer.NextCheckpoint,
 			"lørenskog_cp",
 		)
+	}
+}
+
+func TestEndTurnInPlayingResetsDiceAndSwitchesPlayer(t *testing.T) {
+	room := playingRoomWithPlayers(MaxPlayers, "kolbotn_cp", t)
+	actorID := *room.ActivePlayerID
+
+	var err error
+	room, err = RollDice(room, actorID, func() int {
+		return 3
+	})
+	if err != nil {
+		t.Fatalf("rolling dice for %q: %v", actorID, err)
+	}
+	activePlayer := playerByID(room.Players, actorID)
+	activePlayer.ValidMoves = []MapNodeID{"kolbotn_cp"}
+	room, err = Move(room, actorID, "kolbotn_cp")
+	if err != nil {
+		t.Fatalf("moving to node for %q: %v", actorID, err)
+	}
+	room, err = EndTurn(room, actorID)
+	if err != nil {
+		t.Fatalf("ending turn for %q: %v", actorID, err)
+	}
+
+	activePlayer = playerByID(room.Players, actorID)
+	newActivePlayerID := *room.ActivePlayerID
+	if activePlayer == nil {
+		t.Fatal("active player not found")
+	}
+
+	if activePlayer.DiceRoll != nil {
+		t.Errorf("dice roll = %v, want nil", *activePlayer.DiceRoll)
+	}
+	if activePlayer.MovesRemaining != 0 {
+		t.Errorf("moves remaining = %d, want 0", activePlayer.MovesRemaining)
+	}
+	if len(activePlayer.ValidMoves) != 0 {
+		t.Errorf("valid moves = %v, want []", activePlayer.ValidMoves)
+	}
+	if newActivePlayerID == actorID {
+		t.Error("active player should switch after ending turn")
+	}
+}
+
+func TestEndTurnInPlayingWhenSkippingMovesResetsDiceAndSwitchesPlayer(t *testing.T) {
+	room := playingRoomWithPlayers(MaxPlayers, "kolbotn_cp", t)
+	actorID := *room.ActivePlayerID
+	var err error
+
+	room, err = RollDice(room, actorID, func() int {
+		return 3
+	})
+	if err != nil {
+		t.Fatalf("rolling dice for %q: %v", actorID, err)
+	}
+
+	room, err = EndTurn(room, actorID)
+	if err != nil {
+		t.Fatalf("ending turn for %q: %v", actorID, err)
+	}
+
+	activePlayer := playerByID(room.Players, actorID)
+	newActivePlayerID := *room.ActivePlayerID
+	if activePlayer == nil {
+		t.Fatal("active player not found")
+	}
+
+	if activePlayer.DiceRoll != nil {
+		t.Errorf("dice roll = %v, want nil", *activePlayer.DiceRoll)
+	}
+	if activePlayer.MovesRemaining != 0 {
+		t.Errorf("moves remaining = %d, want 0", activePlayer.MovesRemaining)
+	}
+	if len(activePlayer.ValidMoves) != 0 {
+		t.Errorf("valid moves = %v, want []", activePlayer.ValidMoves)
+	}
+	if newActivePlayerID == actorID {
+		t.Error("active player should switch after ending turn")
 	}
 }

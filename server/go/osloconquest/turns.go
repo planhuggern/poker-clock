@@ -12,6 +12,7 @@ var ErrAlreadyRolled = errors.New("player has already rolled the dice this turn"
 var ErrNotPlaying = errors.New("game is not in playing phase")
 var ErrNoMovesRemaining = errors.New("player has no moves remaining")
 var ErrInvalidMove = errors.New("invalid move: destination is not reachable")
+var ErrInvalidPhase = errors.New("invalid game phase for this action")
 
 func isActivePlayer(room Room, playerID PlayerID) bool {
 	return room.ActivePlayerID != nil && *room.ActivePlayerID == playerID
@@ -109,17 +110,31 @@ func EndTurn(room Room, actorID PlayerID) (Room, error) {
 		return room, ErrPlayerNotFound
 	}
 
-	if activePlayer.NextCheckpoint == nil {
-		return room, ErrInvalidCheckpoint
+	if room.Phase == PhaseSetup {
+		if activePlayer.NextCheckpoint == nil {
+			return room, ErrInvalidCheckpoint
+		}
+		activePlayer.SetupConfirmed = true
+
+		room.ActivePlayerID = getNextActivePlayerID(room)
+		if allPlayersSetupConfirmed(room) {
+			room.Phase = PhasePlaying
+		}
+		return room, nil
 	}
 
-	activePlayer.SetupConfirmed = true
+	if room.Phase == PhasePlaying {
+		activePlayer.DiceRoll = nil
+		activePlayer.MovesRemaining = 0
+		activePlayer.ValidMoves = nil
 
-	room.ActivePlayerID = getNextActivePlayerID(room)
-	if allPlayersSetupConfirmed(room) {
-		room.Phase = PhasePlaying
+		room.ActivePlayerID = getNextActivePlayerID(room)
+
+
+		return room, nil
 	}
-	return room, nil
+
+	return room, ErrInvalidPhase
 }
 
 func RollDice(room Room, actorID PlayerID, diceFunc func() int) (Room, error) {
