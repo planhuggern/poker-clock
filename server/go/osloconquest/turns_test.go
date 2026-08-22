@@ -642,3 +642,45 @@ func TestForfeitRejectsGameThatIsAlreadyFinished(t *testing.T) {
 		t.Errorf("winner ID = %q, want nil", *updatedRoom.WinnerID)
 	}
 }
+
+func TestForfeitRejectsUnknownPlayer(t *testing.T) {
+	room := playingRoomWithPlayers(MaxPlayers, "kolbotn_cp", t)
+
+	updatedRoom, err := Forfeit(room, "unknown-player")
+
+	if err != ErrPlayerNotFound {
+		t.Errorf("error = %v, want ErrPlayerNotFound", err)
+	}
+	if updatedRoom.Phase != PhasePlaying {
+		t.Errorf("phase = %q, want %q", updatedRoom.Phase, PhasePlaying)
+	}
+	if updatedRoom.WinnerID != nil {
+		t.Errorf("winner ID = %q, want nil", *updatedRoom.WinnerID)
+	}
+}
+
+func TestForfeitAddsPlayerNameToGameLog(t *testing.T) {
+	room := playingRoomWithPlayers(MaxPlayers, "kolbotn_cp", t)
+	forfeitingPlayerID := *room.ActivePlayerID
+	forfeitingPlayer := playerByID(room.Players, forfeitingPlayerID)
+	if forfeitingPlayer == nil {
+		t.Fatal("forfeiting player not found")
+	}
+	wantMessage := forfeitingPlayer.Name + " ga opp"
+	wantLogLength := len(room.Log) + 1
+
+	room, err := Forfeit(room, forfeitingPlayerID)
+	if err != nil {
+		t.Fatalf("Forfeit returned an error: %v", err)
+	}
+
+	if len(room.Log) != wantLogLength {
+		t.Fatalf("log length = %d, want %d", len(room.Log), wantLogLength)
+	}
+	for _, entry := range room.Log {
+		if entry.Message == wantMessage {
+			return
+		}
+	}
+	t.Errorf("log = %v, want entry with message %q", room.Log, wantMessage)
+}

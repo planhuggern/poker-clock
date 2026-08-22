@@ -2,6 +2,7 @@ package osloconquest
 
 import (
 	"errors"
+	"time"
 )
 
 var ErrNotActivePlayer = errors.New("player is not the active player")
@@ -57,8 +58,12 @@ func getNextActivePlayerID(room Room) *PlayerID {
 		return nil
 	}
 
+	return getNextPlayerID(room, *room.ActivePlayerID)
+}
+
+func getNextPlayerID(room Room, currentPlayerID PlayerID) *PlayerID {
 	for i, player := range room.Players {
-		if room.ActivePlayerID != nil && player.ID == *room.ActivePlayerID {
+		if player.ID == currentPlayerID {
 			nextIndex := (i + 1) % len(room.Players)
 			return &room.Players[nextIndex].ID
 		}
@@ -208,6 +213,7 @@ func Move(room Room, actorID PlayerID, destination MapNodeID) (Room, error) {
 func Forfeit(room Room, actorID PlayerID) (Room, error) {
 	room = room.Clone()
 	forfeitingPlayer := playerByID(room.Players, actorID)
+
 	if forfeitingPlayer == nil {
 		return room, ErrPlayerNotFound
 	}
@@ -220,14 +226,16 @@ func Forfeit(room Room, actorID PlayerID) (Room, error) {
 		return room, ErrGameOver
 	}
 
-	if forfeitingPlayer.ID == *room.ActivePlayerID {
-		room.ActivePlayerID = getNextActivePlayerID(room)
-	}
-
 	if len(room.Players) <= 2 {
 		room.Phase = PhaseGameOver
-		room.WinnerID = room.ActivePlayerID
+		room.WinnerID = getNextPlayerID(room, forfeitingPlayer.ID)
 	}
+
+	room.Log = append(room.Log, LogEntry{
+		Message: forfeitingPlayer.Name + " ga opp",
+		Type:    "forfeit",
+		Time:    time.Now().Format(time.RFC3339),
+	})
 
 	return room, nil
 }
